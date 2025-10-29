@@ -1,0 +1,349 @@
+---
+alwaysApply: false
+---
+
+# FEEDBACKFLOW - PROJECT DEFINITION & HIGH-LEVEL FUNCTIONALITY
+
+## PROJECT OVERVIEW
+FeedbackFlow is a comprehensive web-based feedback management system for tech organizations. It centralizes all feedback cycles, performance reviews, and continuous feedback processes in one unified platform.
+
+## CORE PURPOSE
+- Streamline feedback collection and management across the organization
+- Enable 360-degree feedback processes (manager, peer, self, upward reviews)
+- Provide actionable insights and analytics for performance improvement
+- Facilitate goal setting, tracking, and development planning
+- Create transparent and structured feedback workflows
+
+## TECH STACK
+- **Frontend**: React 18, Next.js, TypeScript, Tailwind CSS
+- **Backend**: Node.js, Express.js, TypeScript
+- **Database**: PostgreSQL with connection pooling
+- **Authentication**: Google OAuth 2.0 only
+- **State Management**: Redux Toolkit / Zustand
+- **API Design**: RESTful with comprehensive error handling
+- **Testing**: Jest, React Testing Library
+- **Deployment**: Docker, containerized architecture
+
+## ARCHITECTURE PRINCIPLES
+- **Modular Design**: Feature-based module organization
+- **Event-Driven**: Decoupled components using event emitters
+- **Security-First**: RBAC, input validation, SQL injection prevention
+- **Scalable**: Multi-tenant ready, horizontal scaling support
+- **Performance**: Pagination, caching, optimized queries
+- **Maintainable**: TypeScript, comprehensive testing, clean code
+
+## CORE FUNCTIONALITY MODULES
+
+### 1. AUTHENTICATION & USER MANAGEMENT
+- Google OAuth 2.0 integration only
+- Role-based access control (Admin, Manager, Employee)
+- User profile management and preferences
+- Organization hierarchy and team structure
+- Session management and security
+
+### 2. FEEDBACK CYCLE MANAGEMENT
+- Create and configure feedback cycles (annual, quarterly, project-based)
+- Cycle templates and workflow automation
+- Participant assignment and timeline management
+- Automated reminders and deadline tracking
+- Cycle completion analytics and reporting
+
+### 3. FEEDBACK & REVIEW SYSTEM
+- Multi-type feedback support:
+  - Manager-to-Employee reviews
+  - Self-assessments
+  - Peer reviews (360-degree)
+  - Upward feedback (employee-to-manager)
+  - Project retrospectives
+- Rich feedback content: comments, ratings, goals, recommendations
+- Draft/Submit/Complete workflow with validation
+- Threaded comments and discussions
+- Feedback acknowledgment and action planning
+
+### 4. ANALYTICS & INSIGHTS
+- Individual performance trends and growth tracking
+- Team and department analytics
+- Organization-wide feedback insights
+- Goal completion rates and progress tracking
+- Custom reports and data visualization
+- Export capabilities (PDF, CSV, Excel)
+
+### 5. NOTIFICATION & COMMUNICATION
+- Multi-channel notifications (email, in-app, Slack)
+- Automated deadline reminders and escalations
+- Real-time updates and activity feeds
+- Customizable notification preferences
+- Comment threading and @mentions
+
+### 6. GOAL MANAGEMENT
+- SMART goal setting and tracking
+- OKR integration and alignment
+- Development plan creation
+- Progress monitoring and updates
+- Goal categorization and prioritization
+
+## USER ROLES & PERMISSIONS
+
+### ADMIN (HR/System Admin)
+- Full system access and configuration
+- Organization setup and user management
+- Cycle creation and management across all departments
+- System-wide analytics and reporting
+- Integration management and settings
+
+### MANAGER
+- Team member feedback management
+- Cycle participation for direct reports
+- Team analytics and insights
+- Goal setting and tracking for team members
+- Can receive feedback as an employee from their manager
+
+### EMPLOYEE
+- Participate in assigned feedback cycles
+- Give and receive feedback based on assignments
+- Self-assessment completion
+- Goal setting and progress tracking
+- Personal development planning
+
+## DATA MODELS & RELATIONSHIPS
+
+### Core Entities:
+- **Users**: Profile, role, organization hierarchy
+- **Organizations**: Multi-tenant structure, departments, teams
+- **Feedback Cycles**: Templates, timelines, participants
+- **Feedback**: Content, ratings, goals, comments, acknowledgments
+- **Goals**: Categories, priorities, progress tracking
+- **Notifications**: Multi-channel, preferences, delivery status
+- **Analytics**: Aggregated data, metrics, insights
+
+### Key Relationships:
+- Users belong to Organizations with hierarchical reporting
+- Feedback Cycles contain multiple Feedback instances
+- Feedback has one-to-many Comments and Goals
+- Users can have multiple roles in different contexts
+- Managers can be Employees in different feedback relationships
+
+## SECURITY & COMPLIANCE
+- Google OAuth 2.0 with workspace domain restrictions
+- JWT token-based session management
+- Input validation and sanitization
+- SQL injection and XSS prevention
+- GDPR compliance and data privacy controls
+- Audit logging for all user actions
+- Rate limiting and API security
+
+## PERFORMANCE REQUIREMENTS
+- Page load times < 2 seconds
+- API response times < 500ms
+- Support for 1000+ concurrent users
+- Efficient pagination for large datasets
+- Optimized database queries with indexes
+- CDN integration for static assets
+
+## INTEGRATION CAPABILITIES
+- Google Workspace (OAuth, email, calendar)
+- HRIS systems (user sync, org structure)
+- Slack (notifications, bot integration)
+- Email providers (SMTP, templates)
+- Calendar systems (meeting scheduling)
+- Export to BI tools and analytics platforms
+
+## DEVELOPMENT GUIDELINES
+- TypeScript strict mode enabled
+- Comprehensive error handling and logging
+- Input validation on all endpoints
+- Unit test coverage > 90%
+- Integration tests for critical flows
+- API documentation with OpenAPI/Swagger
+- Code formatting with Prettier and ESLint
+- Git flow with feature branches and PR reviews
+
+## DEPLOYMENT & MONITORING
+- Containerized deployment with Docker
+- Environment-based configuration
+- Health checks and monitoring
+- Automated backups and disaster recovery
+- Performance monitoring and alerting
+- Scaling capabilities for growth
+
+## FUTURE ENHANCEMENTS
+- Mobile application (React Native)
+- AI-powered feedback insights and suggestions
+- Advanced analytics with machine learning
+- Integration with learning management systems
+- Video feedback capabilities
+- Multi-language support
+- Advanced workflow automation
+# FEEDBACKFLOW - PROJECT DEFINITION & HIGH-LEVEL FUNCTIONALITY
+
+## PROJECT OVERVIEW
+FeedbackFlow is a comprehensive web-based feedback management system for tech organizations. It centralizes all feedback cycles, performance reviews, and continuous feedback processes in one unified platform.
+
+## CORE PURPOSE
+- Streamline feedback collection and management across the organization
+- Enable 360-degree feedback processes (manager, peer, self, upward reviews)
+- Provide actionable insights and analytics for performance improvement
+- Facilitate goal setting, tracking, and development planning
+- Create transparent and structured feedback workflows
+
+## TECH STACK
+- **Frontend**: React 18, Next.js, TypeScript, Tailwind CSS
+- **Backend**: Node.js, Express.js, TypeScript
+- **Database**: PostgreSQL with connection pooling
+- **Authentication**: Google OAuth 2.0 only
+- **State Management**: Redux Toolkit / Zustand
+- **API Design**: RESTful with comprehensive error handling
+- **Testing**: Jest, React Testing Library
+- **Deployment**: Docker, containerized architecture
+
+## ARCHITECTURE PRINCIPLES
+- **Modular Design**: Feature-based module organization
+- **Event-Driven**: Decoupled components using event emitters
+- **Security-First**: RBAC, input validation, SQL injection prevention
+- **Scalable**: Multi-tenant ready, horizontal scaling support
+- **Performance**: Pagination, caching, optimized queries
+- **Maintainable**: TypeScript, comprehensive testing, clean code
+
+## CORE FUNCTIONALITY MODULES
+
+### 1. AUTHENTICATION & USER MANAGEMENT
+- Google OAuth 2.0 integration only
+- Role-based access control (Admin, Manager, Employee)
+- User profile management and preferences
+- Organization hierarchy and team structure
+- Session management and security
+
+### 2. FEEDBACK CYCLE MANAGEMENT
+- Create and configure feedback cycles (annual, quarterly, project-based)
+- Cycle templates and workflow automation
+- Participant assignment and timeline management
+- Automated reminders and deadline tracking
+- Cycle completion analytics and reporting
+
+### 3. FEEDBACK & REVIEW SYSTEM
+- Multi-type feedback support:
+  - Manager-to-Employee reviews
+  - Self-assessments
+  - Peer reviews (360-degree)
+  - Upward feedback (employee-to-manager)
+  - Project retrospectives
+- Rich feedback content: comments, ratings, goals, recommendations
+- Draft/Submit/Complete workflow with validation
+- Threaded comments and discussions
+- Feedback acknowledgment and action planning
+
+### 4. ANALYTICS & INSIGHTS
+- Individual performance trends and growth tracking
+- Team and department analytics
+- Organization-wide feedback insights
+- Goal completion rates and progress tracking
+- Custom reports and data visualization
+- Export capabilities (PDF, CSV, Excel)
+
+### 5. NOTIFICATION & COMMUNICATION
+- Multi-channel notifications (email, in-app, Slack)
+- Automated deadline reminders and escalations
+- Real-time updates and activity feeds
+- Customizable notification preferences
+- Comment threading and @mentions
+
+### 6. GOAL MANAGEMENT
+- SMART goal setting and tracking
+- OKR integration and alignment
+- Development plan creation
+- Progress monitoring and updates
+- Goal categorization and prioritization
+
+## USER ROLES & PERMISSIONS
+
+### ADMIN (HR/System Admin)
+- Full system access and configuration
+- Organization setup and user management
+- Cycle creation and management across all departments
+- System-wide analytics and reporting
+- Integration management and settings
+
+### MANAGER
+- Team member feedback management
+- Cycle participation for direct reports
+- Team analytics and insights
+- Goal setting and tracking for team members
+- Can receive feedback as an employee from their manager
+
+### EMPLOYEE
+- Participate in assigned feedback cycles
+- Give and receive feedback based on assignments
+- Self-assessment completion
+- Goal setting and progress tracking
+- Personal development planning
+
+## DATA MODELS & RELATIONSHIPS
+
+### Core Entities:
+- **Users**: Profile, role, organization hierarchy
+- **Organizations**: Multi-tenant structure, departments, teams
+- **Feedback Cycles**: Templates, timelines, participants
+- **Feedback**: Content, ratings, goals, comments, acknowledgments
+- **Goals**: Categories, priorities, progress tracking
+- **Notifications**: Multi-channel, preferences, delivery status
+- **Analytics**: Aggregated data, metrics, insights
+
+### Key Relationships:
+- Users belong to Organizations with hierarchical reporting
+- Feedback Cycles contain multiple Feedback instances
+- Feedback has one-to-many Comments and Goals
+- Users can have multiple roles in different contexts
+- Managers can be Employees in different feedback relationships
+
+## SECURITY & COMPLIANCE
+- Google OAuth 2.0 with workspace domain restrictions
+- JWT token-based session management
+- Input validation and sanitization
+- SQL injection and XSS prevention
+- GDPR compliance and data privacy controls
+- Audit logging for all user actions
+- Rate limiting and API security
+
+## PERFORMANCE REQUIREMENTS
+- Page load times < 2 seconds
+- API response times < 500ms
+- Support for 1000+ concurrent users
+- Efficient pagination for large datasets
+- Optimized database queries with indexes
+- CDN integration for static assets
+
+## INTEGRATION CAPABILITIES
+- Google Workspace (OAuth, email, calendar)
+- HRIS systems (user sync, org structure)
+- Slack (notifications, bot integration)
+- Email providers (SMTP, templates)
+- Calendar systems (meeting scheduling)
+- Export to BI tools and analytics platforms
+
+## DEVELOPMENT GUIDELINES
+- TypeScript strict mode enabled
+- Comprehensive error handling and logging
+- Input validation on all endpoints
+- Unit test coverage > 90%
+- Integration tests for critical flows
+- API documentation with OpenAPI/Swagger
+- Code formatting with Prettier and ESLint
+- Git flow with feature branches and PR reviews
+
+## DEPLOYMENT & MONITORING
+- Containerized deployment with Docker
+- Environment-based configuration
+- Health checks and monitoring
+- Automated backups and disaster recovery
+- Performance monitoring and alerting
+- Scaling capabilities for growth
+
+## FUTURE ENHANCEMENTS
+- Mobile application (React Native)
+- AI-powered feedback insights and suggestions
+- Advanced analytics with machine learning
+- Integration with learning management systems
+- Video feedback capabilities
+- Multi-language support
+- Advanced workflow automation
+

@@ -1,0 +1,46 @@
+name,description,type,department_id,organization_id,team_lead_id,is_active
+"Frontend Team","Frontend development and user interface","core","1","1","1",true
+"Backend Team","Backend services and API development","core","1","1","2",true
+"DevOps Team","Infrastructure and deployment","support","1","1","5",true
+"Product Strategy","Product planning and roadmap","core","2","1","3",true
+"UX Research","User research and usability testing","core","3","1","4",true
+"Visual Design","Graphic design and branding","core","3","1","4",true
+"Talent Acquisition","Recruitment and hiring","support","4","1","6",true
+"Employee Relations","Employee engagement and relations","support","4","1","6",true
+"Enterprise Sales","Large enterprise sales","core","5","1","7",true
+"SMB Sales","Small and medium business sales","core","5","1","7",true
+"Digital Marketing","Online marketing and campaigns","core","6","1","8",true
+"Brand Marketing","Brand awareness and positioning","core","6","1","8",true
+"Financial Planning","Budget planning and forecasting","core","7","1","9",true
+"Accounting","Financial reporting and compliance","support","7","1","9",true
+"AI Research","Artificial intelligence research","core","8","2","11",true
+"Data Science","Data analysis and machine learning","core","8","2","15",true
+"Software Engineering","Application development","core","9","2","13",true
+"Quality Assurance","Testing and quality control","support","9","2","13",true
+"Business Operations","Operational efficiency and processes","core","10","2","14",true
+"Facilities Management","Office and facility management","support","10","2","14",true
+"Growth Marketing","User acquisition and growth","core","11","3","17",true
+"Community Management","User community and support","support","11","3","17",true
+"Platform Development","Core platform development","core","13","3","18",true
+"Mobile Development","Mobile application development","core","13","3","18",true
+"Product Management","Product strategy and execution","core","14","3","19",true
+"Partnership Development","Strategic partnerships and alliances","core","15","3","20",true
+"Client Success","Client relationship management","support","15","3","20",true
+"Management Consulting","Strategic business consulting","core","16","4","22",true
+"Technology Consulting","IT strategy and implementation","core","16","4","27",true
+"Financial Advisory","Financial planning and advisory","core","18","4","24",true
+"Risk Management","Risk assessment and mitigation","support","18","4","24",true
+"Operations Consulting","Process optimization and efficiency","core","19","4","25",true
+"Change Management","Organizational change and transformation","core","19","4","25",true
+"Talent Consulting","HR strategy and talent management","core","20","4","26",true
+"Organizational Development","Culture and organizational design","core","20","4","26",true
+"Creative Services","Design and creative solutions","core","22","5","28",true
+"Brand Strategy","Brand positioning and strategy","core","22","5","28",true
+"Performance Marketing","Paid advertising and performance","core","23","5","30",true
+"Content Marketing","Content strategy and creation","core","23","5","30",true
+"Web Development","Website and web application development","core","24","5","31",true
+"Mobile Apps","Mobile application development","core","24","5","31",true
+"Content Creation","Copywriting and content production","core","25","5","32",true
+"Editorial","Content editing and quality assurance","support","25","5","32",true
+"Client Relations","Client communication and satisfaction","support","26","5","33",true
+"Project Management","Project coordination and delivery","core","26","5","33",true

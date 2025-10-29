@@ -1,0 +1,5 @@
+name,slug,description,contactEmail,contactPhone,address,city,state,zipCode,country,website,logoUrl,subscriptionPlan,maxUsers,maxCycles,storageLimitGb,timezone,language,dateFormat,currency,workingDays,workingHoursStart,workingHoursEnd
+Tech Innovations Inc,tech-innovations,Leading technology solutions provider,admin@techinnovations.com,+1-555-0100,456 Tech Street,San Francisco,CA,94105,USA,https://techinnovations.com,https://techinnovations.com/logo.png,enterprise,500,50,100,America/Los_Angeles,en,YYYY-MM-DD,USD,"[1,2,3,4,5]",09:00,18:00
+Marketing Masters,marketing-masters,Full-service marketing agency,contact@marketingmasters.com,+1-555-0200,789 Marketing Ave,New York,NY,10001,USA,https://marketingmasters.com,https://marketingmasters.com/logo.png,professional,100,20,20,America/New_York,en,MM/DD/YYYY,USD,"[1,2,3,4,5]",08:30,17:30
+Design Studio Co,design-studio,Creative design solutions,hello@designstudio.com,+1-555-0300,321 Creative Blvd,Austin,TX,78701,USA,https://designstudio.com,https://designstudio.com/logo.png,basic,50,10,5,America/Chicago,en,YYYY-MM-DD,USD,"[1,2,3,4,5]",10:00,19:00
+

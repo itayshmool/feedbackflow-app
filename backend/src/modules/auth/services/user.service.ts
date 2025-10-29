@@ -1,0 +1,38 @@
+// backend/src/modules/auth/services/user.service.ts
+
+export interface User {
+  id: string;
+  email: string;
+  name?: string;
+  picture?: string;
+  roles: string[];
+}
+
+export class UserService {
+  private users = new Map<string, User>();
+
+  async findByEmail(email: string): Promise<User | undefined> {
+    return this.users.get(email);
+  }
+
+  async upsertGoogleUser(profile: { email: string; name?: string; picture?: string }): Promise<User> {
+    const existing = await this.findByEmail(profile.email);
+    if (existing) {
+      const updated = { ...existing, ...profile };
+      this.users.set(profile.email, updated);
+      return updated;
+    }
+    const user: User = {
+      id: 'user_' + Math.random().toString(36).slice(2),
+      email: profile.email,
+      name: profile.name,
+      picture: profile.picture,
+      roles: ['employee'],
+    };
+    this.users.set(profile.email, user);
+    return user;
+  }
+}
+
+
+

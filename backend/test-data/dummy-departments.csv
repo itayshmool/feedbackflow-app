@@ -1,0 +1,27 @@
+name,description,type,organization_id,manager_id,is_active
+"Engineering","Software development and technical operations","engineering","1","2",true
+"Product","Product management and strategy","product","1","3",true
+"Design","User experience and visual design","design","1","4",true
+"HR","Human resources and people operations","hr","1","6",true
+"Sales","Sales and business development","sales","1","7",true
+"Marketing","Marketing and brand management","marketing","1","8",true
+"Finance","Financial planning and analysis","finance","1","9",true
+"Research","Scientific research and development","other","2","12",true
+"Development","Software development and engineering","engineering","2","13",true
+"Operations","Business operations and administration","operations","2","14",true
+"Operations","Startup operations and management","operations","3","16",true
+"Marketing","Marketing and growth","marketing","3","17",true
+"Engineering","Product development and engineering","engineering","3","18",true
+"Product","Product strategy and roadmap","product","3","19",true
+"Sales","Sales and partnerships","sales","3","20",true
+"Consulting","Business consulting services","other","4","22",true
+"Strategy","Strategic planning and advisory","other","4","23",true
+"Finance","Financial consulting and analysis","finance","4","24",true
+"Operations","Operations consulting and optimization","operations","4","25",true
+"HR","Human resources consulting","hr","4","26",true
+"Technology","Technology consulting and implementation","other","4","27",true
+"Design","Creative design and branding","design","5","28",true
+"Marketing","Digital marketing and advertising","marketing","5","30",true
+"Development","Web and application development","engineering","5","31",true
+"Content","Content creation and copywriting","other","5","32",true
+"Account","Client account management","other","5","33",true

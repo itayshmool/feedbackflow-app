@@ -1,0 +1,8 @@
+{
+  "name": "feedbackflow-app",
+  "private": true,
+  "workspaces": ["frontend", "backend"],
+  "scripts": {
+    "dev": "echo 'Run frontend and backend dev servers'"
+  }
+}

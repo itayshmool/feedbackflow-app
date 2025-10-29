@@ -1,0 +1,6 @@
+name,slug,description,contact_email,phone,address,city,state,zip_code,country,website,subscription_plan,max_users,max_cycles,storage_limit_gb
+"TechCorp Solutions","techcorp-solutions","Leading technology solutions provider","contact@techcorp.com","+1-555-0123","123 Tech Street","San Francisco","CA","94105","USA","https://techcorp.com","enterprise",500,50,1000
+"InnovateLab","innovate-lab","Innovation and research laboratory","info@innovatelab.com","+1-555-0456","456 Innovation Drive","Austin","TX","78701","USA","https://innovatelab.com","professional",200,25,500
+"StartupHub","startup-hub","Startup accelerator and incubator","hello@startuphub.com","+1-555-0789","789 Startup Avenue","Seattle","WA","98101","USA","https://startuphub.com","basic",50,10,100
+"Global Dynamics","global-dynamics","International business consulting","contact@globaldynamics.com","+44-20-7123-4567","100 Business Plaza","London","England","EC1A 4HD","UK","https://globaldynamics.com","enterprise",1000,100,2000
+"Creative Agency","creative-agency","Digital marketing and design agency","team@creativeagency.com","+1-555-0321","321 Creative Lane","New York","NY","10001","USA","https://creativeagency.com","professional",150,20,300

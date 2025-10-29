@@ -1,0 +1,120 @@
+// frontend/src/components/layout/Header.tsx
+
+import { useState } from 'react'
+import { Search, Menu, User, LogOut, Settings } from 'lucide-react'
+import { useAuthStore } from '@/stores/authStore'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
+import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
+// import { cn } from '@/lib/utils'
+
+export default function Header() {
+  const { user, logout } = useAuthStore()
+  const [showUserMenu, setShowUserMenu] = useState(false)
+
+  const handleLogout = () => {
+    logout()
+    setShowUserMenu(false)
+  }
+
+  return (
+    <header className="bg-white shadow-sm border-b border-gray-200">
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          {/* Left side - Search */}
+          <div className="flex-1 max-w-lg">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400" />
+              </div>
+              <Input
+                type="text"
+                placeholder="Search..."
+                className="pl-10 w-full"
+              />
+            </div>
+          </div>
+
+          {/* Right side - Actions */}
+          <div className="flex items-center space-x-4">
+            {/* Mobile menu button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="md:hidden"
+              leftIcon={<Menu className="h-5 w-5" />}
+            />
+
+            {/* Notifications */}
+            <NotificationBell />
+
+            {/* User menu */}
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center space-x-2"
+              >
+                {user?.picture ? (
+                  <img
+                    className="h-8 w-8 rounded-full"
+                    src={user.picture}
+                    alt={user.name}
+                  />
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
+                    <User className="h-4 w-4 text-gray-600" />
+                  </div>
+                )}
+                <span className="hidden md:block text-sm font-medium text-gray-700">
+                  {user?.name}
+                </span>
+              </Button>
+
+              {/* User dropdown */}
+              {showUserMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                  <div className="py-1">
+                    <div className="px-4 py-2 border-b border-gray-100">
+                      <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                      <p className="text-xs text-gray-500">{user?.email}</p>
+                    </div>
+                    
+                    <a
+                      href="/profile"
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      <User className="mr-3 h-4 w-4" />
+                      Profile
+                    </a>
+                    
+                    <a
+                      href="/settings"
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      <Settings className="mr-3 h-4 w-4" />
+                      Settings
+                    </a>
+                    
+                    <div className="border-t border-gray-100">
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        <LogOut className="mr-3 h-4 w-4" />
+                        Sign out
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  )
+}

@@ -1,0 +1,89 @@
+# AI Workflow & Communication Standards
+
+## 1. Honest Status Reporting
+- NEVER claim something is "complete" or "working" if it uses mock/placeholder data
+- Always distinguish between:
+  - ✅ What actually works end-to-end
+  - ⚠️ What works partially (UI only, mock data, etc.)
+  - ❌ What's not implemented yet
+- Example: "Status: UI works ✅, Backend returns mock data ⚠️, Real DB query NOT implemented ❌"
+
+## 2. Test Before Claiming Success
+- Before marking ANY task as complete:
+  1. Run actual test (API call, UI interaction, etc.)
+  2. Show test results/evidence
+  3. Verify it works with real data (not mocks)
+- If testing reveals issues, report them immediately
+
+## 3. Stop and Ask When Stuck
+- When hitting errors/blockers:
+  1. Stop immediately (don't hide with workarounds)
+  2. Show the error clearly
+  3. Present options: "Error X occurred. Should I: A) try to fix, B) skip feature, C) different approach?"
+- NEVER use mock data as a workaround without explicit approval
+
+## 4. Incremental Verification
+For each feature:
+1. **Plan** - Show what will be done
+2. **Implement** - Make changes
+3. **Test** - Actually test with evidence
+4. **User Verify** - Wait for user confirmation
+5. **Only Then** - Mark complete
+
+## 5. Evidence-Based Claims
+- Don't say "everything works" - show:
+  - API response
+  - Database query results
+  - UI screenshot/behavior
+  - Test output
+- Backend logs showing successful queries
+- Actual data returned (not mock)
+
+## 6. One Thing at a Time
+- Work on ONE small, testable piece
+- Test that piece thoroughly
+- Get user confirmation
+- Then move to next piece
+- Don't stack unverified changes
+
+## 7. Clear Issue Reporting
+When reporting problems:
+- **What failed**: Specific action/test
+- **Error**: Exact error message
+- **Impact**: What doesn't work
+- **Options**: 2-3 possible solutions
+- **Recommendation**: Which option you suggest and why
+
+## Examples
+
+### Good Status Report:
+```
+✅ Frontend Team Feedback page loads
+⚠️ Backend returns mock data (not real team members)
+❌ Database query fails: "could not determine data type of parameter $1"
+```
+
+### Bad Status Report:
+```
+✅ Team Feedback feature complete and working
+```
+
+### Good Error Report:
+```
+❌ Database query error: "could not determine data type of parameter $1"
+Impact: Team feedback shows empty list
+Options: 
+A) Fix parameter type casting in query
+B) Use simpler query without parameters
+C) Debug parameter values being passed
+Recommendation: Option A - fix the type casting
+```
+
+### Evidence-Based Claim:
+```
+✅ API Test Results:
+- Request: GET /api/v1/team/feedback
+- Response: 200 OK
+- Data: [{"id": "123", "giverName": "John Doe", ...}]
+- Database logs: "Executed query { duration: 15ms, rows: 3 }"
+```
