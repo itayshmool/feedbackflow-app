@@ -66,13 +66,18 @@ export class TemplateAttachmentService {
       }
     );
 
+    // Handle both return types from uploadFile
+    const uploadPath = 'path' in uploadResult ? uploadResult.path : uploadResult.filePath;
+    const uploadSize = 'size' in uploadResult ? uploadResult.size : uploadResult.fileSize;
+    const uploadUrl = 'url' in uploadResult ? uploadResult.url : uploadResult.filePath;
+
     // Create attachment record
     const attachmentData: CreateAttachmentDto = {
       feedbackResponseId,
       templateDocumentId,
       fileName: file.originalname,
-      filePath: uploadResult.path,
-      fileSize: uploadResult.size,
+      filePath: uploadPath,
+      fileSize: uploadSize,
       fileMimeType: file.mimetype,
       uploadedBy: userId,
     };
@@ -80,8 +85,8 @@ export class TemplateAttachmentService {
     const attachment = await TemplateAttachmentModel.create(attachmentData);
 
     // Start virus scanning if enabled
-    if (virusScanService.isEnabled()) {
-      this.startVirusScan(attachment.id, uploadResult.path).catch(error => {
+    if ((virusScanService as any).isEnabled && (virusScanService as any).isEnabled()) {
+      this.startVirusScan(attachment.id, uploadPath).catch(error => {
         console.error('Virus scan failed:', error);
       });
     }
@@ -93,7 +98,7 @@ export class TemplateAttachmentService {
 
     return {
       attachment,
-      fileUrl: uploadResult.url,
+      fileUrl: uploadUrl,
     };
   }
 
@@ -146,7 +151,7 @@ export class TemplateAttachmentService {
         [userId]
       );
 
-      const feedbackIds = feedbackResult.rows.map(row => row.id);
+      const feedbackIds = feedbackResult.rows.map((row: any) => row.id);
       if (feedbackIds.length === 0) {
         return {
           attachments: [],
@@ -280,7 +285,21 @@ export class TemplateAttachmentService {
       throw new Error('User not found');
     }
 
-    const userRoles = userResult.rows[0].roles || [];
+    const userRolesData = userResult.rows[0].roles;
+    let userRoles: string[] = [];
+    // PostgreSQL ARRAY_AGG can return null if no roles, or an array
+    if (userRolesData === null || userRolesData === undefined) {
+      userRoles = [];
+    } else if (Array.isArray(userRolesData)) {
+      userRoles = userRolesData.filter((r: any) => r !== null && r !== undefined && typeof r === 'string');
+    } else if (typeof userRolesData === 'string') {
+      try {
+        const parsed = JSON.parse(userRolesData);
+        userRoles = Array.isArray(parsed) ? parsed.filter((r: any) => r !== null && r !== undefined && typeof r === 'string') : [];
+      } catch {
+        userRoles = [];
+      }
+    }
 
     // Check template permissions
     const templateResult = await query(
@@ -292,8 +311,15 @@ export class TemplateAttachmentService {
       throw new Error('Template document not found');
     }
 
-    const templatePermissions = templateResult.rows[0].permissions || { roles: [] };
-    const hasRequiredRole = templatePermissions.roles.some((role: string) => userRoles.includes(role));
+    const permissionsData = templateResult.rows[0].permissions;
+    const templatePermissions = typeof permissionsData === 'string' 
+      ? JSON.parse(permissionsData) 
+      : (permissionsData || { roles: [] });
+    const templateRoles = Array.isArray(templatePermissions.roles) ? templatePermissions.roles : [];
+    // Ensure both are arrays and have at least one matching role
+    const hasRequiredRole = templateRoles.length > 0 && 
+                           userRoles.length > 0 && 
+                           templateRoles.some((role: string) => userRoles.includes(role));
 
     if (!hasRequiredRole) {
       throw new Error('Access denied: insufficient permissions for template');
@@ -305,7 +331,7 @@ export class TemplateAttachmentService {
    */
   private static async startVirusScan(attachmentId: string, filePath: string): Promise<void> {
     try {
-      const scanResult = await virusScanService.scanFile(filePath);
+      const scanResult = await (virusScanService as any).scanFile(filePath, {});
       
       // Update attachment with scan result
       await TemplateAttachmentModel.updateVirusScanStatus(attachmentId, scanResult.status);
@@ -387,3 +413,7 @@ export class TemplateAttachmentService {
     return await TemplateAttachmentModel.getStats({ feedbackResponseId });
   }
 }
+
+
+
+

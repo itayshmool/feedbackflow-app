@@ -8,11 +8,11 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, hasHydrated } = useAuthStore()
+  const { isAuthenticated, isLoading } = useAuthStore()
   const location = useLocation()
 
-  // Wait for hydration
-  if (!hasHydrated || isLoading) {
+  // Wait for auth check to complete
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
@@ -20,6 +20,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     )
   }
 
+  // Simple auth check
   if (!isAuthenticated) {
     // Redirect to login page with return url
     return <Navigate to="/login" state={{ from: location }} replace />

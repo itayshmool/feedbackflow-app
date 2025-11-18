@@ -1,0 +1,127 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - generic [ref=e6]:
+    - generic [ref=e8]:
+      - generic [ref=e11]: FF
+      - heading "FeedbackFlow" [level=1] [ref=e13]
+    - navigation [ref=e15]:
+      - link "Dashboard" [ref=e16] [cursor=pointer]:
+        - /url: /dashboard
+        - img [ref=e17] [cursor=pointer]
+        - text: Dashboard
+      - link "Cycles" [ref=e22] [cursor=pointer]:
+        - /url: /cycles
+        - img [ref=e23] [cursor=pointer]
+        - text: Cycles
+      - link "Feedback" [ref=e26] [cursor=pointer]:
+        - /url: /feedback
+        - img [ref=e27] [cursor=pointer]
+        - text: Feedback
+      - link "Notifications" [ref=e29] [cursor=pointer]:
+        - /url: /notifications
+        - img [ref=e30] [cursor=pointer]
+        - text: Notifications
+      - link "Integrations" [ref=e33] [cursor=pointer]:
+        - /url: /integrations
+        - img [ref=e34] [cursor=pointer]
+        - text: Integrations
+      - heading "Management" [level=3] [ref=e38]
+      - link "Team Feedback" [ref=e39] [cursor=pointer]:
+        - /url: /team-feedback
+        - img [ref=e40] [cursor=pointer]
+        - text: Team Feedback
+    - generic [ref=e45]:
+      - generic [ref=e48]: I
+      - generic [ref=e49]:
+        - paragraph [ref=e50]: Idan Cohen
+        - paragraph [ref=e51]: idanc@wix.com
+  - generic [ref=e52]:
+    - banner [ref=e53]:
+      - generic [ref=e55]:
+        - generic [ref=e57]:
+          - generic:
+            - img
+          - textbox "Search..." [ref=e60]
+        - generic [ref=e61]:
+          - button "Notifications" [ref=e63] [cursor=pointer]:
+            - img [ref=e64] [cursor=pointer]
+            - generic [ref=e69] [cursor=pointer]: "2"
+          - button "Idan Cohen" [ref=e71] [cursor=pointer]:
+            - img [ref=e73] [cursor=pointer]
+            - generic [ref=e76] [cursor=pointer]: Idan Cohen
+    - main [ref=e77]:
+      - generic [ref=e78]:
+        - generic [ref=e82]:
+          - heading "Manager Dashboard" [level=1] [ref=e83]
+          - paragraph [ref=e84]: Manage your team and track performance
+        - navigation [ref=e87]:
+          - button "Overview" [ref=e88] [cursor=pointer]:
+            - img [ref=e89] [cursor=pointer]
+            - text: Overview
+          - button "Team" [ref=e91] [cursor=pointer]:
+            - img [ref=e92] [cursor=pointer]
+            - text: Team
+          - button "Analytics" [ref=e97] [cursor=pointer]:
+            - img [ref=e98] [cursor=pointer]
+            - text: Analytics
+        - generic [ref=e101]:
+          - generic [ref=e103]:
+            - generic [ref=e104]:
+              - heading "Welcome back, Idan Cohen!" [level=1] [ref=e105]
+              - paragraph [ref=e106]: Manage your team and track performance
+            - button "Add Team Member" [ref=e107] [cursor=pointer]:
+              - img [ref=e108] [cursor=pointer]
+              - text: Add Team Member
+          - generic [ref=e111]:
+            - generic [ref=e114]:
+              - img [ref=e116]
+              - generic [ref=e121]:
+                - paragraph [ref=e122]: Direct Reports
+                - paragraph [ref=e123]: "6"
+            - generic [ref=e126]:
+              - img [ref=e128]
+              - generic [ref=e130]:
+                - paragraph [ref=e131]: Feedback Given
+                - paragraph [ref=e132]: "0"
+            - generic [ref=e135]:
+              - img [ref=e137]
+              - generic [ref=e140]:
+                - paragraph [ref=e141]: Feedback Received
+                - paragraph [ref=e142]: "0"
+            - generic [ref=e145]:
+              - img [ref=e147]
+              - generic [ref=e150]:
+                - paragraph [ref=e151]: Average Rating
+                - paragraph [ref=e152]: N/A
+          - generic [ref=e153]:
+            - generic [ref=e154]:
+              - heading "Recent Feedback" [level=3] [ref=e156]:
+                - img [ref=e157]
+                - text: Recent Feedback
+              - generic [ref=e160]:
+                - generic [ref=e163]:
+                  - paragraph [ref=e164]: Sarah completed Q4 review
+                  - paragraph [ref=e165]: 2 hours ago
+                - generic [ref=e168]:
+                  - paragraph [ref=e169]: Mike's feedback pending
+                  - paragraph [ref=e170]: 1 day ago
+                - generic [ref=e173]:
+                  - paragraph [ref=e174]: New cycle started
+                  - paragraph [ref=e175]: 3 days ago
+            - generic [ref=e176]:
+              - heading "Team Goals" [level=3] [ref=e178]:
+                - img [ref=e179]
+                - text: Team Goals
+              - generic [ref=e184]:
+                - generic [ref=e185]:
+                  - generic [ref=e186]: Q4 Performance Review
+                  - generic [ref=e187]: 85%
+                - generic [ref=e190]:
+                  - generic [ref=e191]: Team Development
+                  - generic [ref=e192]: 60%
+                - generic [ref=e195]:
+                  - generic [ref=e196]: Feedback Completion
+                  - generic [ref=e197]: 92%
+```

@@ -7,3 +7,5 @@ DROP CONSTRAINT IF EXISTS feedback_requests_status_check;
 ALTER TABLE feedback_requests 
 ADD CONSTRAINT feedback_requests_status_check 
 CHECK (status IN ('pending', 'in_progress', 'completed', 'declined', 'expired', 'acknowledged'));
+
+

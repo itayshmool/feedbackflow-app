@@ -1,11 +1,13 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import { testConnection, healthCheck } from './config/database';
 import { DatabaseOrganizationService } from './services/DatabaseOrganizationService';
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: 'http://localhost:3006', credentials: true }));
 app.use(express.json());
+app.use(cookieParser());
 
 const PORT = process.env.PORT || 5000;
 
@@ -50,6 +52,14 @@ app.post('/api/v1/auth/login/mock', (req, res) => {
     
     const mockToken = 'mock-jwt-token-' + Date.now();
     
+    // Set token as httpOnly cookie (consistent with auth middleware expecting cookies)
+    res.cookie('authToken', mockToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 3600000 // 1 hour
+    });
+    
     res.json({
       user: mockUser,
       token: mockToken,
@@ -64,9 +74,10 @@ app.post('/api/v1/auth/login/mock', (req, res) => {
 });
 
 app.get('/api/v1/auth/me', (req, res) => {
-  const authHeader = req.headers.authorization;
+  // Check for token in cookie (consistent with frontend using withCredentials: true)
+  const token = req.cookies?.authToken;
   
-  if (authHeader && authHeader.startsWith('Bearer ')) {
+  if (token) {
     const mockUser = {
       id: '1',
       email: 'test@example.com',
@@ -79,12 +90,22 @@ app.get('/api/v1/auth/me', (req, res) => {
       lastLoginAt: new Date().toISOString()
     };
     
-    res.json(mockUser);
+    res.json({ data: mockUser });
   } else {
     res.status(401).json({
-      message: 'Unauthorized'
+      success: false,
+      message: 'Unauthorized - No token in cookie'
     });
   }
+});
+
+app.post('/api/v1/auth/logout', (req, res) => {
+  // Clear the auth cookie
+  res.clearCookie('authToken');
+  res.json({
+    success: true,
+    message: 'Logged out successfully'
+  });
 });
 
 app.post('/api/v1/auth/refresh', (req, res) => {
@@ -135,19 +156,23 @@ app.get('/api/v1/admin/organizations/stats', async (req, res) => {
   try {
     const stats = await organizationService.getOrganizationStats();
     
-    // Transform to match frontend expectations
+    // Return in API format: { data: { snake_case fields } }
     res.json({
-      totalOrganizations: stats.total_organizations,
-      activeOrganizations: stats.active_organizations,
-      byPlan: stats.by_plan,
-      averageUsersPerOrganization: stats.average_users_per_organization,
-      totalDepartments: stats.total_departments,
-      totalTeams: stats.total_teams,
-      totalUsers: stats.total_users
+      success: true,
+      data: {
+        total_organizations: stats.total_organizations,
+        active_organizations: stats.active_organizations,
+        by_plan: stats.by_plan,
+        average_users_per_organization: stats.average_users_per_organization,
+        total_departments: stats.total_departments,
+        total_teams: stats.total_teams,
+        total_users: stats.total_users
+      }
     });
   } catch (error) {
     console.error('Error fetching organization stats:', error);
     res.status(500).json({
+      success: false,
       message: 'Failed to fetch organization statistics',
       error: error instanceof Error ? error.message : 'Unknown error'
     });

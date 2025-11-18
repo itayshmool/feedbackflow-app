@@ -1,6 +1,6 @@
 // frontend/src/services/profile.service.ts
 
-import api from './api';
+import { api } from '../lib/api';
 import {
   UserProfile,
   UpdateProfileRequest,

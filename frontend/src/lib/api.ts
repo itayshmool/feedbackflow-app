@@ -10,38 +10,15 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Send cookies with all requests
 })
 
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    // Add auth token if available
-    try {
-      const token = localStorage.getItem('auth-storage')
-      console.log('[API] localStorage auth-storage:', token ? 'exists' : 'missing')
-      if (token) {
-        const authData = JSON.parse(token)
-        console.log('[API] authData:', authData)
-        // Check both possible token locations (Zustand persist structure)
-        const authToken = authData.state?.token || authData.token
-        console.log('[API] authToken:', authToken ? 'exists' : 'missing')
-        if (authToken) {
-          config.headers.Authorization = `Bearer ${authToken}`
-          console.log('[API] Set Authorization header:', config.headers.Authorization)
-        }
-      }
-    } catch (error) {
-      console.error('Error parsing auth token:', error)
-      // Don't fail the request if token parsing fails
-    }
-    
-    // Also check if token is already set in defaults (from auth store)
-    if (api.defaults.headers.common['Authorization']) {
-      config.headers.Authorization = api.defaults.headers.common['Authorization']
-      console.log('[API] Using default Authorization header:', config.headers.Authorization)
-    }
-    
-    console.log('[API] Final request config:', config.url, 'Headers:', config.headers.Authorization ? 'Has Auth' : 'No Auth')
+    // Cookies are sent automatically with withCredentials: true
+    // No manual token management needed
+    console.log('[API] Request to', config.url, '- Cookie will be sent automatically')
     return config
   },
   (error) => {
@@ -62,10 +39,12 @@ api.interceptors.response.use(
       
       switch (status) {
         case 401:
-          // Unauthorized - clear auth and redirect to login
-          localStorage.removeItem('auth-storage')
-          window.location.href = '/login'
-          toast.error('Session expired. Please login again.')
+          // Unauthorized - cookie expired or invalid
+          // Only redirect if not already on login page to prevent loops
+          if (!window.location.pathname.includes('/login')) {
+            window.location.href = '/login'
+            toast.error('Session expired. Please login again.')
+          }
           break
           
         case 403:

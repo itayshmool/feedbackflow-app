@@ -1,5 +1,4 @@
-import api from './api';
-import axios from 'axios';
+import { api } from '../lib/api';
 
 export interface Template {
   id: string;
@@ -57,3 +56,7 @@ export const templatesService = {
     return response.data;
   },
 };
+
+
+
+

@@ -3,66 +3,56 @@
 import { Page } from '@playwright/test';
 
 /**
- * Set up authentication state directly in localStorage and navigate to dashboard
+ * Set up authentication by making a real login API call to get JWT cookie
  */
 export async function setupAuthAs(page: Page, email: string) {
-  // First navigate to the app to establish the domain
-  await page.goto('http://localhost:3008');
+  // Navigate to the app first to establish the domain
+  await page.goto('http://localhost:3006');
   
-  // User data from database query
-  const userData = {
-    'efratr@wix.com': {
-      id: '1764d577-3bc6-417b-9d47-e1b6115f09e8',
-      name: 'Efrat Regev',
-      position: 'UX',
-      roles: ['employee', 'manager']
+  // Make a real login API call to get JWT cookie
+  const response = await page.request.post('http://localhost:5000/api/v1/auth/login/mock', {
+    data: { 
+      email,
+      password: 'test123' // Mock password - backend doesn't validate it
     },
-    'idanc@wix.com': {
-      id: '10420848-9173-49e3-8bbd-47ec740bff43',
-      name: 'Idan Cohen',
-      position: 'Server',
-      roles: ['manager']
+    headers: {
+      'Content-Type': 'application/json'
     }
-  };
+  });
   
-  const user = userData[email as keyof typeof userData];
-  if (!user) {
-    throw new Error(`Unknown user email: ${email}`);
+  if (!response.ok()) {
+    throw new Error(`Login failed for ${email}: ${response.status()} ${await response.text()}`);
   }
   
-  // Mock auth data structure matching Zustand persist format
-  const mockAuthData = {
-    state: {
-      user: {
-        id: user.id,
-        email: email,
-        name: user.name,
-        avatarUrl: null,
-        isActive: true,
-        emailVerified: false,
-        lastLoginAt: null,
-        createdAt: '2025-10-19T09:08:14.554Z',
-        updatedAt: '2025-10-19T09:08:14.554Z',
-        organizationId: '44c23f45-8e55-473e-91c7-3994dcf68f1d',
-        organizationName: 'wix.com',
-        department: null,
-        position: user.position,
-        roles: user.roles
-      },
-      token: `mock-jwt-token-${email}-${Date.now()}`,
-      isAuthenticated: true,
-      isLoading: false
-    },
-    version: 0
-  };
+  const responseData = await response.json();
+  console.log(`Login response for ${email}:`, responseData.success ? 'Success' : 'Failed');
   
-  // Set auth data in localStorage
-  await page.evaluate((authData) => {
-    localStorage.setItem('auth-storage', JSON.stringify(authData));
-  }, mockAuthData);
+  // Extract the cookie from the response
+  const cookies = await response.headersArray();
+  const setCookieHeader = cookies.find(h => h.name.toLowerCase() === 'set-cookie');
+  
+  if (setCookieHeader) {
+    // Parse and set the cookie in the browser context
+    const cookieValue = setCookieHeader.value;
+    const tokenMatch = cookieValue.match(/authToken=([^;]+)/);
+    
+    if (tokenMatch) {
+      await page.context().addCookies([{
+        name: 'authToken',
+        value: tokenMatch[1],
+        domain: 'localhost',
+        path: '/',
+        httpOnly: true,
+        secure: false,
+        sameSite: 'Lax'
+      }]);
+      
+      console.log(`Successfully set JWT cookie for ${email}`);
+    }
+  }
   
   // Navigate to dashboard
-  await page.goto('/dashboard');
+  await page.goto('http://localhost:3006/dashboard');
   
   // Wait for sidebar to confirm page loaded
   await page.waitForSelector('a[href="/feedback"]', { timeout: 10000 });
@@ -83,16 +73,24 @@ export async function loginAsUser(page: Page, email: string, password: string = 
  * Logout current user
  */
 export async function logout(page: Page) {
-  // Simply clear localStorage and navigate away
+  // Call the logout endpoint to clear the JWT cookie
   try {
-    await page.goto('http://localhost:3008'); // Use the correct base URL
+    await page.request.post('http://localhost:5000/api/v1/auth/logout');
+  } catch (error) {
+    console.log('Logout API call failed, clearing cookies manually');
+  }
+  
+  // Clear cookies and storage
+  await page.context().clearCookies();
+  
+  try {
+    await page.goto('http://localhost:3006');
     await page.evaluate(() => {
       localStorage.clear();
       sessionStorage.clear();
     });
   } catch (error) {
-    // If navigation fails, just clear cookies
-    console.log('Could not clear storage, only cleared cookies');
+    console.log('Could not clear storage');
   }
 }
 
@@ -100,17 +98,17 @@ export async function logout(page: Page) {
  * Clear authentication state
  */
 export async function clearAuth(page: Page) {
+  // Clear cookies (including JWT token)
   await page.context().clearCookies();
   
   // Navigate to a valid page first before clearing storage
   try {
-    await page.goto('http://localhost:3007');
+    await page.goto('http://localhost:3006');
     await page.evaluate(() => {
       localStorage.clear();
       sessionStorage.clear();
     });
   } catch (error) {
-    // If navigation fails, just clear cookies
     console.log('Could not clear storage, only cleared cookies');
   }
 }

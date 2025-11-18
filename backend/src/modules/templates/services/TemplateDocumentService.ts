@@ -55,12 +55,17 @@ export class TemplateDocumentService {
       }
     );
 
+    // Handle both return types from uploadFile
+    const uploadPath = 'path' in uploadResult ? uploadResult.path : uploadResult.filePath;
+    const uploadSize = 'size' in uploadResult ? uploadResult.size : uploadResult.fileSize;
+    const uploadUrl = 'url' in uploadResult ? uploadResult.url : uploadResult.filePath;
+
     // Create template document record
     const templateData: CreateTemplateDocumentDto = {
       ...metadata,
       fileName: file.originalname,
-      filePath: uploadResult.path,
-      fileSize: uploadResult.size,
+      filePath: uploadPath,
+      fileSize: uploadSize,
       fileMimeType: file.mimetype,
       fileFormat: FileValidator.getFileExtension(file.originalname) as '.docx' | '.pdf' | '.doc',
       createdBy: userId,
@@ -69,15 +74,15 @@ export class TemplateDocumentService {
     const template = await TemplateDocumentModel.create(templateData);
 
     // Start virus scanning if enabled
-    if (virusScanService.isEnabled()) {
-      this.startVirusScan(template.id, uploadResult.path).catch(error => {
+    if ((virusScanService as any).isEnabled && (virusScanService as any).isEnabled()) {
+      this.startVirusScan(template.id, uploadPath).catch(error => {
         console.error('Virus scan failed:', error);
       });
     }
 
     return {
       template,
-      fileUrl: uploadResult.url,
+      fileUrl: uploadUrl,
     };
   }
 
@@ -109,8 +114,14 @@ export class TemplateDocumentService {
     limit: number;
     totalPages: number;
   }> {
-    // Filter templates based on user permissions
-    const filteredTemplates = await TemplateDocumentModel.findAll(filters);
+    // Get templates with pagination
+    const filteredTemplates = await TemplateDocumentModel.findAllWithPagination({
+      ...filters,
+      page: filters.page || 1,
+      limit: filters.limit || 20,
+      sortBy: filters.sortBy || 'created_at',
+      sortOrder: filters.sortOrder || 'desc',
+    });
     
     // Filter out templates user doesn't have permission to see
     const accessibleTemplates = [];
@@ -129,6 +140,7 @@ export class TemplateDocumentService {
     return {
       ...filteredTemplates,
       templates: accessibleTemplates,
+      total: accessibleTemplates.length, // Update total to reflect filtered count
     };
   }
 
@@ -149,13 +161,17 @@ export class TemplateDocumentService {
 
     // Check if user is admin or creator
     const isAdmin = userRoles.includes('admin') || userRoles.includes('super_admin');
-    const isCreator = existingTemplate.createdBy === userId;
+    const isCreator = existingTemplate.created_by === userId;
     
     if (!isAdmin && !isCreator) {
       throw new Error('Access denied: only admins or template creators can update templates');
     }
 
-    return await TemplateDocumentModel.update(id, data);
+    const updated = await TemplateDocumentModel.update(id, data);
+    if (!updated) {
+      throw new Error('Failed to update template');
+    }
+    return updated;
   }
 
   /**
@@ -170,7 +186,7 @@ export class TemplateDocumentService {
 
     // Check if user is admin or creator
     const isAdmin = userRoles.includes('admin') || userRoles.includes('super_admin');
-    const isCreator = existingTemplate.createdBy === userId;
+    const isCreator = existingTemplate.created_by === userId;
     
     if (!isAdmin && !isCreator) {
       throw new Error('Access denied: only admins or template creators can delete templates');
@@ -184,7 +200,7 @@ export class TemplateDocumentService {
 
     // Delete file from storage
     try {
-      await fileStorageService.deleteFile(existingTemplate.filePath);
+      await fileStorageService.deleteFile(existingTemplate.file_path);
     } catch (error) {
       console.error('Failed to delete file from storage:', error);
       // Continue with database deletion even if file deletion fails
@@ -210,39 +226,42 @@ export class TemplateDocumentService {
     }
 
     // Download original file
-    const fileBuffer = await fileStorageService.downloadFile(originalTemplate.filePath);
+    const fileBuffer = await fileStorageService.downloadFile(originalTemplate.file_path);
 
     // Generate new file path
-    const newFileName = FileValidator.generateUniqueFileName(originalTemplate.fileName);
-    const newFilePath = `templates/${originalTemplate.organizationId}/${newFileName}`;
+    const newFileName = FileValidator.generateUniqueFileName(originalTemplate.file_name);
+    const newFilePath = `templates/${originalTemplate.organization_id}/${newFileName}`;
 
     // Upload duplicated file
     const uploadResult = await fileStorageService.uploadFile(
       fileBuffer,
       newFilePath,
-      originalTemplate.fileMimeType,
+      originalTemplate.file_mime_type,
       {
         'template-name': newName,
-        'template-type': originalTemplate.templateType,
+        'template-type': originalTemplate.template_type,
         'uploaded-by': userId,
         'duplicated-from': originalTemplate.id,
       }
     );
 
     // Create new template document
+    const uploadPath = 'path' in uploadResult ? uploadResult.path : uploadResult.filePath;
+    const uploadSize = 'size' in uploadResult ? uploadResult.size : uploadResult.fileSize;
+    
     const duplicatedTemplateData: CreateTemplateDocumentDto = {
-      organizationId: originalTemplate.organizationId,
+      organizationId: originalTemplate.organization_id,
       name: newName,
       description: `Copy of ${originalTemplate.name}`,
-      templateType: originalTemplate.templateType,
-      fileName: originalTemplate.fileName,
-      filePath: uploadResult.path,
-      fileSize: uploadResult.size,
-      fileMimeType: originalTemplate.fileMimeType,
-      fileFormat: originalTemplate.fileFormat,
+      templateType: originalTemplate.template_type,
+      fileName: originalTemplate.file_name,
+      filePath: uploadPath,
+      fileSize: uploadSize,
+      fileMimeType: originalTemplate.file_mime_type,
+      fileFormat: originalTemplate.file_format,
       tags: [...originalTemplate.tags],
       permissions: { ...originalTemplate.permissions },
-      availabilityRules: { ...originalTemplate.availabilityRules },
+      availabilityRules: { ...originalTemplate.availability_rules },
       createdBy: userId,
       isDefault: false, // Duplicated templates are never default
     };
@@ -272,7 +291,7 @@ export class TemplateDocumentService {
 
     // Check if user is admin or creator
     const isAdmin = userRoles.includes('admin') || userRoles.includes('super_admin');
-    const isCreator = existingTemplate.createdBy === userId;
+    const isCreator = existingTemplate.created_by === userId;
     
     if (!isAdmin && !isCreator) {
       throw new Error('Access denied: only admins or template creators can replace template files');
@@ -296,7 +315,7 @@ export class TemplateDocumentService {
 
     // Generate new file path
     const newFileName = FileValidator.generateUniqueFileName(file.originalname);
-    const newFilePath = `templates/${existingTemplate.organizationId}/${newFileName}`;
+    const newFilePath = `templates/${existingTemplate.organization_id}/${newFileName}`;
 
     // Upload new file
     const uploadResult = await fileStorageService.uploadFile(
@@ -305,33 +324,42 @@ export class TemplateDocumentService {
       file.mimetype,
       {
         'template-name': existingTemplate.name,
-        'template-type': existingTemplate.templateType,
+        'template-type': existingTemplate.template_type,
         'uploaded-by': userId,
         'replaced-template': existingTemplate.id,
       }
     );
 
+    // Handle both return types from uploadFile
+    const uploadPath = 'path' in uploadResult ? uploadResult.path : uploadResult.filePath;
+    const uploadSize = 'size' in uploadResult ? uploadResult.size : uploadResult.fileSize;
+
     // Update template with new file info
     const updatedTemplate = await TemplateDocumentModel.update(id, {
-      fileName: file.originalname,
-      filePath: uploadResult.path,
-      fileSize: uploadResult.size,
-      fileMimeType: file.mimetype,
-      fileFormat: FileValidator.getFileExtension(file.originalname) as '.docx' | '.pdf' | '.doc',
+      file_name: file.originalname,
+      file_path: uploadPath,
+      file_size: uploadSize,
+      file_mime_type: file.mimetype,
+      file_format: FileValidator.getFileExtension(file.originalname) as '.docx' | '.pdf' | '.doc',
     });
 
     // Delete old file
     try {
-      await fileStorageService.deleteFile(existingTemplate.filePath);
+      await fileStorageService.deleteFile(existingTemplate.file_path);
     } catch (error) {
       console.error('Failed to delete old file:', error);
     }
 
     // Start virus scanning for new file
-    if (virusScanService.isEnabled()) {
-      this.startVirusScan(id, uploadResult.path).catch(error => {
+    if ((virusScanService as any).isEnabled && (virusScanService as any).isEnabled()) {
+      const uploadPath = 'path' in uploadResult ? uploadResult.path : uploadResult.filePath;
+      this.startVirusScan(id, uploadPath).catch(error => {
         console.error('Virus scan failed:', error);
       });
+    }
+
+    if (!updatedTemplate) {
+      throw new Error('Failed to update template');
     }
 
     return updatedTemplate;
@@ -358,12 +386,12 @@ export class TemplateDocumentService {
     await this.trackTemplateAction(id, userId, 'download');
 
     // Download file
-    const fileBuffer = await fileStorageService.downloadFile(template.filePath);
+    const fileBuffer = await fileStorageService.downloadFile(template.file_path);
 
     return {
       fileBuffer,
-      fileName: template.fileName,
-      mimeType: template.fileMimeType,
+      fileName: template.file_name,
+      mimeType: template.file_mime_type,
     };
   }
 
@@ -392,7 +420,7 @@ export class TemplateDocumentService {
 
     // Check if user is admin or creator
     const isAdmin = userRoles.includes('admin') || userRoles.includes('super_admin');
-    const isCreator = existingTemplate.createdBy === userId;
+    const isCreator = existingTemplate.created_by === userId;
     
     if (!isAdmin && !isCreator) {
       throw new Error('Access denied: only admins or template creators can archive templates');
@@ -441,7 +469,7 @@ export class TemplateDocumentService {
    */
   private static async startVirusScan(templateId: string, filePath: string): Promise<void> {
     try {
-      const scanResult = await virusScanService.scanFile(filePath);
+      const scanResult = await (virusScanService as any).scanFile(filePath, {});
       
       // Update template with scan result
       await query(

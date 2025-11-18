@@ -1,0 +1,59 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - generic [ref=e5]:
+    - generic [ref=e7]: FF
+    - heading "Sign in to FeedbackFlow" [level=2] [ref=e8]
+    - paragraph [ref=e9]: Enter your credentials to access your account
+  - generic [ref=e10]:
+    - heading "Login" [level=3] [ref=e12]
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - generic [ref=e16]: Email address
+          - generic [ref=e17]:
+            - generic:
+              - generic:
+                - img
+            - textbox "Email address" [ref=e18]
+        - generic [ref=e19]:
+          - generic [ref=e20]: Password
+          - generic [ref=e21]:
+            - generic:
+              - generic:
+                - img
+            - textbox "Password" [ref=e22]
+            - generic:
+              - generic:
+                - button:
+                  - img
+        - generic [ref=e23]:
+          - generic [ref=e24]:
+            - checkbox "Remember me" [ref=e25]
+            - generic [ref=e26]: Remember me
+          - link "Forgot your password?" [ref=e28] [cursor=pointer]:
+            - /url: "#"
+        - button "Sign in" [ref=e29] [cursor=pointer]
+      - generic [ref=e30]:
+        - generic [ref=e35]: Or continue with
+        - generic [ref=e38]:
+          - button "כניסה באמצעות Google. פתיחה בכרטיסייה חדשה" [ref=e40] [cursor=pointer]:
+            - generic [ref=e42] [cursor=pointer]:
+              - img [ref=e44] [cursor=pointer]
+              - generic [ref=e51] [cursor=pointer]: כניסה באמצעות Google
+          - iframe
+      - generic [ref=e52]:
+        - generic [ref=e57]: Demo credentials
+        - generic [ref=e58]:
+          - generic [ref=e59]:
+            - strong [ref=e60]: "Admin:"
+            - text: itays@wix.com
+          - generic [ref=e61]:
+            - strong [ref=e62]: "Manager:"
+            - text: efratr@wix.com
+          - generic [ref=e63]:
+            - strong [ref=e64]: "Employee:"
+            - text: tovahc@wix.com
+          - generic [ref=e65]: Use any password to login (mock authentication)
+```

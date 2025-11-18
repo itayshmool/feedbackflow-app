@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
+import cookieParser from 'cookie-parser'
 import { Pool } from 'pg'
 import { EventEmitter } from 'events'
 import { GoogleOAuthService } from './modules/auth/services/google-oauth.service.js'
@@ -29,11 +30,49 @@ import { createIntegrationsRoutes } from './modules/integrations/routes/integrat
 import { AdminOrganizationService } from './modules/admin/services/admin-organization.service.js'
 import { AdminOrganizationController } from './modules/admin/controllers/admin-organization.controller.js'
 import { createAdminOrganizationRoutes } from './modules/admin/routes/admin-organization.routes.js'
+import { FeedbackService } from './modules/feedback/services/feedback.service.js'
+import { RatingService } from './modules/feedback/services/rating.service.js'
+import { GoalService } from './modules/feedback/services/goal.service.js'
+import { CommentService } from './modules/feedback/services/comment.service.js'
+import { FeedbackController } from './modules/feedback/controllers/feedback.controller.js'
+import { CommentController } from './modules/feedback/controllers/comment.controller.js'
+import { createFeedbackModuleRoutes } from './modules/feedback/routes/feedback.routes.js'
+import { templateRoutes } from './modules/templates/routes/template.routes.js'
+import { HierarchyService } from './modules/hierarchy/services/hierarchy.service.js'
+import { HierarchyController } from './modules/hierarchy/controllers/hierarchy.controller.js'
+import { createHierarchyRoutes } from './modules/hierarchy/routes/hierarchy.routes.js'
+import profileRoutes from './modules/auth/routes/profile.routes.js'
+import settingsRoutes from './modules/auth/routes/settings.routes.js'
 import { Logger } from './shared/utils/logger.js'
 
 const app = express()
 app.use(helmet())
-app.use(cors())
+app.use(cors({
+  origin: function(origin, callback) {
+    const allowedOrigins = [
+      // Local development
+      'http://localhost:3006',
+      'http://localhost:3000',
+      'http://localhost:5173',
+      // Production (add your domains here)
+      process.env.FRONTEND_URL,
+      // Example: 'https://app.yourcompany.com',
+      // Example: 'https://staging.yourcompany.com',
+    ].filter(Boolean) as string[]
+
+    // Allow requests with no origin (mobile apps, curl, etc)
+    if (!origin) return callback(null, true)
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      console.warn(`🚫 CORS blocked request from origin: ${origin}`)
+      callback(new Error('Not allowed by CORS'))
+    }
+  },
+  credentials: true
+}))
+app.use(cookieParser())
 app.use(express.json())
 
 // Initialize database connection (placeholder)
@@ -90,6 +129,25 @@ app.use('/api/v1/integrations', createIntegrationsRoutes(integrationsController)
 const adminOrganizationService = new AdminOrganizationService(db, eventEmitter, logger)
 const adminOrganizationController = new AdminOrganizationController(adminOrganizationService)
 app.use('/api/v1/admin', createAdminOrganizationRoutes(adminOrganizationController))
+
+// Feedback
+const feedbackService = new FeedbackService(db, eventEmitter, logger)
+const commentService = new CommentService(db)
+const feedbackController = new FeedbackController(feedbackService)
+const commentController = new CommentController(commentService)
+app.use('/api/v1', createFeedbackModuleRoutes(feedbackController, commentController))
+
+// Templates
+app.use('/api/v1/templates', templateRoutes)
+
+// Hierarchy
+const hierarchyService = new HierarchyService(db, eventEmitter, logger)
+const hierarchyController = new HierarchyController(hierarchyService)
+app.use('/api/v1/hierarchy', createHierarchyRoutes(hierarchyController))
+
+// Profile & Settings
+app.use('/api/v1/profile', profileRoutes)
+app.use('/api/v1/settings', settingsRoutes)
 
 // Event Integration - Connect notifications to cycle and feedback events
 eventEmitter.on('cycle:created', (data) => notificationService.handleCycleEvent('cycle:created', data))

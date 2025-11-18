@@ -51,3 +51,7 @@ test.describe('Debug Sidebar', () => {
     console.log('Screenshot saved as debug-sidebar.png');
   });
 });
+
+
+
+

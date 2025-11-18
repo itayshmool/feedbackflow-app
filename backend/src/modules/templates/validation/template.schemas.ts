@@ -227,3 +227,7 @@ export const templateQualityFiltersSchema = z.object({
   page: z.number().int().min(1).max(1000).optional(),
   limit: z.number().int().min(1).max(100).optional(),
 });
+
+
+
+

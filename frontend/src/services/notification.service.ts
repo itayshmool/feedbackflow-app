@@ -1,9 +1,8 @@
 // frontend/src/services/notification.service.ts
 
-import axios from 'axios';
+import { api } from '../lib/api';
+import type { AxiosRequestConfig } from 'axios';
 import {
-  Notification,
-  NotificationStats,
   NotificationFilters,
   CreateNotificationRequest,
   NotificationListResponse,
@@ -11,20 +10,13 @@ import {
   NotificationResponse
 } from '../types/notification.types';
 
-const API_BASE_URL = 'http://localhost:5000/api/v1';
-
 class NotificationService {
-  private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  private async makeRequest<T>(endpoint: string, options: AxiosRequestConfig = {}): Promise<T> {
     try {
-      const response = await axios({
-        url: `${API_BASE_URL}${endpoint}`,
+      const response = await api({
+        url: endpoint,
         method: options.method || 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
-        data: options.body,
-        params: options.params,
+        ...options,
       });
       return response.data;
     } catch (error: any) {
@@ -71,7 +63,7 @@ class NotificationService {
   async markAllAsRead(): Promise<{ success: boolean; data: { count: number } }> {
     return this.makeRequest<{ success: boolean; data: { count: number } }>('/notifications/read-all', {
       method: 'PUT',
-      body: JSON.stringify({ userEmail: 'admin@example.com' }),
+      data: { userEmail: 'admin@example.com' },
     });
   }
 
@@ -84,10 +76,10 @@ class NotificationService {
   async createNotification(notification: CreateNotificationRequest): Promise<NotificationResponse> {
     return this.makeRequest<NotificationResponse>('/notifications', {
       method: 'POST',
-      body: JSON.stringify({
+      data: {
         ...notification,
         userEmail: notification.userEmail || 'admin@example.com',
-      }),
+      },
     });
   }
 }

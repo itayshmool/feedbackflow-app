@@ -6,6 +6,7 @@ import { useAuthStore } from './stores/authStore';
 
 // Pages
 import LoginPage from './pages/auth/LoginPage';
+import GoogleOAuthTestPage from './pages/auth/GoogleOAuthTestPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
 import ManagerDashboard from './pages/dashboard/ManagerDashboard';
@@ -39,6 +40,10 @@ const AppRouter: React.FC = () => {
     {
       path: '/login',
       element: <LoginPage />,
+    },
+    {
+      path: '/test-google-login',
+      element: <GoogleOAuthTestPage />,
     },
     {
       path: '/',

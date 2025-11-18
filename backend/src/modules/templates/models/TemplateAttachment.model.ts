@@ -1,4 +1,4 @@
-import { query, transaction } from '../../config/database.js';
+import { query, transaction } from '../../../config/database.js';
 
 export interface TemplateAttachment {
   id: string;
@@ -108,7 +108,7 @@ export class TemplateAttachmentModel {
       [feedbackResponseId]
     );
 
-    return result.rows.map(row => this.mapToTemplateAttachment(row));
+    return result.rows.map((row: any) => this.mapToTemplateAttachment(row));
   }
 
   /**
@@ -120,7 +120,7 @@ export class TemplateAttachmentModel {
       [templateDocumentId]
     );
 
-    return result.rows.map(row => this.mapToTemplateAttachment(row));
+    return result.rows.map((row: any) => this.mapToTemplateAttachment(row));
   }
 
   /**
@@ -190,7 +190,7 @@ export class TemplateAttachmentModel {
       queryParams
     );
 
-    const attachments = result.rows.map(row => this.mapToTemplateAttachment(row));
+    const attachments = result.rows.map((row: any) => this.mapToTemplateAttachment(row));
     const totalPages = Math.ceil(total / limit);
 
     return {
@@ -314,7 +314,7 @@ export class TemplateAttachmentModel {
     );
 
     const attachmentsByType: Record<string, number> = {};
-    typeResult.rows.forEach(row => {
+    typeResult.rows.forEach((row: any) => {
       attachmentsByType[row.file_type] = parseInt(row.count);
     });
 
@@ -329,7 +329,7 @@ export class TemplateAttachmentModel {
     );
 
     const attachmentsByUser: Record<string, number> = {};
-    userResult.rows.forEach(row => {
+    userResult.rows.forEach((row: any) => {
       attachmentsByUser[row.uploaded_by] = parseInt(row.count);
     });
 
@@ -426,3 +426,7 @@ export class TemplateAttachmentModel {
     };
   }
 }
+
+
+
+

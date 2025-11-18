@@ -114,8 +114,19 @@ export function createFeedbackRoutes(
   );
 
   /**
+   * @route   GET /api/v1/feedback/stats
+   * @desc    Get user feedback statistics (query param: userId)
+   * @access  Private (Own stats, Manager for direct reports, HR for all)
+   * @note    Must be before other /stats/* routes to match correctly
+   */
+  router.get(
+    '/stats',
+    feedbackController.getUserFeedbackStats
+  );
+
+  /**
    * @route   GET /api/v1/feedback/stats/user/:userId?
-   * @desc    Get user feedback statistics
+   * @desc    Get user feedback statistics (path param: userId) - DEPRECATED, use /stats?userId=
    * @access  Private (Own stats, Manager for direct reports, HR for all)
    */
   router.get(
