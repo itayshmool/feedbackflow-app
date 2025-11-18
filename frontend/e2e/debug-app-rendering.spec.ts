@@ -56,3 +56,7 @@ test.describe('Debug App Rendering', () => {
     console.log('Screenshot saved as debug-app-rendering.png');
   });
 });
+
+
+
+

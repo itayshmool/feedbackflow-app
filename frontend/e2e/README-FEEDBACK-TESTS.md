@@ -297,3 +297,7 @@ Follow the established pattern:
 4. Clear auth state in `beforeEach()`
 5. Use helper functions from `auth.helper.ts`
 
+
+
+
+

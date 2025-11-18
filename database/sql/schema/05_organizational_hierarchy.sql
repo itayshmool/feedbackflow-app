@@ -135,3 +135,7 @@ BEGIN
         ) as orphaned_employees;
 END;
 $$ LANGUAGE plpgsql;
+
+
+
+

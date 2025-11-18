@@ -28,3 +28,7 @@ ON feedback_template_analytics(user_id, action, created_at);
 -- This prevents spam analytics (e.g., multiple downloads within 1 minute)
 CREATE UNIQUE INDEX IF NOT EXISTS idx_template_analytics_unique_action_window 
 ON feedback_template_analytics(template_document_id, user_id, action, DATE_TRUNC('minute', created_at));
+
+
+
+

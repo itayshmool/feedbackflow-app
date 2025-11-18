@@ -1,13 +1,27 @@
-import { TemplateSettingsController } from '../../../src/modules/templates/controllers/TemplateSettingsController.js';
-import { TemplateSettingsService } from '../../../src/modules/templates/services/TemplateSettingsService.js';
+import { TemplateSettingsController } from '../../../src/modules/templates/controllers/TemplateSettingsController';
+import { TemplateSettingsService } from '../../../src/modules/templates/services/TemplateSettingsService';
 import { jest } from '@jest/globals';
 
 // Mock dependencies
-jest.mock('../../../src/modules/templates/services/TemplateSettingsService.js');
+jest.mock('../../../src/modules/templates/services/TemplateSettingsService', () => ({
+  TemplateSettingsService: {
+    getGlobalSettings: jest.fn(),
+    updateGlobalSettings: jest.fn(),
+    getOrganizationSettings: jest.fn(),
+    updateOrganizationSettings: jest.fn(),
+    resetToDefaults: jest.fn(),
+    getNotificationSettings: jest.fn(),
+    getRetentionPolicy: jest.fn(),
+    getSecuritySettings: jest.fn(),
+    getFileValidationRules: jest.fn(),
+    canUserUploadTemplates: jest.fn(),
+    getSettingsSummary: jest.fn(),
+  },
+}));
 
 describe('TemplateSettingsController', () => {
   let templateSettingsController: TemplateSettingsController;
-  let mockTemplateSettingsService: jest.Mocked<TemplateSettingsService>;
+  let mockTemplateSettingsService: jest.Mocked<typeof TemplateSettingsService>;
   let mockRequest: any;
   let mockResponse: any;
   let mockNext: any;
@@ -15,7 +29,7 @@ describe('TemplateSettingsController', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     
-    mockTemplateSettingsService = new TemplateSettingsService() as jest.Mocked<TemplateSettingsService>;
+    mockTemplateSettingsService = TemplateSettingsService as jest.Mocked<typeof TemplateSettingsService>;
     
     templateSettingsController = new TemplateSettingsController();
     
@@ -47,15 +61,15 @@ describe('TemplateSettingsController', () => {
         maxFileSizeMB: 10,
         allowedFileFormats: ['.docx', '.pdf', '.doc'],
         virusScanningEnabled: true,
-        storageProvider: 'local',
+        storageProvider: 'local' as const,
         autoDeleteAfterDays: 365,
         maxTemplatesPerOrganization: 100,
         allowPublicTemplates: false,
         requireApprovalForTemplates: false,
         defaultPermissions: {
           roles: ['admin', 'manager', 'employee'],
-          departments: [],
-          cycles: []
+          departments: [] as string[],
+          cycles: [] as string[]
         },
         notificationSettings: {
           notifyOnUpload: true,
@@ -109,7 +123,7 @@ describe('TemplateSettingsController', () => {
         }
       };
 
-      const mockUpdatedSettings = {
+      const mockUpdatedSettings: any = {
         id: 'settings-123',
         ...updateData,
         updatedAt: '2024-01-15T12:00:00Z'
@@ -147,14 +161,14 @@ describe('TemplateSettingsController', () => {
 
   describe('resetSettings', () => {
     it('should reset settings to defaults successfully', async () => {
-      const mockResetSettings = {
+      const mockResetSettings: any = {
         id: 'settings-123',
         settingType: 'global',
         settings: JSON.stringify({
           maxFileSizeMB: 10,
           allowedFileFormats: ['.docx', '.pdf', '.doc'],
           virusScanningEnabled: false,
-          storageProvider: 'local',
+          storageProvider: 'local' as const,
           autoDeleteAfterDays: 365,
           maxTemplatesPerOrganization: 100,
           allowPublicTemplates: false,
@@ -163,11 +177,11 @@ describe('TemplateSettingsController', () => {
         updatedAt: '2024-01-15T12:00:00Z'
       };
 
-      mockTemplateSettingsService.resetSettings.mockResolvedValue(mockResetSettings);
+      mockTemplateSettingsService.resetToDefaults.mockResolvedValue(mockResetSettings);
 
       await TemplateSettingsController.resetSettings(mockRequest, mockResponse, mockNext);
 
-      expect(mockTemplateSettingsService.resetSettings).toHaveBeenCalled();
+      expect(mockTemplateSettingsService.resetToDefaults).toHaveBeenCalled();
 
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
@@ -176,7 +190,7 @@ describe('TemplateSettingsController', () => {
     });
 
     it('should handle service errors during settings reset', async () => {
-      mockTemplateSettingsService.resetSettings.mockRejectedValue(new Error('Database connection failed'));
+      mockTemplateSettingsService.resetToDefaults.mockRejectedValue(new Error('Database connection failed'));
 
       await TemplateSettingsController.resetSettings(mockRequest, mockResponse, mockNext);
 
@@ -220,15 +234,36 @@ describe('TemplateSettingsController', () => {
   describe('getOrganizationSettings', () => {
     it('should get organization settings successfully', async () => {
       const organizationId = 'org-123';
-      const mockOrgSettings = {
+      const mockOrgSettings: any = {
         maxFileSizeMB: 15,
         allowedFileFormats: ['.docx', '.pdf'],
         virusScanningEnabled: true,
+        storageProvider: 'local' as const,
+        autoDeleteAfterDays: 365,
         maxTemplatesPerOrganization: 200,
+        allowPublicTemplates: false,
+        requireApprovalForTemplates: false,
         defaultPermissions: {
           roles: ['admin', 'manager'],
           departments: ['engineering', 'marketing'],
           cycles: []
+        },
+        notificationSettings: {
+          notifyOnUpload: true,
+          notifyOnDownload: false,
+          notifyOnAttachment: true,
+          notifyOnApproval: true
+        },
+        retentionPolicy: {
+          keepTemplatesForDays: 365,
+          keepAttachmentsForDays: 180,
+          keepAnalyticsForDays: 90
+        },
+        securitySettings: {
+          requireVirusScan: true,
+          allowAnonymousDownloads: false,
+          requireAuthenticationForDownloads: true,
+          maxDownloadsPerUser: 100
         }
       };
 
@@ -250,7 +285,7 @@ describe('TemplateSettingsController', () => {
       const organizationId = 'org-123';
       mockRequest.params.organizationId = organizationId;
 
-      mockTemplateSettingsService.getOrganizationSettings.mockResolvedValue(null);
+      mockTemplateSettingsService.getOrganizationSettings.mockRejectedValue(new Error('Organization not found'));
 
       await TemplateSettingsController.getOrganizationSettings(mockRequest, mockResponse, mockNext);
 
@@ -279,10 +314,15 @@ describe('TemplateSettingsController', () => {
       const updateData = {
         maxFileSizeMB: 20,
         virusScanningEnabled: true,
-        maxTemplatesPerOrganization: 300
+        maxTemplatesPerOrganization: 300,
+        defaultPermissions: {
+          roles: ['admin', 'manager'],
+          departments: [] as string[],
+          cycles: [] as string[]
+        }
       };
 
-      const mockUpdatedSettings = {
+      const mockUpdatedSettings: any = {
         id: 'org-settings-123',
         organizationId,
         ...updateData,
@@ -337,11 +377,11 @@ describe('TemplateSettingsController', () => {
         checkFileContent: false
       };
 
-      mockTemplateSettingsService.getValidationRules.mockResolvedValue(mockValidationRules);
+      mockTemplateSettingsService.getFileValidationRules.mockResolvedValue(mockValidationRules);
 
       await TemplateSettingsController.getValidationRules(mockRequest, mockResponse, mockNext);
 
-      expect(mockTemplateSettingsService.getValidationRules).toHaveBeenCalled();
+      expect(mockTemplateSettingsService.getFileValidationRules).toHaveBeenCalled();
 
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
@@ -350,7 +390,7 @@ describe('TemplateSettingsController', () => {
     });
 
     it('should handle service errors during validation rules retrieval', async () => {
-      mockTemplateSettingsService.getValidationRules.mockRejectedValue(new Error('Database connection failed'));
+      mockTemplateSettingsService.getFileValidationRules.mockRejectedValue(new Error('Database connection failed'));
 
       await TemplateSettingsController.getValidationRules(mockRequest, mockResponse, mockNext);
 
@@ -374,11 +414,11 @@ describe('TemplateSettingsController', () => {
       mockRequest.params.userId = userId;
       mockRequest.query = { userRole, organizationId };
 
-      mockTemplateSettingsService.checkUploadPermissions.mockResolvedValue(mockPermissions);
+      mockTemplateSettingsService.canUserUploadTemplates.mockResolvedValue(mockPermissions);
 
       await TemplateSettingsController.checkUploadPermissions(mockRequest, mockResponse, mockNext);
 
-      expect(mockTemplateSettingsService.checkUploadPermissions).toHaveBeenCalledWith(userId, userRole, organizationId);
+      expect(mockTemplateSettingsService.canUserUploadTemplates).toHaveBeenCalledWith(userId, organizationId);
 
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
@@ -399,7 +439,7 @@ describe('TemplateSettingsController', () => {
       mockRequest.params.userId = userId;
       mockRequest.query = { userRole, organizationId };
 
-      mockTemplateSettingsService.checkUploadPermissions.mockResolvedValue(mockPermissions);
+      mockTemplateSettingsService.canUserUploadTemplates.mockResolvedValue(mockPermissions);
 
       await TemplateSettingsController.checkUploadPermissions(mockRequest, mockResponse, mockNext);
 
@@ -418,7 +458,7 @@ describe('TemplateSettingsController', () => {
       mockRequest.params.userId = userId;
       mockRequest.query = { userRole, organizationId };
 
-      mockTemplateSettingsService.checkUploadPermissions.mockRejectedValue(new Error('Database connection failed'));
+      mockTemplateSettingsService.canUserUploadTemplates.mockRejectedValue(new Error('Database connection failed'));
 
       await TemplateSettingsController.checkUploadPermissions(mockRequest, mockResponse, mockNext);
 
@@ -429,26 +469,14 @@ describe('TemplateSettingsController', () => {
   describe('getSettingsSummary', () => {
     it('should get settings summary successfully', async () => {
       const organizationId = 'org-123';
-      const mockSummary = {
-        globalSettings: {
-          maxFileSizeMB: 10,
-          virusScanningEnabled: false,
-          storageProvider: 'local'
-        },
-        organizationSettings: {
-          maxFileSizeMB: 15,
-          virusScanningEnabled: true,
-          maxTemplatesPerOrganization: 200
-        },
-        effectiveSettings: {
-          maxFileSizeMB: 15,
-          virusScanningEnabled: true,
-          storageProvider: 'local',
-          maxTemplatesPerOrganization: 200
-        },
-        templateCount: 5,
-        attachmentCount: 25,
-        storageUsage: '2.5GB'
+      const mockSummary: any = {
+        totalTemplates: 5,
+        maxTemplates: 200,
+        storageUsed: 2621440000, // 2.5GB in bytes
+        storageLimit: 10737418240, // 10GB in bytes
+        virusScanningEnabled: true,
+        retentionDays: 365,
+        lastUpdated: new Date()
       };
 
       mockRequest.params.organizationId = organizationId;
@@ -654,7 +682,7 @@ describe('TemplateSettingsController', () => {
       mockRequest.params.organizationId = organizationId;
       mockRequest.body = updateData;
 
-      const mockUpdatedSettings = {
+      const mockUpdatedSettings: any = {
         id: 'org-settings-123',
         organizationId,
         ...updateData,
@@ -673,3 +701,7 @@ describe('TemplateSettingsController', () => {
     });
   });
 });
+
+
+
+

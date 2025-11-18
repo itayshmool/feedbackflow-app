@@ -29,8 +29,44 @@ export class FileStorageService {
 
   /**
    * Upload a file to the storage
+   * Supports two signatures:
+   * 1. uploadFile(file: FileUpload, fileName: string) - legacy
+   * 2. uploadFile(buffer: Buffer, filePath: string, mimetype: string, metadata?: Record<string, string>) - new
    */
-  async uploadFile(file: FileUpload, fileName: string): Promise<FileUploadResult> {
+  async uploadFile(
+    fileOrBuffer: FileUpload | Buffer,
+    fileNameOrPath: string,
+    mimetype?: string,
+    metadata?: Record<string, string>
+  ): Promise<FileUploadResult | { path: string; url: string; size: number }> {
+    // Handle new signature (buffer, path, mimetype, metadata)
+    if (Buffer.isBuffer(fileOrBuffer) && mimetype) {
+      const buffer = fileOrBuffer;
+      const filePath = fileNameOrPath;
+      const fullPath = path.join(this.uploadDir, filePath);
+      const dir = path.dirname(fullPath);
+      
+      // Ensure directory exists
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      
+      try {
+        fs.writeFileSync(fullPath, buffer);
+        
+        return {
+          path: filePath,
+          url: this.getFileUrl(filePath),
+          size: buffer.length,
+        };
+      } catch (error) {
+        throw new Error(`Failed to upload file: ${error}`);
+      }
+    }
+    
+    // Handle legacy signature (file, fileName)
+    const file = fileOrBuffer as FileUpload;
+    const fileName = fileNameOrPath;
     const filePath = path.join(this.uploadDir, fileName);
     
     try {
@@ -50,12 +86,17 @@ export class FileStorageService {
    * Download a file from storage
    */
   async downloadFile(filePath: string): Promise<Buffer> {
-    if (!fs.existsSync(filePath)) {
+    // Handle both absolute and relative paths
+    const fullPath = filePath.startsWith(this.uploadDir) 
+      ? filePath 
+      : path.join(this.uploadDir, filePath);
+    
+    if (!fs.existsSync(fullPath)) {
       throw new Error('File not found');
     }
 
     try {
-      return fs.readFileSync(filePath);
+      return fs.readFileSync(fullPath);
     } catch (error) {
       throw new Error(`Failed to download file: ${error}`);
     }
@@ -65,12 +106,17 @@ export class FileStorageService {
    * Delete a file from storage
    */
   async deleteFile(filePath: string): Promise<void> {
-    if (!fs.existsSync(filePath)) {
+    // Handle both absolute and relative paths
+    const fullPath = filePath.startsWith(this.uploadDir) 
+      ? filePath 
+      : path.join(this.uploadDir, filePath);
+    
+    if (!fs.existsSync(fullPath)) {
       throw new Error('File not found');
     }
 
     try {
-      fs.unlinkSync(filePath);
+      fs.unlinkSync(fullPath);
     } catch (error) {
       throw new Error(`Failed to delete file: ${error}`);
     }
@@ -118,4 +164,8 @@ export class FileStorageService {
       return null;
     }
   }
+
 }
+
+// Export singleton instance
+export const fileStorageService = new FileStorageService();

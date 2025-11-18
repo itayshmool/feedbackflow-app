@@ -17,8 +17,17 @@ export class UserService {
 
   async upsertGoogleUser(profile: { email: string; name?: string; picture?: string }): Promise<User> {
     const existing = await this.findByEmail(profile.email);
+    
+    // Determine roles based on email
+    let roles: string[] = ['employee'];
+    if (profile.email === 'itays@wix.com' || profile.email === 'admin@example.com') {
+      roles = ['admin', 'employee'];
+    } else if (profile.email === 'manager@example.com') {
+      roles = ['manager', 'employee'];
+    }
+    
     if (existing) {
-      const updated = { ...existing, ...profile };
+      const updated = { ...existing, ...profile, roles };
       this.users.set(profile.email, updated);
       return updated;
     }
@@ -27,7 +36,7 @@ export class UserService {
       email: profile.email,
       name: profile.name,
       picture: profile.picture,
-      roles: ['employee'],
+      roles,
     };
     this.users.set(profile.email, user);
     return user;

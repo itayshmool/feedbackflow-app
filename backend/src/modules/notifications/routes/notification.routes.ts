@@ -69,6 +69,17 @@ export function createNotificationRoutes(controller: NotificationController): Ro
   );
 
   /**
+   * @route   GET /api/v1/notifications/stats
+   * @desc    Get notification statistics
+   * @access  Private (All authenticated users)
+   * @note    Must be before /:id route to avoid matching "stats" as an ID
+   */
+  router.get(
+    '/stats',
+    controller.getNotificationStats
+  );
+
+  /**
    * @route   GET /api/v1/notifications/:id
    * @desc    Get specific notification by ID
    * @access  Private (All authenticated users)
@@ -120,16 +131,7 @@ export function createNotificationRoutes(controller: NotificationController): Ro
   // ===================
   // NOTIFICATION ANALYTICS
   // ===================
-
-  /**
-   * @route   GET /api/v1/notifications/stats
-   * @desc    Get notification statistics
-   * @access  Private (All authenticated users)
-   */
-  router.get(
-    '/stats',
-    controller.getNotificationStats
-  );
+  // Note: /stats route moved above /:id route to prevent route matching issues
 
   // ===================
   // TEMPLATE ROUTES

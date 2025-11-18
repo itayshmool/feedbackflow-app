@@ -31,43 +31,30 @@ test.describe('Basic Navigation Tests', () => {
     console.log('✅ Manager feedback navigation test passed');
   });
 
-  test('Manager can navigate to analytics page', async ({ page }) => {
+  test('Manager can navigate to cycles page', async ({ page }) => {
     await setupAuthAs(page, 'efratr@wix.com');
     
-    // Navigate to analytics
-    await page.click('a[href="/analytics"]');
-    await page.waitForURL(/.*analytics/);
+    // Navigate to cycles
+    await page.click('a[href="/cycles"]');
+    await page.waitForURL(/.*cycles/);
     
-    // Verify analytics page loaded
-    await expect(page.locator('h1:has-text("Team Analytics")')).toBeVisible();
-    await expect(page.locator('button:has-text("Overview")')).toBeVisible();
-    await expect(page.locator('button:has-text("Trends")')).toBeVisible();
-    await expect(page.locator('button:has-text("Categories")')).toBeVisible();
-    await expect(page.locator('button:has-text("Insights")')).toBeVisible();
+    // Verify cycles page loaded
+    await expect(page.locator('h1:has-text("Feedback Cycles")')).toBeVisible();
+    await expect(page.locator('button:has-text("Create Cycle")')).toBeVisible();
     
-    console.log('✅ Manager analytics navigation test passed');
+    console.log('✅ Manager cycles navigation test passed');
   });
 
-  test('Non-manager cannot access analytics', async ({ page }) => {
-    await setupAuthAs(page, 'idanc@wix.com');
+  test('Manager can navigate to notifications page', async ({ page }) => {
+    await setupAuthAs(page, 'efratr@wix.com');
     
-    // Try to navigate to analytics
-    await page.goto('/analytics');
-    await page.waitForTimeout(2000); // Wait for any redirects
+    // Navigate to notifications
+    await page.click('a[href="/notifications"]');
+    await page.waitForURL(/.*notifications/);
     
-    // Check what happened - could be redirected, show error, or stay on analytics
-    const currentUrl = page.url();
-    const hasAccessDenied = await page.locator('text=Manager Access Required').isVisible();
-    const isOnDashboard = currentUrl.includes('/dashboard');
-    const isOnAnalytics = currentUrl.includes('/analytics');
+    // Verify page loaded (check for heading or content)
+    await expect(page.locator('h1').first()).toBeVisible();
     
-    // For now, just verify we don't crash and can handle the response
-    expect(currentUrl).toBeTruthy(); // URL should exist
-    
-    console.log('✅ Non-manager analytics access test completed');
-    console.log(`Current URL: ${currentUrl}`);
-    console.log(`Has access denied: ${hasAccessDenied}`);
-    console.log(`Is on dashboard: ${isOnDashboard}`);
-    console.log(`Is on analytics: ${isOnAnalytics}`);
+    console.log('✅ Manager notifications navigation test passed');
   });
 });

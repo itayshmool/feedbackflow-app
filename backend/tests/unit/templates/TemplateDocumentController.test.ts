@@ -1,16 +1,38 @@
-import { TemplateDocumentController } from '../../../src/modules/templates/controllers/TemplateDocumentController.js';
-import { TemplateDocumentService } from '../../../src/modules/templates/services/TemplateDocumentService.js';
-import { TemplateAnalyticsService } from '../../../src/modules/templates/services/TemplateAnalyticsService.js';
+import { TemplateDocumentController } from '../../../src/modules/templates/controllers/TemplateDocumentController';
+import { TemplateDocumentService } from '../../../src/modules/templates/services/TemplateDocumentService';
+import { TemplateAnalyticsService } from '../../../src/modules/templates/services/TemplateAnalyticsService';
 import { jest } from '@jest/globals';
 
 // Mock dependencies
-jest.mock('../../../src/modules/templates/services/TemplateDocumentService.js');
-jest.mock('../../../src/modules/templates/services/TemplateAnalyticsService.js');
+jest.mock('../../../src/modules/templates/services/TemplateDocumentService', () => ({
+  TemplateDocumentService: {
+    uploadTemplate: jest.fn(),
+    getTemplateById: jest.fn(),
+    listTemplates: jest.fn(),
+    updateTemplate: jest.fn(),
+    deleteTemplate: jest.fn(),
+    downloadTemplate: jest.fn(),
+    duplicateTemplate: jest.fn(),
+    archiveTemplate: jest.fn(),
+    getTemplateStats: jest.fn(),
+    replaceTemplateFile: jest.fn(),
+  },
+}));
+jest.mock('../../../src/modules/templates/services/TemplateAnalyticsService', () => ({
+  TemplateAnalyticsService: {
+    getTemplateAnalytics: jest.fn(),
+    getOrganizationAnalytics: jest.fn(),
+    getTemplateTrends: jest.fn(),
+    getUserAnalytics: jest.fn(),
+    getDownloadHistory: jest.fn(),
+    generateUsageReport: jest.fn(),
+  },
+}));
 
 describe('TemplateDocumentController', () => {
   let templateDocumentController: TemplateDocumentController;
-  let mockTemplateDocumentService: jest.Mocked<TemplateDocumentService>;
-  let mockTemplateAnalyticsService: jest.Mocked<TemplateAnalyticsService>;
+  let mockTemplateDocumentService: jest.Mocked<typeof TemplateDocumentService>;
+  let mockTemplateAnalyticsService: jest.Mocked<typeof TemplateAnalyticsService>;
   let mockRequest: any;
   let mockResponse: any;
   let mockNext: any;
@@ -18,8 +40,8 @@ describe('TemplateDocumentController', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     
-    mockTemplateDocumentService = new TemplateDocumentService() as jest.Mocked<TemplateDocumentService>;
-    mockTemplateAnalyticsService = new TemplateAnalyticsService() as jest.Mocked<TemplateAnalyticsService>;
+    mockTemplateDocumentService = TemplateDocumentService as jest.Mocked<typeof TemplateDocumentService>;
+    mockTemplateAnalyticsService = TemplateAnalyticsService as jest.Mocked<typeof TemplateAnalyticsService>;
     
     templateDocumentController = new TemplateDocumentController();
     
@@ -56,7 +78,7 @@ describe('TemplateDocumentController', () => {
         size: 1024000
       } as Express.Multer.File;
 
-      const mockTemplate = {
+      const mockTemplate: any = {
         id: 'template-789',
         organizationId: 'org-123',
         name: 'Peer Feedback Template',
@@ -97,11 +119,11 @@ describe('TemplateDocumentController', () => {
         isDefault: false
       };
 
-      mockTemplateDocumentService.createTemplate.mockResolvedValue(mockTemplate);
+      mockTemplateDocumentService.uploadTemplate.mockResolvedValue({ template: mockTemplate as any, fileUrl: '/uploads/template.docx' });
 
-      await templateDocumentController.uploadTemplate(mockRequest, mockResponse, mockNext);
+      await TemplateDocumentController.uploadTemplate(mockRequest, mockResponse, mockNext);
 
-      expect(mockTemplateDocumentService.createTemplate).toHaveBeenCalledWith(
+      expect(mockTemplateDocumentService.uploadTemplate).toHaveBeenCalledWith(
         {
           organizationId: 'org-123',
           name: 'Peer Feedback Template',
@@ -141,7 +163,7 @@ describe('TemplateDocumentController', () => {
         templateType: 'peer'
       };
 
-      await templateDocumentController.uploadTemplate(mockRequest, mockResponse, mockNext);
+      await TemplateDocumentController.uploadTemplate(mockRequest, mockResponse, mockNext);
 
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith({
@@ -164,9 +186,9 @@ describe('TemplateDocumentController', () => {
         templateType: 'peer'
       };
 
-      mockTemplateDocumentService.createTemplate.mockRejectedValue(new Error('Storage service unavailable'));
+      mockTemplateDocumentService.uploadTemplate.mockRejectedValue(new Error('Storage service unavailable'));
 
-      await templateDocumentController.uploadTemplate(mockRequest, mockResponse, mockNext);
+      await TemplateDocumentController.uploadTemplate(mockRequest, mockResponse, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
     });
@@ -202,9 +224,15 @@ describe('TemplateDocumentController', () => {
         limit: '10'
       };
 
-      mockTemplateDocumentService.listTemplates.mockResolvedValue(mockTemplates);
+      mockTemplateDocumentService.listTemplates.mockResolvedValue({
+        templates: mockTemplates as any,
+        total: mockTemplates.length,
+        page: 1,
+        limit: 10,
+        totalPages: 1
+      });
 
-      await templateDocumentController.listTemplates(mockRequest, mockResponse, mockNext);
+      await TemplateDocumentController.listTemplates(mockRequest, mockResponse, mockNext);
 
       expect(mockTemplateDocumentService.listTemplates).toHaveBeenCalledWith(
         'org-123',
@@ -219,7 +247,7 @@ describe('TemplateDocumentController', () => {
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
         data: {
-          templates: mockTemplates,
+          templates: mockTemplates as any,
           total: mockTemplates.length,
           page: 1,
           limit: 10,
@@ -233,7 +261,7 @@ describe('TemplateDocumentController', () => {
 
       mockTemplateDocumentService.listTemplates.mockRejectedValue(new Error('Database connection failed'));
 
-      await templateDocumentController.listTemplates(mockRequest, mockResponse, mockNext);
+      await TemplateDocumentController.listTemplates(mockRequest, mockResponse, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
     });
@@ -242,7 +270,7 @@ describe('TemplateDocumentController', () => {
   describe('getTemplateById', () => {
     it('should get template by ID successfully', async () => {
       const templateId = 'template-789';
-      const mockTemplate = {
+      const mockTemplate: any = {
         id: templateId,
         organizationId: 'org-123',
         name: 'Peer Feedback Template',
@@ -276,9 +304,9 @@ describe('TemplateDocumentController', () => {
 
       mockRequest.params.id = templateId;
 
-      mockTemplateDocumentService.getTemplateById.mockResolvedValue(mockTemplate);
+      mockTemplateDocumentService.getTemplateById.mockResolvedValue(mockTemplate as any);
 
-      await templateDocumentController.getTemplateById(mockRequest, mockResponse, mockNext);
+      await TemplateDocumentController.getTemplateById(mockRequest, mockResponse, mockNext);
 
       expect(mockTemplateDocumentService.getTemplateById).toHaveBeenCalledWith(templateId);
 
@@ -294,7 +322,7 @@ describe('TemplateDocumentController', () => {
 
       mockTemplateDocumentService.getTemplateById.mockRejectedValue(new Error('Template document not found'));
 
-      await templateDocumentController.getTemplateById(mockRequest, mockResponse, mockNext);
+      await TemplateDocumentController.getTemplateById(mockRequest, mockResponse, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
     });
@@ -342,9 +370,9 @@ describe('TemplateDocumentController', () => {
       mockRequest.params.id = templateId;
       mockRequest.body = updateData;
 
-      mockTemplateDocumentService.updateTemplate.mockResolvedValue(mockUpdatedTemplate);
+      mockTemplateDocumentService.updateTemplate.mockResolvedValue(mockUpdatedTemplate as any);
 
-      await templateDocumentController.updateTemplate(mockRequest, mockResponse, mockNext);
+      await TemplateDocumentController.updateTemplate(mockRequest, mockResponse, mockNext);
 
       expect(mockTemplateDocumentService.updateTemplate).toHaveBeenCalledWith(templateId, updateData);
 
@@ -363,7 +391,7 @@ describe('TemplateDocumentController', () => {
 
       mockTemplateDocumentService.updateTemplate.mockRejectedValue(new Error('Template document not found'));
 
-      await templateDocumentController.updateTemplate(mockRequest, mockResponse, mockNext);
+      await TemplateDocumentController.updateTemplate(mockRequest, mockResponse, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
     });
@@ -376,7 +404,7 @@ describe('TemplateDocumentController', () => {
 
       mockTemplateDocumentService.deleteTemplate.mockResolvedValue(undefined);
 
-      await templateDocumentController.deleteTemplate(mockRequest, mockResponse, mockNext);
+      await TemplateDocumentController.deleteTemplate(mockRequest, mockResponse, mockNext);
 
       expect(mockTemplateDocumentService.deleteTemplate).toHaveBeenCalledWith(templateId);
 
@@ -392,7 +420,7 @@ describe('TemplateDocumentController', () => {
 
       mockTemplateDocumentService.deleteTemplate.mockRejectedValue(new Error('Template document not found'));
 
-      await templateDocumentController.deleteTemplate(mockRequest, mockResponse, mockNext);
+      await TemplateDocumentController.deleteTemplate(mockRequest, mockResponse, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
     });
@@ -404,39 +432,7 @@ describe('TemplateDocumentController', () => {
       const newName = 'Copy of Peer Feedback Template';
       const userId = 'user-456';
 
-      const mockOriginalTemplate = {
-        id: templateId,
-        organizationId: 'org-123',
-        name: 'Peer Feedback Template',
-        description: 'Standard peer feedback template',
-        templateType: 'peer',
-        fileName: 'template.docx',
-        filePath: 'templates/org-123/template.docx',
-        fileSize: 1024000,
-        fileMimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        fileFormat: '.docx',
-        version: 1,
-        downloadCount: 25,
-        isActive: true,
-        isDefault: false,
-        tags: ['standard', 'peer'],
-        permissions: {
-          roles: ['admin', 'manager', 'employee'],
-          departments: [],
-          cycles: []
-        },
-        availabilityRules: {
-          restrictToCycles: false,
-          restrictToDepartments: false,
-          restrictToRoles: false
-        },
-        createdBy: 'user-456',
-        createdAt: '2024-01-15T10:30:00Z',
-        updatedAt: '2024-01-15T10:30:00Z',
-        archivedAt: null
-      };
-
-      const mockDuplicatedTemplate = {
+      const mockDuplicatedTemplate: any = {
         id: 'template-456',
         organizationId: 'org-123',
         name: newName,
@@ -472,9 +468,40 @@ describe('TemplateDocumentController', () => {
       mockRequest.body = { newName };
       mockRequest.user.id = userId;
 
-      mockTemplateDocumentService.duplicateTemplate.mockResolvedValue(mockDuplicatedTemplate);
+      const mockOriginalTemplate: any = {
+        id: templateId,
+        organizationId: 'org-123',
+        name: 'Peer Feedback Template',
+        description: 'Standard peer feedback template',
+        templateType: 'peer',
+        fileName: 'template.docx',
+        filePath: 'templates/org-123/template.docx',
+        fileSize: 1024000,
+        fileMimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        fileFormat: '.docx',
+        version: 1,
+        downloadCount: 25,
+        isActive: true,
+        isDefault: false,
+        tags: ['standard', 'peer'],
+        permissions: {
+          roles: ['admin', 'manager', 'employee'],
+          departments: [],
+          cycles: []
+        },
+        availabilityRules: {
+          restrictToCycles: false,
+          restrictToDepartments: false,
+          restrictToRoles: false
+        },
+        createdBy: 'user-456',
+        createdAt: '2024-01-15T10:30:00Z',
+        updatedAt: '2024-01-15T10:30:00Z',
+        archivedAt: null
+      };
+      mockTemplateDocumentService.duplicateTemplate.mockResolvedValue({ originalTemplate: mockOriginalTemplate as any, duplicatedTemplate: mockDuplicatedTemplate });
 
-      await templateDocumentController.duplicateTemplate(mockRequest, mockResponse, mockNext);
+      await TemplateDocumentController.duplicateTemplate(mockRequest, mockResponse, mockNext);
 
       expect(mockTemplateDocumentService.duplicateTemplate).toHaveBeenCalledWith(templateId, newName, userId);
 
@@ -497,7 +524,7 @@ describe('TemplateDocumentController', () => {
 
       mockTemplateDocumentService.duplicateTemplate.mockRejectedValue(new Error('Template document not found'));
 
-      await templateDocumentController.duplicateTemplate(mockRequest, mockResponse, mockNext);
+      await TemplateDocumentController.duplicateTemplate(mockRequest, mockResponse, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
     });
@@ -527,9 +554,9 @@ describe('TemplateDocumentController', () => {
       mockRequest.params.id = templateId;
       mockRequest.file = mockFile;
 
-      mockTemplateDocumentService.replaceTemplateFile.mockResolvedValue(mockUpdatedTemplate);
+      mockTemplateDocumentService.replaceTemplateFile.mockResolvedValue(mockUpdatedTemplate as any);
 
-      await templateDocumentController.replaceTemplateFile(mockRequest, mockResponse, mockNext);
+      await TemplateDocumentController.replaceTemplateFile(mockRequest, mockResponse, mockNext);
 
       expect(mockTemplateDocumentService.replaceTemplateFile).toHaveBeenCalledWith(templateId, mockFile);
 
@@ -544,7 +571,7 @@ describe('TemplateDocumentController', () => {
       mockRequest.params.id = templateId;
       mockRequest.file = null;
 
-      await templateDocumentController.replaceTemplateFile(mockRequest, mockResponse, mockNext);
+      await TemplateDocumentController.replaceTemplateFile(mockRequest, mockResponse, mockNext);
 
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith({
@@ -558,7 +585,7 @@ describe('TemplateDocumentController', () => {
     it('should download template successfully', async () => {
       const templateId = 'template-789';
       const userId = 'user-456';
-      const mockTemplate = {
+      const mockTemplate: any = {
         id: templateId,
         fileName: 'template.docx',
         filePath: 'templates/org-123/template.docx',
@@ -572,12 +599,12 @@ describe('TemplateDocumentController', () => {
       mockRequest.user.id = userId;
 
       mockTemplateDocumentService.downloadTemplate.mockResolvedValue({
-        template: mockTemplate,
         fileBuffer: mockFileBuffer,
-        fileName: mockTemplate.fileName
+        fileName: mockTemplate.fileName as any,
+        mimeType: mockTemplate.fileMimeType as any
       });
 
-      await templateDocumentController.downloadTemplate(mockRequest, mockResponse, mockNext);
+      await TemplateDocumentController.downloadTemplate(mockRequest, mockResponse, mockNext);
 
       expect(mockTemplateDocumentService.downloadTemplate).toHaveBeenCalledWith(templateId, userId);
 
@@ -599,7 +626,7 @@ describe('TemplateDocumentController', () => {
 
       mockTemplateDocumentService.downloadTemplate.mockRejectedValue(new Error('Template document not found'));
 
-      await templateDocumentController.downloadTemplate(mockRequest, mockResponse, mockNext);
+      await TemplateDocumentController.downloadTemplate(mockRequest, mockResponse, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
     });
@@ -626,7 +653,7 @@ describe('TemplateDocumentController', () => {
 
       mockTemplateDocumentService.getTemplateStats.mockResolvedValue(mockStats);
 
-      await templateDocumentController.getTemplateStats(mockRequest, mockResponse, mockNext);
+      await TemplateDocumentController.getTemplateStats(mockRequest, mockResponse, mockNext);
 
       expect(mockTemplateDocumentService.getTemplateStats).toHaveBeenCalledWith(templateId);
 
@@ -642,7 +669,7 @@ describe('TemplateDocumentController', () => {
 
       mockTemplateDocumentService.getTemplateStats.mockRejectedValue(new Error('Template document not found'));
 
-      await templateDocumentController.getTemplateStats(mockRequest, mockResponse, mockNext);
+      await TemplateDocumentController.getTemplateStats(mockRequest, mockResponse, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
     });
@@ -658,9 +685,9 @@ describe('TemplateDocumentController', () => {
 
       mockRequest.params.id = templateId;
 
-      mockTemplateDocumentService.archiveTemplate.mockResolvedValue(mockArchivedTemplate);
+      mockTemplateDocumentService.archiveTemplate.mockResolvedValue(undefined);
 
-      await templateDocumentController.archiveTemplate(mockRequest, mockResponse, mockNext);
+      await TemplateDocumentController.archiveTemplate(mockRequest, mockResponse, mockNext);
 
       expect(mockTemplateDocumentService.archiveTemplate).toHaveBeenCalledWith(templateId);
 
@@ -676,7 +703,7 @@ describe('TemplateDocumentController', () => {
 
       mockTemplateDocumentService.archiveTemplate.mockRejectedValue(new Error('Template document not found'));
 
-      await templateDocumentController.archiveTemplate(mockRequest, mockResponse, mockNext);
+      await TemplateDocumentController.archiveTemplate(mockRequest, mockResponse, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
     });
@@ -715,7 +742,7 @@ describe('TemplateDocumentController', () => {
 
         mockRequest.user.organizationId = organizationId;
 
-        mockTemplateAnalyticsService.getOrganizationAnalytics.mockResolvedValue(mockAnalytics);
+        mockTemplateAnalyticsService.getOrganizationAnalytics.mockResolvedValue(mockAnalytics as any);
 
         await TemplateDocumentController.getOverallAnalytics(mockRequest, mockResponse, mockNext);
 
@@ -768,7 +795,19 @@ describe('TemplateDocumentController', () => {
         mockRequest.params.id = templateId;
         mockRequest.query = { page: '1', limit: '10' };
 
-        mockTemplateAnalyticsService.getDownloadHistory.mockResolvedValue(mockDownloads);
+        mockTemplateAnalyticsService.getDownloadHistory.mockResolvedValue({
+          downloads: mockDownloads.map((d: any) => ({
+            userId: d.user_id,
+            userName: d.user_name,
+            userEmail: d.user_email,
+            downloadedAt: new Date(d.downloaded_at),
+            metadata: d.metadata
+          })),
+          total: mockDownloads.length,
+          page: 1,
+          limit: 10,
+          totalPages: 1
+        });
 
         await TemplateDocumentController.getDownloadHistory(mockRequest, mockResponse, mockNext);
 
@@ -876,7 +915,7 @@ describe('TemplateDocumentController', () => {
         mockRequest.params.id = templateId;
         mockRequest.query = { period, limit };
 
-        mockTemplateAnalyticsService.getTemplateTrends.mockResolvedValue(mockTrends);
+        mockTemplateAnalyticsService.getTemplateTrends.mockResolvedValue(mockTrends as any);
 
         await TemplateDocumentController.getTemplateTrends(mockRequest, mockResponse, mockNext);
 
@@ -890,3 +929,7 @@ describe('TemplateDocumentController', () => {
     });
   });
 });
+
+
+
+

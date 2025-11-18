@@ -95,7 +95,7 @@ export class TemplateSettingsController {
         });
       }
 
-      const settings = await TemplateSettingsService.updateGlobalSettings(validation.data);
+      const settings = await TemplateSettingsService.updateGlobalSettings(validation.data as any);
 
       res.json({
         success: true,
@@ -197,7 +197,7 @@ export class TemplateSettingsController {
 
       const settings = await TemplateSettingsService.updateOrganizationSettings(
         organizationId,
-        validation.data
+        validation.data as any
       );
 
       res.json({
@@ -504,3 +504,7 @@ export class TemplateSettingsController {
     }
   }
 }
+
+
+
+

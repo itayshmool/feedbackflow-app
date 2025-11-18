@@ -259,12 +259,12 @@ const HierarchyManagement: React.FC = () => {
               alt={node.name} 
             />
             <AvatarFallback className="text-xs font-semibold bg-gray-200 text-gray-700">
-              {node.name.charAt(0).toUpperCase()}
+              {node.name ? node.name.charAt(0).toUpperCase() : '?'}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1">
             <p className="text-sm font-medium text-gray-900">
-              {node.name}
+              {node.name || 'Unknown'}
               {node.isManager && node.employeeCount !== undefined && node.employeeCount > 0 && (
                 <span className="text-gray-500 ml-1">({node.employeeCount})</span>
               )}
@@ -369,7 +369,7 @@ const HierarchyManagement: React.FC = () => {
               <BarChart3 className="h-8 w-8 text-purple-500 mr-3" />
               <div>
                 <p className="text-sm font-medium text-gray-500">Avg. Span</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.averageSpanOfControl.toFixed(1)}</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.averageSpanOfControl ? stats.averageSpanOfControl.toFixed(1) : '0.0'}</p>
               </div>
             </div>
           </Card>
@@ -499,11 +499,11 @@ const HierarchyManagement: React.FC = () => {
                               alt={employee.name} 
                             />
                             <AvatarFallback className="text-xs">
-                              {employee.name.charAt(0).toUpperCase()}
+                              {employee.name ? employee.name.charAt(0).toUpperCase() : '?'}
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="text-sm font-medium">{employee.name}</p>
+                            <p className="text-sm font-medium">{employee.name || 'Unknown'}</p>
                             <p className="text-xs text-gray-500">{employee.position}</p>
                           </div>
                         </div>
@@ -546,11 +546,11 @@ const HierarchyManagement: React.FC = () => {
                               alt={employee.name} 
                             />
                             <AvatarFallback className="text-xs">
-                              {employee.name.charAt(0).toUpperCase()}
+                              {employee.name ? employee.name.charAt(0).toUpperCase() : '?'}
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="text-sm font-medium">{employee.name}</p>
+                            <p className="text-sm font-medium">{employee.name || 'Unknown'}</p>
                             <p className="text-xs text-gray-500">{employee.position}</p>
                           </div>
                         </div>

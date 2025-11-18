@@ -11,7 +11,8 @@ import Badge from '../../components/ui/Badge';
 import { Upload, Download, Trash2, FileText, X } from 'lucide-react';
 
 const TemplatesManagement: React.FC = () => {
-  const { isAuthenticated, hasHydrated } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
+  const hasHydrated = useAuthStore.persist?.hasHydrated?.() ?? true;
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);

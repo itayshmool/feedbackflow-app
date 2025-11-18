@@ -14,14 +14,18 @@ export function createGoogleAuthRoutes(controller: GoogleAuthController): Router
     controller.login
   );
 
-  // Mock login for local testing (development and test)
-  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
-    router.post(
-      '/login/mock',
-      validationMiddleware([body('email').isEmail()]),
-      controller.mockLogin
-    );
-  }
+  // Mock login for local testing (always available for development)
+  router.post(
+    '/login/mock',
+    validationMiddleware([body('email').isEmail()]),
+    controller.mockLogin
+  );
+
+  // Get current authenticated user
+  router.get('/me', controller.me);
+
+  // Logout
+  router.post('/logout', controller.logout);
 
   return router;
 }

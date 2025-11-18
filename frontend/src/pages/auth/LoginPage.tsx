@@ -1,10 +1,11 @@
 // frontend/src/pages/auth/LoginPage.tsx
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { GoogleLogin } from '@react-oauth/google'
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import Button from '@/components/ui/Button'
@@ -21,11 +22,27 @@ type LoginForm = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
-  const { login, isAuthenticated, isLoading } = useAuthStore()
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const { login, loginWithGoogle, isAuthenticated, isLoading } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
   
+  // Check if Google OAuth is configured
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+  const isGoogleOAuthEnabled = Boolean(googleClientId && googleClientId.trim() !== '')
+
   const from = location.state?.from?.pathname || '/dashboard'
+
+  // Redirect when authenticated - use a ref to prevent multiple redirects
+  const hasRedirected = useRef(false)
+  
+  useEffect(() => {
+    if (isAuthenticated && !isLoading && !hasRedirected.current) {
+      console.log('[LoginPage] User authenticated, navigating to:', from)
+      hasRedirected.current = true
+      navigate(from, { replace: true })
+    }
+  }, [isAuthenticated, isLoading, navigate, from])
 
   const {
     register,
@@ -37,13 +54,38 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     try {
+      console.log('[LoginPage] Submitting login for:', data.email)
       await login(data.email, data.password)
+      console.log('[LoginPage] Login successful')
       toast.success('Welcome back!')
-      // Force navigation to dashboard
-      navigate('/dashboard', { replace: true })
+      // Don't navigate here - let useEffect handle it
+      // This ensures the state update has propagated
     } catch (error: any) {
+      console.error('[LoginPage] Login failed:', error)
       toast.error(error.response?.data?.message || 'Login failed')
     }
+  }
+
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    setIsGoogleLoading(true)
+    try {
+      if (!credentialResponse.credential) {
+        throw new Error('No credential received from Google')
+      }
+      await loginWithGoogle(credentialResponse.credential)
+      toast.success('Welcome back!')
+      // Don't navigate here - let useEffect handle it
+      // This ensures the state update has propagated
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Google login failed')
+    } finally {
+      setIsGoogleLoading(false)
+    }
+  }
+
+  const handleGoogleError = () => {
+    toast.error('Google login failed. Please try again.')
+    setIsGoogleLoading(false)
   }
 
   return (
@@ -129,6 +171,32 @@ export default function LoginPage() {
                 Sign in
               </Button>
             </form>
+
+            {isGoogleOAuthEnabled && (
+              <div className="mt-6">
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300" />
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={handleGoogleError}
+                    useOneTap={false}
+                    theme="outline"
+                    size="large"
+                    text="signin_with"
+                    shape="rectangular"
+                    width="100%"
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="mt-6">
               <div className="relative">

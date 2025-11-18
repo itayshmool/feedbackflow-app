@@ -85,6 +85,72 @@ export class FileValidator {
   }
 
   /**
+   * Validates a file with comprehensive checks
+   */
+  static validateFile(
+    file: Express.Multer.File,
+    options: {
+      allowedTypes?: string[];
+      allowedExtensions?: string[];
+      maxSizeMB?: number;
+      required?: boolean;
+    } = {}
+  ): { isValid: boolean; error: string | null } {
+    const {
+      allowedTypes = this.ALLOWED_MIME_TYPES,
+      allowedExtensions = this.ALLOWED_EXTENSIONS,
+      maxSizeMB = 10,
+      required = false,
+    } = options;
+
+    if (!file && required) {
+      return { isValid: false, error: 'File is required' };
+    }
+
+    if (!file) {
+      return { isValid: true, error: null };
+    }
+
+    // Validate file type
+    if (!allowedTypes.includes(file.mimetype)) {
+      return {
+        isValid: false,
+        error: `Invalid file type. Allowed types: ${allowedTypes.join(', ')}`,
+      };
+    }
+
+    // Validate file extension
+    const extension = this.getFileExtension(file.originalname);
+    if (!allowedExtensions.includes(extension)) {
+      return {
+        isValid: false,
+        error: `Invalid file extension. Allowed extensions: ${allowedExtensions.join(', ')}`,
+      };
+    }
+
+    // Validate file size
+    if (!this.validateFileSize(file.size, maxSizeMB)) {
+      return {
+        isValid: false,
+        error: `File size exceeds ${maxSizeMB}MB limit`,
+      };
+    }
+
+    return { isValid: true, error: null };
+  }
+
+  /**
+   * Gets file extension from filename
+   */
+  static getFileExtension(fileName: string): string {
+    const lastDotIndex = fileName.lastIndexOf('.');
+    if (lastDotIndex > 0 && lastDotIndex < fileName.length - 1) {
+      return fileName.substring(lastDotIndex).toLowerCase();
+    }
+    return '';
+  }
+
+  /**
    * Creates validation middleware for file uploads
    */
   static createFileValidationMiddleware(maxSizeMB: number = 10) {

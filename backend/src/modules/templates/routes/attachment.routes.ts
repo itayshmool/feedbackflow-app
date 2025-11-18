@@ -92,3 +92,7 @@ router.get('/attachments', TemplateAttachmentController.listAllAttachments);
 router.get('/attachments/stats', TemplateAttachmentController.getUserAttachmentStats);
 
 export { router as attachmentRoutes };
+
+
+
+

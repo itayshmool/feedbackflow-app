@@ -1,5 +1,6 @@
 // backend/src/server.ts
 
+import 'dotenv/config'
 import app from './app.js'
 import { Pool } from 'pg'
 
