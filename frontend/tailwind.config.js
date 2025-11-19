@@ -7,6 +7,19 @@ export default {
   theme: {
     extend: {
       colors: {
+        gray: {
+          50: '#fafafa',
+          100: '#f5f5f5',
+          200: '#e5e5e5',
+          300: '#d4d4d4',
+          400: '#a3a3a3',
+          500: '#737373',
+          600: '#525252',
+          700: '#404040',
+          800: '#262626',
+          900: '#171717',
+          950: '#0a0a0a',
+        },
         primary: {
           50: '#eff6ff',
           100: '#dbeafe',
@@ -74,8 +87,51 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
+        sans: [
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'SF Pro Display',
+          'SF Pro Text',
+          'Helvetica Neue',
+          'Helvetica',
+          'Arial',
+          'sans-serif',
+        ],
+        mono: [
+          'SF Mono',
+          'Monaco',
+          'Consolas',
+          'Liberation Mono',
+          'Courier New',
+          'monospace',
+        ],
+      },
+      fontSize: {
+        xs: ['0.75rem', { lineHeight: '1rem', letterSpacing: '0.01em' }],
+        sm: ['0.875rem', { lineHeight: '1.25rem', letterSpacing: '0.006em' }],
+        base: ['1rem', { lineHeight: '1.5rem', letterSpacing: '0.004em' }],
+        lg: ['1.125rem', { lineHeight: '1.75rem', letterSpacing: '0.002em' }],
+        xl: ['1.25rem', { lineHeight: '1.875rem', letterSpacing: '0' }],
+        '2xl': ['1.5rem', { lineHeight: '2rem', letterSpacing: '-0.01em' }],
+        '3xl': ['1.875rem', { lineHeight: '2.25rem', letterSpacing: '-0.015em' }],
+        '4xl': ['2.25rem', { lineHeight: '2.5rem', letterSpacing: '-0.02em' }],
+        '5xl': ['3rem', { lineHeight: '3.5rem', letterSpacing: '-0.025em' }],
+        '6xl': ['3.75rem', { lineHeight: '4rem', letterSpacing: '-0.03em' }],
+      },
+      fontWeight: {
+        light: '300',
+        normal: '400',
+        medium: '500',
+        semibold: '600',
+        bold: '700',
+      },
+      letterSpacing: {
+        tighter: '-0.03em',
+        tight: '-0.015em',
+        normal: '0',
+        wide: '0.01em',
+        wider: '0.025em',
+        widest: '0.05em',
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',
