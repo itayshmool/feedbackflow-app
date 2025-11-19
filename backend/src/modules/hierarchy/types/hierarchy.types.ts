@@ -24,6 +24,7 @@ export interface HierarchyNode {
   department?: string;
   level?: number;
   children?: HierarchyNode[];
+  employee_count?: number;
 }
 
 export interface CreateHierarchyRequest {

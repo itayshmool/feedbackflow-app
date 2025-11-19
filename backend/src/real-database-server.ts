@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import multer from 'multer';
+import cookieParser from 'cookie-parser';
 import path from 'path';
 import fs from 'fs';
 import { query, testConnection, pool } from './config/real-database.js';
@@ -50,6 +51,7 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+app.use(cookieParser());
 
 // Test database connection on startup
 testConnection().then((connected) => {
@@ -609,6 +611,14 @@ app.post('/api/v1/auth/login/mock', async (req, res) => {
     // Mock JWT token with email embedded
     const mockToken = `mock-jwt-token-${email}-${Date.now()}`;
     
+    // Set authentication cookie (like mock-database-server does)
+    res.cookie('authToken', mockToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+    
     res.json({
       success: true,
       data: {
@@ -642,28 +652,27 @@ app.post('/api/v1/auth/logout', async (req, res) => {
   }
 });
 
-app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
+app.get('/api/v1/auth/me', async (req, res) => {
   try {
-    // Get user from Authorization header
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // Get token from cookie (like mock-database-server does)
+    const token = req.cookies.authToken;
+    
+    if (!token) {
       return res.status(401).json({
         success: false,
-        error: 'Authorization header required'
+        error: 'Unauthorized - No token in cookie'
       });
     }
 
-    // For now, we'll extract email from the token (in a real app, this would be JWT verification)
-    const token = authHeader.slice(7);
-    
-    // Since we're using mock tokens, we'll need to get the user from the request
-    // In a real implementation, we'd verify the JWT and extract user info
-    const userEmail = (req as any).user?.email;
+    // Extract email from mock token (format: mock-jwt-token-EMAIL-TIMESTAMP)
+    const tokenParts = token.split('-');
+    const emailIndex = tokenParts.findIndex((part: string) => part.includes('@'));
+    const userEmail = emailIndex >= 0 ? tokenParts.slice(emailIndex).join('-').split('-')[0] : null;
     
     if (!userEmail) {
       return res.status(401).json({
         success: false,
-        error: 'Invalid token'
+        error: 'Invalid token format'
       });
     }
 
