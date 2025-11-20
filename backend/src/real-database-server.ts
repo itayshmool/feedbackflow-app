@@ -49,7 +49,10 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:3006', // Frontend URL - allow credentials
+  credentials: true // Enable cookies to be sent cross-origin
+}));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -611,7 +614,7 @@ app.post('/api/v1/auth/login/mock', async (req, res) => {
     // Mock JWT token with email embedded
     const mockToken = `mock-jwt-token-${email}-${Date.now()}`;
     
-    // Set authentication cookie (like mock-database-server does)
+    // Set authentication cookie
     res.cookie('authToken', mockToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -639,6 +642,9 @@ app.post('/api/v1/auth/login/mock', async (req, res) => {
 
 app.post('/api/v1/auth/logout', async (req, res) => {
   try {
+    // Clear authentication cookie
+    res.clearCookie('authToken');
+    
     res.json({
       success: true,
       message: 'Logged out successfully'
@@ -654,25 +660,14 @@ app.post('/api/v1/auth/logout', async (req, res) => {
 
 app.get('/api/v1/auth/me', async (req, res) => {
   try {
-    // Get token from cookie (like mock-database-server does)
-    const token = req.cookies.authToken;
-    
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized - No token in cookie'
-      });
-    }
-
-    // Extract email from mock token (format: mock-jwt-token-EMAIL-TIMESTAMP)
-    const tokenParts = token.split('-');
-    const emailIndex = tokenParts.findIndex((part: string) => part.includes('@'));
-    const userEmail = emailIndex >= 0 ? tokenParts.slice(emailIndex).join('-').split('-')[0] : null;
+    // authenticateToken middleware has already verified the token from cookie
+    // and populated req.user
+    const userEmail = (req as any).user?.email;
     
     if (!userEmail) {
       return res.status(401).json({
         success: false,
-        error: 'Invalid token format'
+        error: 'Invalid token or user not found'
       });
     }
 
@@ -2341,22 +2336,13 @@ app.get('/api/v1/users/search', authenticateToken, async (req, res) => {
 // GET /api/v1/profile - Get current user profile
 app.get('/api/v1/profile', authenticateToken, async (req, res) => {
   try {
-    // Get user from Authorization header
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authorization header required'
-      });
-    }
-
     // Get user email from request (set by auth middleware)
     const userEmail = (req as any).user?.email;
     
     if (!userEmail) {
       return res.status(401).json({
         success: false,
-        error: 'Invalid token'
+        error: 'User not authenticated'
       });
     }
 
@@ -2436,8 +2422,13 @@ app.get('/api/v1/profile', authenticateToken, async (req, res) => {
 });
 
 // PUT /api/v1/profile - Update current user profile
-app.put('/api/v1/profile', async (req, res) => {
+app.put('/api/v1/profile', authenticateToken, async (req, res) => {
   try {
+    const userEmail = (req as any).user?.email;
+    if (!userEmail) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+    
     const { name, department, position, phone, bio, location, timezone } = req.body;
     
     const updateQuery = `
@@ -2451,12 +2442,12 @@ app.put('/api/v1/profile', async (req, res) => {
         location = COALESCE($6, location),
         timezone = COALESCE($7, timezone),
         updated_at = NOW()
-      WHERE email = 'admin@example.com'
+      WHERE email = $8
       RETURNING *
     `;
     
     const result = await query(updateQuery, [
-      name, department, position, phone, bio, location, timezone
+      name, department, position, phone, bio, location, timezone, userEmail
     ]);
     
     if (result.rows.length === 0) {
@@ -2493,19 +2484,24 @@ app.put('/api/v1/profile', async (req, res) => {
 });
 
 // POST /api/v1/profile/avatar - Upload avatar
-app.post('/api/v1/profile/avatar', async (req, res) => {
+app.post('/api/v1/profile/avatar', authenticateToken, async (req, res) => {
   try {
+    const userEmail = (req as any).user?.email;
+    if (!userEmail) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+    
     // For now, return a mock avatar URL
     const mockAvatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${Date.now()}`;
     
     const updateQuery = `
       UPDATE users 
       SET avatar_url = $1, updated_at = NOW()
-      WHERE email = 'admin@example.com'
+      WHERE email = $2
       RETURNING avatar_url
     `;
     
-    const result = await query(updateQuery, [mockAvatarUrl]);
+    const result = await query(updateQuery, [mockAvatarUrl, userEmail]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Profile not found' });
@@ -2522,17 +2518,76 @@ app.post('/api/v1/profile/avatar', async (req, res) => {
 });
 
 // GET /api/v1/profile/stats - Get profile statistics
-app.get('/api/v1/profile/stats', async (req, res) => {
+app.get('/api/v1/profile/stats', authenticateToken, async (req, res) => {
   try {
-    // Mock stats for now
+    const userEmail = (req as any).user?.email;
+    if (!userEmail) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    // Get user ID from email
+    const userQuery = `SELECT id FROM users WHERE email = $1`;
+    const userResult = await query(userQuery, [userEmail]);
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    
+    const userId = userResult.rows[0].id;
+
+    // Calculate real statistics from database
+    const statsQuery = `
+      SELECT 
+        -- Count feedback given (as giver)
+        (SELECT COUNT(*) 
+         FROM feedback_responses 
+         WHERE giver_id = $1) as total_feedback_given,
+        
+        -- Count feedback received
+        (SELECT COUNT(*) 
+         FROM feedback_responses 
+         WHERE recipient_id = $1) as total_feedback_received,
+        
+        -- Calculate average rating received
+        (SELECT COALESCE(AVG(rating), 0) 
+         FROM feedback_responses 
+         WHERE recipient_id = $1 AND rating IS NOT NULL) as average_rating,
+        
+        -- Count active cycles (user is participant)
+        (SELECT COUNT(DISTINCT fc.id)
+         FROM feedback_cycles fc
+         WHERE fc.status = 'active'
+           AND (
+             EXISTS (SELECT 1 FROM feedback_requests fr WHERE fr.cycle_id = fc.id AND (fr.requester_id = $1 OR fr.recipient_id = $1))
+             OR EXISTS (SELECT 1 FROM feedback_responses fr WHERE fr.cycle_id = fc.id AND (fr.giver_id = $1 OR fr.recipient_id = $1))
+           )) as active_cycles,
+        
+        -- Count completed cycles (user was participant)
+        (SELECT COUNT(DISTINCT fc.id)
+         FROM feedback_cycles fc
+         WHERE fc.status = 'closed'
+           AND (
+             EXISTS (SELECT 1 FROM feedback_requests fr WHERE fr.cycle_id = fc.id AND (fr.requester_id = $1 OR fr.recipient_id = $1))
+             OR EXISTS (SELECT 1 FROM feedback_responses fr WHERE fr.cycle_id = fc.id AND (fr.giver_id = $1 OR fr.recipient_id = $1))
+           )) as completed_cycles
+    `;
+    
+    const statsResult = await query(statsQuery, [userId]);
+    
+    if (statsResult.rows.length === 0) {
+      return res.status(500).json({ success: false, error: 'Failed to calculate stats' });
+    }
+    
+    const dbStats = statsResult.rows[0];
+    
     const stats = {
-      totalFeedbackGiven: 12,
-      totalFeedbackReceived: 8,
-      averageRating: 4.2,
-      totalGoals: 5,
-      completedGoals: 3,
-      activeCycles: 2,
-      completedCycles: 4
+      totalFeedbackGiven: parseInt(dbStats.total_feedback_given) || 0,
+      totalFeedbackReceived: parseInt(dbStats.total_feedback_received) || 0,
+      averageRating: parseFloat(dbStats.average_rating) || 0,
+      totalGoals: 0, // Goals table doesn't exist yet
+      completedGoals: 0,
+      activeCycles: parseInt(dbStats.active_cycles) || 0,
+      completedCycles: parseInt(dbStats.completed_cycles) || 0
     };
     
     res.json({ success: true, data: stats });
@@ -2547,56 +2602,74 @@ app.get('/api/v1/profile/stats', async (req, res) => {
 // ==================
 
 // GET /api/v1/settings - Get current user settings
-app.get('/api/v1/settings', async (req, res) => {
+app.get('/api/v1/settings', authenticateToken, async (req, res) => {
   try {
-    // Return mock settings for now
-    const mockSettings = {
-      id: 'settings-1',
-      userId: 'mock-user-1',
-      
-      // Notification Settings
+    const userEmail = (req as any).user?.email;
+    if (!userEmail) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    // Query user settings from database
+    const settingsQuery = `
+      SELECT 
+        id,
+        settings,
+        timezone,
+        created_at,
+        updated_at
+      FROM users
+      WHERE email = $1
+    `;
+    
+    const result = await query(settingsQuery, [userEmail]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    
+    const user = result.rows[0];
+    
+    // Default settings in case settings column is null
+    const defaultSettings = {
       emailNotifications: true,
       pushNotifications: true,
       feedbackNotifications: true,
       cycleNotifications: true,
       reminderNotifications: true,
       weeklyDigest: false,
-      
-      // Privacy Settings
       profileVisibility: 'organization',
       showEmail: false,
       showPhone: false,
       showDepartment: true,
       showPosition: true,
-      
-      // Application Settings
       theme: 'system',
       language: 'en',
-      timezone: 'America/Los_Angeles',
       dateFormat: 'MM/DD/YYYY',
       timeFormat: '12h',
-      
-      // Feedback Settings
       autoSaveDrafts: true,
       draftSaveInterval: 5,
       feedbackReminders: true,
       reminderFrequency: 'weekly',
-      
-      // Security Settings
       twoFactorEnabled: false,
       sessionTimeout: 60,
       loginNotifications: true,
-      
-      // Data & Privacy
       dataRetention: 24,
       analyticsOptIn: true,
-      marketingEmails: false,
-      
-      createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-      updatedAt: new Date().toISOString(),
+      marketingEmails: false
     };
     
-    res.json({ success: true, data: mockSettings });
+    // Merge default settings with user settings
+    const userSettings = {
+      id: user.id,
+      userId: user.id,
+      ...defaultSettings,
+      ...(user.settings || {}),
+      timezone: user.timezone || 'UTC',
+      createdAt: user.created_at,
+      updatedAt: user.updated_at,
+    };
+    
+    res.json({ success: true, data: userSettings });
   } catch (error) {
     console.error('Error fetching settings:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch settings' });
@@ -2604,13 +2677,67 @@ app.get('/api/v1/settings', async (req, res) => {
 });
 
 // PUT /api/v1/settings - Update current user settings
-app.put('/api/v1/settings', async (req, res) => {
+app.put('/api/v1/settings', authenticateToken, async (req, res) => {
   try {
+    const userEmail = (req as any).user?.email;
+    if (!userEmail) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    // Get current user to merge settings
+    const getCurrentQuery = `
+      SELECT id, settings, timezone
+      FROM users
+      WHERE email = $1
+    `;
+    
+    const currentResult = await query(getCurrentQuery, [userEmail]);
+    
+    if (currentResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    
+    const currentUser = currentResult.rows[0];
+    const currentSettings = currentUser.settings || {};
+    
+    // Extract timezone separately if provided
+    const { timezone, ...settingsUpdate } = req.body;
+    
+    // Merge current settings with updates (only update provided fields)
+    const mergedSettings = {
+      ...currentSettings,
+      ...settingsUpdate
+    };
+    
+    // Update user settings in database
+    const updateQuery = `
+      UPDATE users
+      SET 
+        settings = $1,
+        timezone = COALESCE($2, timezone),
+        updated_at = NOW()
+      WHERE email = $3
+      RETURNING id, settings, timezone, updated_at
+    `;
+    
+    const result = await query(updateQuery, [
+      JSON.stringify(mergedSettings),
+      timezone,
+      userEmail
+    ]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    
+    const updatedUser = result.rows[0];
+    
     const updatedSettings = {
-      id: 'settings-1',
-      userId: 'mock-user-1',
-      ...req.body,
-      updatedAt: new Date().toISOString(),
+      id: updatedUser.id,
+      userId: updatedUser.id,
+      ...updatedUser.settings,
+      timezone: updatedUser.timezone,
+      updatedAt: updatedUser.updated_at,
     };
     
     res.json({ success: true, data: updatedSettings });

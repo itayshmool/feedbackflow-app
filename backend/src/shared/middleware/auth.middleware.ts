@@ -13,33 +13,30 @@ async function authenticateTokenAsync(req: Request, res: Response, next: NextFun
       error: 'Unauthorized - No token in cookie'
     });
   }
+  
   try {
-    // Check if it's a mock token (format: mock-jwt-token-EMAIL-TIMESTAMP)
+    // Handle mock tokens (format: mock-jwt-token-EMAIL-TIMESTAMP)
     if (token.startsWith('mock-jwt-token-')) {
-      // Extract email from mock token
-      const tokenParts = token.split('-');
-      const emailIndex = tokenParts.findIndex((part: string) => part.includes('@'));
-      const email = emailIndex >= 0 ? tokenParts.slice(emailIndex).join('-').split('-')[0] : null;
-      
-      if (!email) {
-        return res.status(401).json({
-          success: false,
-          error: 'Invalid mock token format'
-        });
+      const parts = token.split('-');
+      if (parts.length >= 4) {
+        // Extract email from token (everything between 'mock-jwt-token-' and last '-TIMESTAMP')
+        const email = parts.slice(3, -1).join('-');
+        
+        // Assign mock user with admin + employee roles for testing
+        (req as any).user = {
+          id: 'mock-user-id',
+          email: email,
+          name: email.split('@')[0],
+          roles: ['admin', 'employee'] // Mock roles for all authenticated users
+        };
+        
+        console.log('🔍 Auth middleware - mock token authenticated:', email);
+        return next();
       }
-      
-      // Set user from extracted email (mock authentication)
-      (req as any).user = {
-        id: email, // Use email as ID for mock
-        email: email,
-        name: email.split('@')[0],
-        roles: ['admin', 'employee'] // Mock roles
-      };
-      
-      next();
-    } else {
-      // Real JWT verification
-      const payload = jwtService.verify(token);
+    }
+    
+    // Real JWT verification
+    const payload = jwtService.verify(token);
 
       // Fetch user data from database if needed
       // For now, use JWT payload directly

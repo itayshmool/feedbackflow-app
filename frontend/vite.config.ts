@@ -19,6 +19,8 @@ export default defineConfig({
         target: 'http://localhost:5000',
         changeOrigin: true,
         secure: false,
+        cookieDomainRewrite: 'localhost', // Rewrite cookie domain to work with proxy
+        cookiePathRewrite: '/', // Ensure cookie path is correct
       },
     },
   },
