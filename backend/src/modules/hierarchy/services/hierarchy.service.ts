@@ -146,6 +146,9 @@ export class HierarchyService {
       }
     });
     
+    // Calculate employee counts for all nodes
+    roots.forEach(root => this.calculateEmployeeCounts(root));
+    
     // Return first root or create placeholder
     return roots[0] || {
       id: 'root',
@@ -153,8 +156,30 @@ export class HierarchyService {
       employee_name: 'Organization',
       employee_email: '',
       manager_id: null,
-      children: []
+      children: [],
+      employee_count: 0
     };
+  }
+
+  /**
+   * Recursively calculate total employee count for each node
+   * Returns the count of all descendants (direct + indirect reports)
+   */
+  private calculateEmployeeCounts(node: HierarchyNode): number {
+    if (!node.children || node.children.length === 0) {
+      node.employee_count = 0;
+      return 0;
+    }
+    
+    let totalCount = node.children.length; // Direct reports
+    
+    // Add indirect reports recursively
+    node.children.forEach(child => {
+      totalCount += this.calculateEmployeeCounts(child);
+    });
+    
+    node.employee_count = totalCount;
+    return totalCount;
   }
 
   /**

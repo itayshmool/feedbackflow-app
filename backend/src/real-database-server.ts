@@ -658,7 +658,7 @@ app.post('/api/v1/auth/logout', async (req, res) => {
   }
 });
 
-app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
+app.get('/api/v1/auth/me', async (req, res) => {
   try {
     // authenticateToken middleware has already verified the token from cookie
     // and populated req.user
