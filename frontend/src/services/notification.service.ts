@@ -9,8 +9,17 @@ import {
   NotificationStatsResponse,
   NotificationResponse
 } from '../types/notification.types';
+import { useAuthStore } from '../stores/authStore';
 
 class NotificationService {
+  private getUserEmail(): string {
+    const user = useAuthStore.getState().user;
+    if (!user?.email) {
+      throw new Error('User not authenticated');
+    }
+    return user.email;
+  }
+
   private async makeRequest<T>(endpoint: string, options: AxiosRequestConfig = {}): Promise<T> {
     try {
       const response = await api({
@@ -44,14 +53,15 @@ class NotificationService {
       params.append('offset', filters.offset.toString());
     }
 
-    // Add user email for filtering
-    params.append('userEmail', 'admin@example.com');
+    // Add authenticated user email for filtering
+    params.append('userEmail', this.getUserEmail());
 
     return this.makeRequest<NotificationListResponse>(`/notifications?${params.toString()}`);
   }
 
   async getNotificationStats(): Promise<NotificationStatsResponse> {
-    return this.makeRequest<NotificationStatsResponse>('/notifications/stats?userEmail=admin@example.com');
+    const userEmail = this.getUserEmail();
+    return this.makeRequest<NotificationStatsResponse>(`/notifications/stats?userEmail=${encodeURIComponent(userEmail)}`);
   }
 
   async markAsRead(notificationId: string): Promise<NotificationResponse> {
@@ -63,7 +73,7 @@ class NotificationService {
   async markAllAsRead(): Promise<{ success: boolean; data: { count: number } }> {
     return this.makeRequest<{ success: boolean; data: { count: number } }>('/notifications/read-all', {
       method: 'PUT',
-      data: { userEmail: 'admin@example.com' },
+      data: { userEmail: this.getUserEmail() },
     });
   }
 
@@ -78,7 +88,7 @@ class NotificationService {
       method: 'POST',
       data: {
         ...notification,
-        userEmail: notification.userEmail || 'admin@example.com',
+        userEmail: notification.userEmail || this.getUserEmail(),
       },
     });
   }
