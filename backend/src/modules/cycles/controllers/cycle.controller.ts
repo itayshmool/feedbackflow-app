@@ -93,6 +93,37 @@ export class CycleController {
     }
   };
 
+  // Participant management endpoints
+  getCycleParticipants = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const participants = await this.cycleService.getCycleParticipants(req.params.id);
+      res.json(participants);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  addCycleParticipants = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = (req as any).user?.id;
+      const { participants } = req.body;
+      const added = await this.cycleService.addCycleParticipants(req.params.id, participants, userId);
+      res.status(201).json(added);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  removeCycleParticipant = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = (req as any).user?.id;
+      await this.cycleService.removeCycleParticipant(req.params.id, req.params.participantId, userId);
+      res.status(204).send();
+    } catch (err) {
+      next(err);
+    }
+  };
+
   // Validation endpoint for feedback integration
   validateFeedbackPermission = async (req: Request, res: Response, next: NextFunction) => {
     try {

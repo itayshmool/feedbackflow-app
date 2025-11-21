@@ -126,7 +126,7 @@ export const CycleDetails: React.FC<CycleDetailsProps> = ({ cycleId, onClose, on
   }
 
   // Ensure settings object exists with defaults
-  const settings = currentCycle.settings || {
+  const defaultSettings = {
     allowSelfReview: false,
     allowPeerReview: false,
     allowManagerReview: false,
@@ -136,6 +136,15 @@ export const CycleDetails: React.FC<CycleDetailsProps> = ({ cycleId, onClose, on
       allowAnonymous: false,
       requireComments: false,
       categories: []
+    }
+  };
+
+  const settings = {
+    ...defaultSettings,
+    ...currentCycle.settings,
+    feedbackSettings: {
+      ...defaultSettings.feedbackSettings,
+      ...(currentCycle.settings?.feedbackSettings || {})
     }
   };
 

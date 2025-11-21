@@ -1,0 +1,361 @@
+import React, { useState, useEffect } from 'react';
+import { useAuthStore } from '../../stores/authStore';
+import { useFeedbackStore } from '../../stores/feedbackStore';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
+import Button from '../../components/ui/Button';
+import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { Link } from 'react-router-dom';
+import { 
+  MessageSquare, 
+  TrendingUp, 
+  Clock,
+  Target,
+  Award,
+  Activity,
+  FileText,
+  Calendar
+} from 'lucide-react';
+
+const EmployeeDashboard: React.FC = () => {
+  const { user } = useAuthStore();
+  const {
+    feedbackStats,
+    feedbackList: recentFeedback,
+    isLoading: isFeedbackLoading,
+    fetchFeedbackStats,
+    fetchFeedbackList
+  } = useFeedbackStore();
+
+  const [activeTab, setActiveTab] = useState<'overview' | 'my-feedback' | 'goals'>('overview');
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchFeedbackStats();
+      fetchFeedbackList({ toUserId: user.id }, 1, 5);
+    }
+  }, [user, fetchFeedbackStats, fetchFeedbackList]);
+
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: Activity },
+    { id: 'my-feedback', label: 'My Feedback', icon: MessageSquare },
+    { id: 'goals', label: 'My Goals', icon: Target },
+  ];
+
+  const renderOverview = () => (
+    <div className="space-y-6">
+      {/* Welcome Section */}
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-6 text-white shadow-lg transform transition-all duration-200 hover:shadow-xl">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.name}!</h1>
+            <p className="text-indigo-100 text-lg">
+              Track your performance and growth
+            </p>
+          </div>
+          <Link to="/feedback/give">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all duration-200"
+            >
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Give Feedback
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-3 bg-blue-100 rounded-xl">
+                <MessageSquare className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Feedback Received</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {isFeedbackLoading ? '...' : feedbackStats?.received || 0}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-3 bg-green-100 rounded-xl">
+                <FileText className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Feedback Given</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {isFeedbackLoading ? '...' : feedbackStats?.given || 0}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-3 bg-purple-100 rounded-xl">
+                <TrendingUp className="h-6 w-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Average Rating</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {isFeedbackLoading ? '...' : feedbackStats?.averageRating ? `${feedbackStats.averageRating.toFixed(1)}/5` : 'N/A'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-3 bg-orange-100 rounded-xl">
+                <Clock className="h-6 w-6 text-orange-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Pending Actions</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {isFeedbackLoading ? '...' : feedbackStats?.pending || 0}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Activity & Quick Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Feedback Received */}
+        <Card className="transform transition-all duration-200 hover:shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center">
+                <MessageSquare className="h-5 w-5 mr-2 text-blue-600" />
+                Recent Feedback
+              </div>
+              <Link to="/feedback">
+                <Button variant="outline" size="sm">View All</Button>
+              </Link>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isFeedbackLoading ? (
+              <div className="flex justify-center py-8">
+                <LoadingSpinner size="md" />
+              </div>
+            ) : recentFeedback && recentFeedback.length > 0 ? (
+              <div className="space-y-3">
+                {recentFeedback.slice(0, 3).map((feedback) => (
+                  <div key={feedback.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-150">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{feedback.fromUser?.name || 'Anonymous'}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(feedback.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    {feedback.ratings && feedback.ratings.length > 0 && (
+                      <div className="flex items-center space-x-1">
+                        <Award className="w-4 h-4 text-yellow-500" />
+                        <span className="text-sm font-medium text-gray-900">
+                          {feedback.ratings[0].score}/5
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <MessageSquare className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                <p>No feedback received yet</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* My Goals & Development */}
+        <Card className="transform transition-all duration-200 hover:shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Target className="h-5 w-5 mr-2 text-purple-600" />
+              My Development Goals
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Technical Skills</span>
+                  <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">In Progress</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-blue-500 h-2 rounded-full transition-all duration-500" style={{ width: '65%' }}></div>
+                </div>
+              </div>
+              
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Communication</span>
+                  <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">On Track</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-green-500 h-2 rounded-full transition-all duration-500" style={{ width: '80%' }}></div>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Project Delivery</span>
+                  <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full">Needs Attention</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-yellow-500 h-2 rounded-full transition-all duration-500" style={{ width: '45%' }}></div>
+                </div>
+              </div>
+
+              <Button variant="outline" size="sm" className="w-full mt-4">
+                <Target className="w-4 h-4 mr-2" />
+                View All Goals
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <Card className="transform transition-all duration-200 hover:shadow-lg">
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Link to="/feedback/give">
+              <Button variant="outline" className="w-full h-24 flex-col space-y-2 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200">
+                <MessageSquare className="w-6 h-6 text-blue-600" />
+                <span className="font-medium">Give Feedback</span>
+              </Button>
+            </Link>
+            <Link to="/feedback">
+              <Button variant="outline" className="w-full h-24 flex-col space-y-2 hover:bg-green-50 hover:border-green-300 transition-all duration-200">
+                <FileText className="w-6 h-6 text-green-600" />
+                <span className="font-medium">View Feedback</span>
+              </Button>
+            </Link>
+            <Link to="/cycles">
+              <Button variant="outline" className="w-full h-24 flex-col space-y-2 hover:bg-purple-50 hover:border-purple-300 transition-all duration-200">
+                <Calendar className="w-6 h-6 text-purple-600" />
+                <span className="font-medium">Active Cycles</span>
+              </Button>
+            </Link>
+            <Link to="/profile">
+              <Button variant="outline" className="w-full h-24 flex-col space-y-2 hover:bg-orange-50 hover:border-orange-300 transition-all duration-200">
+                <Award className="w-6 h-6 text-orange-600" />
+                <span className="font-medium">My Profile</span>
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderMyFeedback = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">My Feedback History</h2>
+        <Link to="/feedback">
+          <Button>View All Feedback</Button>
+        </Link>
+      </div>
+
+      <div className="text-center py-16 text-gray-500">
+        <MessageSquare className="w-20 h-20 mx-auto mb-4 text-gray-400" />
+        <p className="text-lg mb-4">Your complete feedback history</p>
+        <p className="text-sm text-gray-600 mb-6">All feedback you've received and given will be displayed here</p>
+        <Link to="/feedback">
+          <Button size="lg">View Detailed Feedback</Button>
+        </Link>
+      </div>
+    </div>
+  );
+
+  const renderGoals = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">My Development Goals</h2>
+        <Button>
+          <Target className="w-4 h-4 mr-2" />
+          Add New Goal
+        </Button>
+      </div>
+
+      <div className="text-center py-16 text-gray-500">
+        <Target className="w-20 h-20 mx-auto mb-4 text-gray-400" />
+        <p className="text-lg mb-4">Track your career development</p>
+        <p className="text-sm text-gray-600 mb-6">Set and monitor your professional growth goals</p>
+        <Button size="lg">Create Your First Goal</Button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">My Dashboard</h1>
+              <p className="text-gray-600">Track your performance and development</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="px-6">
+          <nav className="flex space-x-8">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
+                    activeTab === tab.id
+                      ? 'border-indigo-500 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 mr-2" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="p-6">
+        {activeTab === 'overview' && renderOverview()}
+        {activeTab === 'my-feedback' && renderMyFeedback()}
+        {activeTab === 'goals' && renderGoals()}
+      </div>
+    </div>
+  );
+};
+
+export default EmployeeDashboard;
+

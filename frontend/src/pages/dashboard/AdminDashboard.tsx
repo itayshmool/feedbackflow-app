@@ -76,11 +76,11 @@ const AdminDashboard: React.FC = () => {
   const renderOverview = () => (
     <div className="space-y-6">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white shadow-lg transform transition-all duration-200 hover:shadow-xl">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold mb-2">Welcome back, {user?.name}!</h1>
-            <p className="text-blue-100">
+            <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.name}!</h1>
+            <p className="text-blue-100 text-lg">
               Manage your FeedbackFlow platform and organizations
             </p>
           </div>
@@ -88,6 +88,7 @@ const AdminDashboard: React.FC = () => {
             onClick={() => setShowSetupWizard(true)}
             variant="secondary"
             size="sm"
+            className="backdrop-blur-sm transition-all duration-200"
           >
             <Plus className="w-4 h-4 mr-2" />
             New Organization
@@ -98,9 +99,9 @@ const AdminDashboard: React.FC = () => {
       {/* Stats Cards */}
       {organizationStats && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="p-6">
+          <Card className="p-6 transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
             <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
+              <div className="p-3 bg-blue-100 rounded-xl">
                 <Building className="w-6 h-6 text-blue-600" />
               </div>
               <div className="ml-4">
@@ -112,9 +113,9 @@ const AdminDashboard: React.FC = () => {
             </div>
           </Card>
 
-          <Card className="p-6">
+          <Card className="p-6 transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
             <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
+              <div className="p-3 bg-green-100 rounded-xl">
                 <CheckCircle className="w-6 h-6 text-green-600" />
               </div>
               <div className="ml-4">
@@ -126,9 +127,9 @@ const AdminDashboard: React.FC = () => {
             </div>
           </Card>
 
-          <Card className="p-6">
+          <Card className="p-6 transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
             <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
+              <div className="p-3 bg-purple-100 rounded-xl">
                 <Users className="w-6 h-6 text-purple-600" />
               </div>
               <div className="ml-4">
@@ -140,9 +141,9 @@ const AdminDashboard: React.FC = () => {
             </div>
           </Card>
 
-          <Card className="p-6">
+          <Card className="p-6 transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
             <div className="flex items-center">
-              <div className="p-2 bg-orange-100 rounded-lg">
+              <div className="p-3 bg-orange-100 rounded-xl">
                 <TrendingUp className="w-6 h-6 text-orange-600" />
               </div>
               <div className="ml-4">
@@ -217,32 +218,32 @@ const AdminDashboard: React.FC = () => {
       </Card>
 
       {/* Quick Actions */}
-      <Card className="p-6">
+      <Card className="p-6 transform transition-all duration-200 hover:shadow-lg">
         <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Button
             onClick={() => setShowSetupWizard(true)}
             variant="outline"
-            className="h-20 flex-col"
+            className="h-24 flex-col space-y-2 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
           >
-            <Plus className="w-6 h-6 mb-2" />
-            <span>New Organization</span>
+            <Plus className="w-6 h-6 text-blue-600" />
+            <span className="font-medium">New Organization</span>
           </Button>
           <Button
             onClick={() => setActiveTab('organizations')}
             variant="outline"
-            className="h-20 flex-col"
+            className="h-24 flex-col space-y-2 hover:bg-purple-50 hover:border-purple-300 transition-all duration-200"
           >
-            <Building className="w-6 h-6 mb-2" />
-            <span>Manage Organizations</span>
+            <Building className="w-6 h-6 text-purple-600" />
+            <span className="font-medium">Manage Organizations</span>
           </Button>
           <Button
             onClick={() => setActiveTab('settings')}
             variant="outline"
-            className="h-20 flex-col"
+            className="h-24 flex-col space-y-2 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
           >
-            <Settings className="w-6 h-6 mb-2" />
-            <span>System Settings</span>
+            <Settings className="w-6 h-6 text-gray-600" />
+            <span className="font-medium">System Settings</span>
           </Button>
         </div>
       </Card>

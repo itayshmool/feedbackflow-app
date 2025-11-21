@@ -296,7 +296,7 @@ const teamModel = new TeamModelClass(dbConfig.pool);
 app.use('/api/v1/admin', createAdminUserRoutes);
 
 // Organization API routes - specific routes first, then parameterized routes
-app.get('/api/v1/admin/organizations', async (req, res) => {
+app.get('/api/v1/admin/organizations', authenticateToken, async (req, res) => {
   try {
     const { page = 1, limit = 10, search = '' } = req.query;
     const pageNum = Number(page);
@@ -329,7 +329,7 @@ app.get('/api/v1/admin/organizations', async (req, res) => {
   }
 });
 
-app.get('/api/v1/admin/organizations/stats', async (req, res) => {
+app.get('/api/v1/admin/organizations/stats', authenticateToken, async (req, res) => {
   try {
     const stats = await organizationService.getOrganizationStats();
     res.json({
@@ -347,7 +347,7 @@ app.get('/api/v1/admin/organizations/stats', async (req, res) => {
 });
 
 // Slug availability check - must come before /:id route
-app.get('/api/v1/admin/organizations/check-slug', async (req, res) => {
+app.get('/api/v1/admin/organizations/check-slug', authenticateToken, async (req, res) => {
   try {
     const slug = req.query.slug;
     if (!slug) {
@@ -372,7 +372,7 @@ app.get('/api/v1/admin/organizations/check-slug', async (req, res) => {
 });
 
 // Test endpoint
-app.get('/api/v1/admin/organizations/test', async (req, res) => {
+app.get('/api/v1/admin/organizations/test', authenticateToken, async (req, res) => {
   try {
     const result = await query('SELECT COUNT(*) as count FROM organizations');
     res.json({
@@ -390,7 +390,7 @@ app.get('/api/v1/admin/organizations/test', async (req, res) => {
   }
 });
 
-app.get('/api/v1/admin/organizations/:id', async (req, res) => {
+app.get('/api/v1/admin/organizations/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const organization = await organizationService.getOrganizationById(id);
@@ -414,8 +414,8 @@ app.get('/api/v1/admin/organizations/:id', async (req, res) => {
   }
 });
 
-app.post('/api/v1/admin/organizations', async (req, res) => {
-  try {
+app.post('/api/v1/admin/organizations', authenticateToken, async (req, res) => {
+  try{
     const frontendData = req.body;
     
     // Transform camelCase to snake_case for database
@@ -455,7 +455,7 @@ app.post('/api/v1/admin/organizations', async (req, res) => {
   }
 });
 
-app.put('/api/v1/admin/organizations/:id', async (req, res) => {
+app.put('/api/v1/admin/organizations/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -480,7 +480,7 @@ app.put('/api/v1/admin/organizations/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/v1/admin/organizations/:id', async (req, res) => {
+app.delete('/api/v1/admin/organizations/:id', authenticateToken, async (req, res) => {
   console.log('🗑️  DELETE organization endpoint hit', { id: req.params.id });
   try {
     const { id } = req.params;
@@ -658,7 +658,7 @@ app.post('/api/v1/auth/logout', async (req, res) => {
   }
 });
 
-app.get('/api/v1/auth/me', async (req, res) => {
+app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
   try {
     // authenticateToken middleware has already verified the token from cookie
     // and populated req.user
@@ -742,7 +742,7 @@ app.get('/api/v1/auth/me', async (req, res) => {
 });
 
 // Department API routes
-app.get('/api/v1/admin/organizations/:id/departments', async (req, res) => {
+app.get('/api/v1/admin/organizations/:id/departments', authenticateToken, async (req, res) => {
   try {
     const { id: organizationId } = req.params;
     const { isActive, type, parentDepartmentId, limit, offset } = req.query;
@@ -771,7 +771,7 @@ app.get('/api/v1/admin/organizations/:id/departments', async (req, res) => {
   }
 });
 
-app.get('/api/v1/admin/organizations/:id/departments/stats', async (req, res) => {
+app.get('/api/v1/admin/organizations/:id/departments/stats', authenticateToken, async (req, res) => {
   try {
     const { id: organizationId } = req.params;
     const stats = await departmentModel.getDepartmentStats(organizationId);
@@ -790,7 +790,7 @@ app.get('/api/v1/admin/organizations/:id/departments/stats', async (req, res) =>
   }
 });
 
-app.get('/api/v1/admin/organizations/:id/departments/hierarchy', async (req, res) => {
+app.get('/api/v1/admin/organizations/:id/departments/hierarchy', authenticateToken, async (req, res) => {
   try {
     const { id: organizationId } = req.params;
     const hierarchy = await departmentModel.getDepartmentHierarchy(organizationId);
@@ -809,7 +809,7 @@ app.get('/api/v1/admin/organizations/:id/departments/hierarchy', async (req, res
   }
 });
 
-app.post('/api/v1/admin/organizations/:id/departments', async (req, res) => {
+app.post('/api/v1/admin/organizations/:id/departments', authenticateToken, async (req, res) => {
   try {
     const { id: organizationId } = req.params;
     const departmentData = req.body;
@@ -833,7 +833,7 @@ app.post('/api/v1/admin/organizations/:id/departments', async (req, res) => {
   }
 });
 
-app.get('/api/v1/admin/organizations/:id/departments/:departmentId', async (req, res) => {
+app.get('/api/v1/admin/organizations/:id/departments/:departmentId', authenticateToken, async (req, res) => {
   try {
     const { id: organizationId, departmentId } = req.params;
     const department = await departmentModel.getDepartmentById(departmentId, organizationId);
@@ -859,7 +859,7 @@ app.get('/api/v1/admin/organizations/:id/departments/:departmentId', async (req,
   }
 });
 
-app.put('/api/v1/admin/organizations/:id/departments/:departmentId', async (req, res) => {
+app.put('/api/v1/admin/organizations/:id/departments/:departmentId', authenticateToken, async (req, res) => {
   try {
     const { id: organizationId, departmentId } = req.params;
     const updateData = req.body;
@@ -884,7 +884,7 @@ app.put('/api/v1/admin/organizations/:id/departments/:departmentId', async (req,
   }
 });
 
-app.delete('/api/v1/admin/organizations/:id/departments/:departmentId', async (req, res) => {
+app.delete('/api/v1/admin/organizations/:id/departments/:departmentId', authenticateToken, async (req, res) => {
   try {
     const { id: organizationId, departmentId } = req.params;
     
@@ -902,7 +902,7 @@ app.delete('/api/v1/admin/organizations/:id/departments/:departmentId', async (r
 });
 
 // Team API routes
-app.get('/api/v1/admin/organizations/:id/teams', async (req, res) => {
+app.get('/api/v1/admin/organizations/:id/teams', authenticateToken, async (req, res) => {
   try {
     const { id: organizationId } = req.params;
     const { isActive, type, departmentId, limit, offset } = req.query;
@@ -931,7 +931,7 @@ app.get('/api/v1/admin/organizations/:id/teams', async (req, res) => {
   }
 });
 
-app.get('/api/v1/admin/organizations/:id/teams/stats', async (req, res) => {
+app.get('/api/v1/admin/organizations/:id/teams/stats', authenticateToken, async (req, res) => {
   try {
     const { id: organizationId } = req.params;
     const stats = await teamModel.getTeamStats(organizationId);
@@ -950,7 +950,7 @@ app.get('/api/v1/admin/organizations/:id/teams/stats', async (req, res) => {
   }
 });
 
-app.post('/api/v1/admin/organizations/:id/teams', async (req, res) => {
+app.post('/api/v1/admin/organizations/:id/teams', authenticateToken, async (req, res) => {
   try {
     const { id: organizationId } = req.params;
     const teamData = req.body;
@@ -974,7 +974,7 @@ app.post('/api/v1/admin/organizations/:id/teams', async (req, res) => {
   }
 });
 
-app.get('/api/v1/admin/organizations/:id/teams/:teamId', async (req, res) => {
+app.get('/api/v1/admin/organizations/:id/teams/:teamId', authenticateToken, async (req, res) => {
   try {
     const { id: organizationId, teamId } = req.params;
     const team = await teamModel.getTeamById(teamId, organizationId);
@@ -1000,7 +1000,7 @@ app.get('/api/v1/admin/organizations/:id/teams/:teamId', async (req, res) => {
   }
 });
 
-app.put('/api/v1/admin/organizations/:id/teams/:teamId', async (req, res) => {
+app.put('/api/v1/admin/organizations/:id/teams/:teamId', authenticateToken, async (req, res) => {
   try {
     const { id: organizationId, teamId } = req.params;
     const updateData = req.body;
@@ -1025,7 +1025,7 @@ app.put('/api/v1/admin/organizations/:id/teams/:teamId', async (req, res) => {
   }
 });
 
-app.delete('/api/v1/admin/organizations/:id/teams/:teamId', async (req, res) => {
+app.delete('/api/v1/admin/organizations/:id/teams/:teamId', authenticateToken, async (req, res) => {
   try {
     const { id: organizationId, teamId } = req.params;
     
@@ -1043,7 +1043,7 @@ app.delete('/api/v1/admin/organizations/:id/teams/:teamId', async (req, res) => 
 });
 
 // Organization Chart Route
-app.get('/api/v1/admin/organizations/:organizationId/chart', async (req, res) => {
+app.get('/api/v1/admin/organizations/:organizationId/chart', authenticateToken, async (req, res) => {
   try {
     const { organizationId } = req.params;
     
@@ -1157,7 +1157,7 @@ app.get('/api/v1/admin/organizations/:organizationId/chart', async (req, res) =>
 
 
 // Bulk Operations Routes
-app.get('/api/v1/admin/bulk/template', async (req, res) => {
+app.get('/api/v1/admin/bulk/template', authenticateToken, async (req, res) => {
   try {
     const type = req.query.type as string || 'organizations';
     
@@ -1187,7 +1187,7 @@ app.get('/api/v1/admin/bulk/template', async (req, res) => {
   }
 });
 
-app.post('/api/v1/admin/bulk/upload', upload.single('file'), async (req, res) => {
+app.post('/api/v1/admin/bulk/upload', authenticateToken, upload.single('file'), async (req, res) => {
   try {
     const file = (req as any).file;
     
@@ -1303,7 +1303,7 @@ app.post('/api/v1/admin/bulk/upload', upload.single('file'), async (req, res) =>
   }
 });
 
-app.post('/api/v1/admin/bulk/export', async (req, res) => {
+app.post('/api/v1/admin/bulk/export', authenticateToken, async (req, res) => {
   try {
     const { type, format, filters } = req.body;
     
@@ -1340,7 +1340,7 @@ app.post('/api/v1/admin/bulk/export', async (req, res) => {
 });
 
 // GET /api/v1/admin/bulk/template/users - Download user CSV template
-app.get('/api/v1/admin/bulk/template/users', (req, res) => {
+app.get('/api/v1/admin/bulk/template/users', authenticateToken, (req, res) => {
   try {
     const csv = CSVParser.generateUserTemplate();
     res.setHeader('Content-Type', 'text/csv');
@@ -1357,7 +1357,7 @@ app.get('/api/v1/admin/bulk/template/users', (req, res) => {
 });
 
 // POST /api/v1/admin/bulk/export/users - Export users to CSV/JSON
-app.post('/api/v1/admin/bulk/export/users', async (req, res) => {
+app.post('/api/v1/admin/bulk/export/users', authenticateToken, async (req, res) => {
   try {
     const { format = 'csv', filters = {} } = req.body;
     
@@ -1392,7 +1392,7 @@ app.post('/api/v1/admin/bulk/export/users', async (req, res) => {
 // ==================
 
 // GET /api/v1/admin/roles - Get all roles
-app.get('/api/v1/admin/roles', async (req, res) => {
+app.get('/api/v1/admin/roles', authenticateToken, async (req, res) => {
   try {
     const rolesQuery = `
       SELECT 
@@ -1420,7 +1420,7 @@ app.get('/api/v1/admin/roles', async (req, res) => {
 });
 
 // GET /api/v1/admin/users - Get users with filters and pagination
-app.get('/api/v1/admin/users', async (req, res) => {
+app.get('/api/v1/admin/users', authenticateToken, async (req, res) => {
   console.log('🚀 Admin users endpoint called with query:', req.query);
   try {
     const {
@@ -1575,7 +1575,7 @@ app.get('/api/v1/admin/users', async (req, res) => {
 });
 
 // GET /api/v1/admin/users/:id - Get user by ID
-app.get('/api/v1/admin/users/:id', async (req, res) => {
+app.get('/api/v1/admin/users/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -1632,7 +1632,7 @@ app.get('/api/v1/admin/users/:id', async (req, res) => {
 });
 
 // POST /api/v1/admin/users - Create new user
-app.post('/api/v1/admin/users', async (req, res) => {
+app.post('/api/v1/admin/users', authenticateToken, async (req, res) => {
   try {
     const { 
       name, 
@@ -1700,7 +1700,7 @@ app.post('/api/v1/admin/users', async (req, res) => {
 });
 
 // PUT /api/v1/admin/users/:id - Update user
-app.put('/api/v1/admin/users/:id', async (req, res) => {
+app.put('/api/v1/admin/users/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { 
@@ -1793,7 +1793,7 @@ app.put('/api/v1/admin/users/:id', async (req, res) => {
 });
 
 // DELETE /api/v1/admin/users/:id - Delete user
-app.delete('/api/v1/admin/users/:id', async (req, res) => {
+app.delete('/api/v1/admin/users/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -1815,7 +1815,7 @@ app.delete('/api/v1/admin/users/:id', async (req, res) => {
 });
 
 // GET /api/v1/admin/users/stats - Get user statistics
-app.get('/api/v1/admin/users/stats', async (req, res) => {
+app.get('/api/v1/admin/users/stats', authenticateToken, async (req, res) => {
   try {
     const statsQuery = `
       SELECT 
@@ -1885,7 +1885,7 @@ app.get('/api/v1/admin/users/stats', async (req, res) => {
 // ==================
 
 // GET /api/v1/notifications - Get user notifications
-app.get('/api/v1/notifications', async (req, res) => {
+app.get('/api/v1/notifications', authenticateToken, async (req, res) => {
   try {
     const { userId, userEmail, isRead, type, limit = 50, offset = 0 } = req.query;
     
@@ -1991,7 +1991,7 @@ app.get('/api/v1/notifications', async (req, res) => {
 });
 
 // GET /api/v1/notifications/stats - Get notification statistics
-app.get('/api/v1/notifications/stats', async (req, res) => {
+app.get('/api/v1/notifications/stats', authenticateToken, async (req, res) => {
   try {
     const { userId, userEmail } = req.query;
     
@@ -2083,7 +2083,7 @@ app.get('/api/v1/notifications/stats', async (req, res) => {
 });
 
 // PUT /api/v1/notifications/:id/read - Mark notification as read
-app.put('/api/v1/notifications/:id/read', async (req, res) => {
+app.put('/api/v1/notifications/:id/read', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -2128,7 +2128,7 @@ app.put('/api/v1/notifications/:id/read', async (req, res) => {
 });
 
 // PUT /api/v1/notifications/read-all - Mark all notifications as read
-app.put('/api/v1/notifications/read-all', async (req, res) => {
+app.put('/api/v1/notifications/read-all', authenticateToken, async (req, res) => {
   try {
     const { userId, userEmail } = req.body;
     
@@ -2171,7 +2171,7 @@ app.put('/api/v1/notifications/read-all', async (req, res) => {
 });
 
 // DELETE /api/v1/notifications/:id - Delete notification
-app.delete('/api/v1/notifications/:id', async (req, res) => {
+app.delete('/api/v1/notifications/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -2196,7 +2196,7 @@ app.delete('/api/v1/notifications/:id', async (req, res) => {
 });
 
 // POST /api/v1/notifications - Create notification (for testing)
-app.post('/api/v1/notifications', async (req, res) => {
+app.post('/api/v1/notifications', authenticateToken, async (req, res) => {
   try {
     const { userId, userEmail, type, title, message, data, priority = 'normal' } = req.body;
     
@@ -5076,7 +5076,7 @@ app.delete('/api/v1/feedback/:feedbackId/comments/:commentId', authenticateToken
 // Feedback cycles are now stored in the database (feedback_cycles table)
 
 // GET /api/v1/cycles - Get cycles list
-app.get('/api/v1/cycles', async (req, res) => {
+app.get('/api/v1/cycles', authenticateToken, async (req, res) => {
   try {
     const { 
       page = 1, 
@@ -5160,7 +5160,7 @@ app.get('/api/v1/cycles', async (req, res) => {
       LEFT JOIN (
         SELECT 
           cycle_id,
-          COUNT(*) as completed
+          COUNT(DISTINCT giver_id) as completed
         FROM feedback_responses 
         WHERE is_approved = true
         GROUP BY cycle_id
@@ -5207,7 +5207,7 @@ app.get('/api/v1/cycles', async (req, res) => {
 });
 
 // GET /api/v1/cycles/:id - Get specific cycle
-app.get('/api/v1/cycles/:id', async (req, res) => {
+app.get('/api/v1/cycles/:id', authenticateToken, async (req, res) => {
   try {
     const cycleQuery = `
       SELECT 
@@ -5242,7 +5242,7 @@ app.get('/api/v1/cycles/:id', async (req, res) => {
       LEFT JOIN (
         SELECT 
           cycle_id,
-          COUNT(*) as completed
+          COUNT(DISTINCT giver_id) as completed
         FROM feedback_responses 
         WHERE is_approved = true
         GROUP BY cycle_id
@@ -5390,7 +5390,7 @@ app.post('/api/v1/cycles', authenticateToken, async (req, res) => {
 });
 
 // PUT /api/v1/cycles/:id - Update cycle
-app.put('/api/v1/cycles/:id', async (req, res) => {
+app.put('/api/v1/cycles/:id', authenticateToken, async (req, res) => {
   try {
     const {
       name,
@@ -5467,7 +5467,7 @@ app.put('/api/v1/cycles/:id', async (req, res) => {
 });
 
 // DELETE /api/v1/cycles/:id - Delete cycle
-app.delete('/api/v1/cycles/:id', async (req, res) => {
+app.delete('/api/v1/cycles/:id', authenticateToken, async (req, res) => {
   try {
     const cycleId = req.params.id;
     
@@ -5527,7 +5527,7 @@ app.delete('/api/v1/cycles/:id', async (req, res) => {
 });
 
 // GET /api/v1/cycles/:id/can-delete - Check if cycle can be deleted
-app.get('/api/v1/cycles/:id/can-delete', async (req, res) => {
+app.get('/api/v1/cycles/:id/can-delete', authenticateToken, async (req, res) => {
   try {
     const cycleId = req.params.id;
     
@@ -5574,7 +5574,7 @@ app.get('/api/v1/cycles/:id/can-delete', async (req, res) => {
 });
 
 // POST /api/v1/cycles/:id/activate - Activate cycle
-app.post('/api/v1/cycles/:id/activate', async (req, res) => {
+app.post('/api/v1/cycles/:id/activate', authenticateToken, async (req, res) => {
   try {
     const updateQuery = `
       UPDATE feedback_cycles 
@@ -5604,7 +5604,7 @@ app.post('/api/v1/cycles/:id/activate', async (req, res) => {
 });
 
 // POST /api/v1/cycles/:id/close - Close cycle
-app.post('/api/v1/cycles/:id/close', async (req, res) => {
+app.post('/api/v1/cycles/:id/close', authenticateToken, async (req, res) => {
   try {
     const updateQuery = `
       UPDATE feedback_cycles 
@@ -5634,7 +5634,7 @@ app.post('/api/v1/cycles/:id/close', async (req, res) => {
 });
 
 // GET /api/v1/cycles/summary - Get cycle summary
-app.get('/api/v1/cycles/summary', async (req, res) => {
+app.get('/api/v1/cycles/summary', authenticateToken, async (req, res) => {
   try {
     const statsQuery = `
       SELECT 
@@ -5656,7 +5656,7 @@ app.get('/api/v1/cycles/summary', async (req, res) => {
       LEFT JOIN (
         SELECT 
           cycle_id,
-          COUNT(*) as completed
+          COUNT(DISTINCT giver_id) as completed
         FROM feedback_responses 
         WHERE is_approved = true
         GROUP BY cycle_id
@@ -5689,7 +5689,7 @@ app.get('/api/v1/cycles/summary', async (req, res) => {
 });
 
 // GET /api/v1/cycles/:id/participants - Get cycle participants
-app.get('/api/v1/cycles/:id/participants', async (req, res) => {
+app.get('/api/v1/cycles/:id/participants', authenticateToken, async (req, res) => {
   try {
     const participantsQuery = `
       SELECT 
@@ -5736,7 +5736,7 @@ app.get('/api/v1/cycles/:id/participants', async (req, res) => {
 });
 
 // POST /api/v1/cycles/:id/participants - Add cycle participants
-app.post('/api/v1/cycles/:id/participants', async (req, res) => {
+app.post('/api/v1/cycles/:id/participants', authenticateToken, async (req, res) => {
   try {
     const { participants } = req.body;
     
@@ -5790,7 +5790,7 @@ app.post('/api/v1/cycles/:id/participants', async (req, res) => {
 });
 
 // DELETE /api/v1/cycles/:id/participants/:participantId - Remove cycle participant
-app.delete('/api/v1/cycles/:id/participants/:participantId', async (req, res) => {
+app.delete('/api/v1/cycles/:id/participants/:participantId', authenticateToken, async (req, res) => {
   try {
     const deleteQuery = `
       DELETE FROM feedback_requests 
@@ -5817,7 +5817,7 @@ app.delete('/api/v1/cycles/:id/participants/:participantId', async (req, res) =>
 });
 
 // POST /api/v1/cycles/validate-feedback - Validate feedback permission
-app.post('/api/v1/cycles/validate-feedback', async (req, res) => {
+app.post('/api/v1/cycles/validate-feedback', authenticateToken, async (req, res) => {
   try {
     const { cycleId, fromUserId, toUserId, reviewType } = req.body;
     
