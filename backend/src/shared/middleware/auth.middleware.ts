@@ -38,17 +38,16 @@ async function authenticateTokenAsync(req: Request, res: Response, next: NextFun
     // Real JWT verification
     const payload = jwtService.verify(token);
 
-      // Fetch user data from database if needed
-      // For now, use JWT payload directly
-      (req as any).user = {
-        id: payload.sub,
-        email: payload.email,
-        name: payload.name,
-        roles: payload.roles || []
-      };
+    // Fetch user data from database if needed
+    // For now, use JWT payload directly
+    (req as any).user = {
+      id: payload.sub,
+      email: payload.email,
+      name: payload.name,
+      roles: payload.roles || []
+    };
 
-      next();
-    }
+    next();
   } catch (error) {
     console.error('🔍 Auth middleware - token verification failed:', error);
     return res.status(401).json({

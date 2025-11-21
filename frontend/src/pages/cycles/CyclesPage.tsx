@@ -39,6 +39,22 @@ export default function CyclesPage() {
   // Check if user can create cycles (admin or manager only)
   const canCreateCycles = user?.roles?.includes('admin') || user?.roles?.includes('manager')
 
+  // Check if user can edit a specific cycle
+  // Note: Only Manager, HR, and Admin can create cycles (per backend RBAC)
+  // Therefore, only these same roles can edit cycles
+  const canEditCycle = (cycle: Cycle) => {
+    if (!user) return false
+    
+    // Only Admin, HR, and Manager can edit cycles
+    // (These are the same roles that can create cycles)
+    if (user.roles?.includes('admin')) return true
+    if (user.roles?.includes('hr')) return true
+    if (user.roles?.includes('manager')) return true
+    
+    // Employees cannot edit any cycles (they can't create them either)
+    return false
+  }
+
   useEffect(() => {
     fetchCycles(filters)
   }, [fetchCycles, filters])
@@ -157,9 +173,9 @@ export default function CyclesPage() {
 
       {/* Cycles grid */}
       {!isLoading && !error && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
           {filteredCycles.map((cycle) => (
-            <Card key={cycle.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Card key={cycle.id} className="hover:shadow-lg transition-shadow cursor-pointer h-full flex flex-col">
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
@@ -169,7 +185,7 @@ export default function CyclesPage() {
                   {getStatusBadge(cycle.status)}
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex-1">
                 <div className="space-y-4">
                   {/* Dates */}
                   <div className="flex items-center space-x-2 text-sm text-gray-600">
@@ -219,7 +235,7 @@ export default function CyclesPage() {
                     >
                       View Details
                     </Button>
-                    {cycle.status === CycleStatus.DRAFT && (
+                    {cycle.status === CycleStatus.DRAFT && canEditCycle(cycle) && (
                       <Button 
                         variant="outline" 
                         size="sm"

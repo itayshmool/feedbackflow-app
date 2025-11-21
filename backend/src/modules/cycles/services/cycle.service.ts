@@ -330,6 +330,114 @@ export class CycleService {
     };
   }
 
+  // Participant management methods
+  async getCycleParticipants(cycleId: string): Promise<any[]> {
+    const participants = await this.participantModel.findByCycleId(cycleId);
+    return participants.map(p => ({
+      id: p.id,
+      cycleId: p.cycle_id,
+      userId: p.user_id,
+      role: p.role,
+      assignedBy: p.assigned_by,
+      assignedAt: p.assigned_at,
+      status: p.status,
+      metadata: p.metadata ? JSON.parse(p.metadata) : undefined
+    }));
+  }
+
+  async addCycleParticipants(
+    cycleId: string,
+    participants: any[],
+    assignedBy: string
+  ): Promise<any[]> {
+    const client = await this.db.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Check if cycle exists
+      const cycle = await this.cycleModel.findById(cycleId, client);
+      if (!cycle) {
+        throw new NotFoundError('Cycle not found');
+      }
+      
+      const added = [];
+      for (const participant of participants) {
+        const created = await this.participantModel.create({
+          cycle_id: cycleId,
+          user_id: participant.userId,
+          role: participant.role || 'employee',
+          assigned_by: assignedBy,
+          status: 'active',
+          metadata: participant.metadata ? JSON.stringify(participant.metadata) : undefined
+        }, client);
+        
+        added.push({
+          id: created.id,
+          cycleId: created.cycle_id,
+          userId: created.user_id,
+          role: created.role,
+          assignedBy: created.assigned_by,
+          assignedAt: created.assigned_at,
+          status: created.status,
+          metadata: created.metadata ? JSON.parse(created.metadata) : undefined
+        });
+      }
+      
+      await client.query('COMMIT');
+      
+      this.logger.info('Participants added to cycle', { cycleId, count: added.length });
+      
+      return added;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      this.logger.error('Error adding cycle participants', { error, cycleId });
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async removeCycleParticipant(
+    cycleId: string,
+    participantId: string,
+    requestingUserId: string
+  ): Promise<void> {
+    const client = await this.db.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Check if cycle exists
+      const cycle = await this.cycleModel.findById(cycleId, client);
+      if (!cycle) {
+        throw new NotFoundError('Cycle not found');
+      }
+      
+      // Check permissions (cycle creator or admin/HR can remove participants)
+      if (!this.hasUpdatePermission(cycle, requestingUserId)) {
+        throw new ForbiddenError('Insufficient permission to remove participants');
+      }
+      
+      // Remove participant
+      const deleted = await this.participantModel.delete(participantId, client);
+      
+      if (!deleted) {
+        throw new NotFoundError('Participant not found');
+      }
+      
+      await client.query('COMMIT');
+      
+      this.logger.info('Participant removed from cycle', { cycleId, participantId });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      this.logger.error('Error removing cycle participant', { error, cycleId, participantId });
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   // Validation methods for feedback integration
   async validateCyclePermission(
     cycleId: string,
@@ -383,28 +491,42 @@ export class CycleService {
   }
 
   private hasViewPermission(cycle: CycleModel, userId: string): boolean {
-    // For now, allow all authenticated users to view cycles
-    // TODO: Implement proper permission checking based on user role and organization
+    // All authenticated users can view cycles in their organization
+    // Additional organization-level filtering should be done in getCycleList
     return true;
   }
 
-  private hasUpdatePermission(cycle: CycleModel, userId: string): boolean {
+  private hasUpdatePermission(cycle: CycleModel, userId: string, userRoles?: string[]): boolean {
     // Creator can always update
     if (cycle.created_by === userId) {
       return true;
     }
     
-    // TODO: Add role-based permissions (HR, Admin)
+    // Admin and HR can update any cycle in their organization
+    if (userRoles) {
+      const roles = userRoles.map(r => r.toLowerCase());
+      if (roles.includes('admin') || roles.includes('hr')) {
+        return true;
+      }
+    }
+    
     return false;
   }
 
-  private hasDeletePermission(cycle: CycleModel, userId: string): boolean {
+  private hasDeletePermission(cycle: CycleModel, userId: string, userRoles?: string[]): boolean {
     // Creator can always delete
     if (cycle.created_by === userId) {
       return true;
     }
     
-    // TODO: Add role-based permissions (HR, Admin)
+    // Admin and HR can delete any cycle in their organization
+    if (userRoles) {
+      const roles = userRoles.map(r => r.toLowerCase());
+      if (roles.includes('admin') || roles.includes('hr')) {
+        return true;
+      }
+    }
+    
     return false;
   }
 

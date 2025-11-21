@@ -3,6 +3,7 @@
 import { useAuthStore } from '@/stores/authStore'
 import AdminDashboard from './AdminDashboard'
 import ManagerDashboard from './ManagerDashboard'
+import EmployeeDashboard from './EmployeeDashboard'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 export default function DashboardPage() {
@@ -23,5 +24,10 @@ export default function DashboardPage() {
     return <AdminDashboard />
   }
 
-  return <ManagerDashboard />
+  if (user.roles?.includes('manager')) {
+    return <ManagerDashboard />
+  }
+
+  // Default to employee dashboard for regular employees
+  return <EmployeeDashboard />
 }

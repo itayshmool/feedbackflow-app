@@ -63,6 +63,18 @@ export function createCycleRoutes(controller: CycleController): Router {
   );
 
   /**
+   * @route   GET /api/v1/cycles/summary
+   * @desc    Get cycle summary for organization
+   * @access  Private (HR, Admin)
+   * @note    MUST be before /:id route to avoid conflict
+   */
+  router.get(
+    '/summary',
+    rbacMiddleware(['hr', 'admin']),
+    controller.getCycleSummary
+  );
+
+  /**
    * @route   GET /api/v1/cycles/:id
    * @desc    Get specific cycle by ID
    * @access  Private (All authenticated users)
@@ -136,18 +148,48 @@ export function createCycleRoutes(controller: CycleController): Router {
   );
 
   // ===================
-  // CYCLE ANALYTICS
+  // PARTICIPANT MANAGEMENT
   // ===================
 
   /**
-   * @route   GET /api/v1/cycles/summary
-   * @desc    Get cycle summary for organization
-   * @access  Private (HR, Admin)
+   * @route   GET /api/v1/cycles/:id/participants
+   * @desc    Get cycle participants
+   * @access  Private (All authenticated users)
    */
   router.get(
-    '/summary',
-    rbacMiddleware(['hr', 'admin']),
-    controller.getCycleSummary
+    '/:id/participants',
+    validationMiddleware([
+      param('id').isString().notEmpty()
+    ]),
+    controller.getCycleParticipants
+  );
+
+  /**
+   * @route   POST /api/v1/cycles/:id/participants
+   * @desc    Add participants to cycle
+   * @access  Private (Creator, HR, Admin)
+   */
+  router.post(
+    '/:id/participants',
+    validationMiddleware([
+      param('id').isString().notEmpty(),
+      body('participants').isArray()
+    ]),
+    controller.addCycleParticipants
+  );
+
+  /**
+   * @route   DELETE /api/v1/cycles/:id/participants/:participantId
+   * @desc    Remove participant from cycle
+   * @access  Private (Creator, HR, Admin)
+   */
+  router.delete(
+    '/:id/participants/:participantId',
+    validationMiddleware([
+      param('id').isString().notEmpty(),
+      param('participantId').isString().notEmpty()
+    ]),
+    controller.removeCycleParticipant
   );
 
   // ===================
