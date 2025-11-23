@@ -14,7 +14,7 @@ import { Switch } from '../ui/Switch';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Autocomplete } from '../ui/Autocomplete';
 import { UserSearchResult } from '../../services/userSearch.service';
-import { Plus, Trash2, Save, Send, X, Calendar, Users, Target } from 'lucide-react';
+import { Plus, Trash2, Save, Send, X, Calendar, Users, Target, HelpCircle } from 'lucide-react';
 
 interface GiveFeedbackProps {
   cycleId?: string;
@@ -56,7 +56,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
   const [selectedCycleId, setSelectedCycleId] = useState(initialCycleId || '');
   const [toUserEmail, setToUserEmail] = useState(initialToUserEmail || '');
   const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null);
-  const [reviewType, setReviewType] = useState<ReviewType>(ReviewType.PEER_REVIEW);
+  const [reviewType, setReviewType] = useState<ReviewType>(ReviewType.MANAGER_REVIEW);
   const [overallComment, setOverallComment] = useState('');
   const [strengths, setStrengths] = useState<string[]>(['']);
   const [areasForImprovement, setAreasForImprovement] = useState<string[]>(['']);
@@ -79,6 +79,27 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
 
   // Determine if current review type requires direct reports only
   const requiresDirectReports = reviewType === ReviewType.MANAGER_REVIEW;
+
+  // Helper function to get contextual help text based on review type
+  const getHelpText = (section: string): string => {
+    const helpTexts = {
+      manager: {
+        strengths: "What has this employee done exceptionally well? Focus on specific achievements and behaviors.",
+        improvements: "What skills or behaviors should they develop? Be constructive and actionable.",
+        examples: "Provide concrete examples of situations that illustrate your feedback.",
+        recommendations: "Suggest specific actions or resources for professional development."
+      },
+      project: {
+        strengths: "What went well in this collaboration? Highlight positive contributions.",
+        improvements: "What could improve in future projects? Keep it constructive and forward-looking.",
+        examples: "Share specific instances from the project that stood out.",
+        recommendations: "Suggestions for future collaborations or team processes."
+      }
+    };
+    
+    const type = reviewType === ReviewType.MANAGER_REVIEW ? 'manager' : 'project';
+    return helpTexts[type][section as keyof typeof helpTexts.manager] || '';
+  };
 
   const addStrength = () => setStrengths([...strengths, '']);
   const removeStrength = (index: number) => setStrengths(strengths.filter((_, i) => i !== index));
@@ -343,11 +364,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
               onChange={(e) => setReviewType(e.target.value as ReviewType)}
               required
             >
-              <option value={ReviewType.SELF_ASSESSMENT}>Self Assessment</option>
               <option value={ReviewType.MANAGER_REVIEW}>Manager Review</option>
-              <option value={ReviewType.PEER_REVIEW}>Peer Review</option>
-              <option value={ReviewType.UPWARD_REVIEW}>Upward Review</option>
-              <option value={ReviewType.THREE_SIXTY_REVIEW}>360° Review</option>
               <option value={ReviewType.PROJECT_REVIEW}>Project Review</option>
             </Select>
             {reviewType === ReviewType.MANAGER_REVIEW && (
@@ -355,9 +372,9 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
                 Manager reviews can only be given to your direct reports.
               </p>
             )}
-            {(reviewType === ReviewType.PEER_REVIEW || reviewType === ReviewType.PROJECT_REVIEW) && (
+            {reviewType === ReviewType.PROJECT_REVIEW && (
               <p className="text-sm text-green-600 mt-1">
-                {reviewType === ReviewType.PEER_REVIEW ? 'Peer reviews' : 'Project reviews'} can be given to anyone in your organization.
+                Project reviews can be given to anyone in your organization.
               </p>
             )}
           </div>
@@ -424,7 +441,13 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
       {/* Strengths */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Strengths</h3>
+          <div>
+            <h3 className="text-lg font-semibold">Strengths</h3>
+            <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
+              <HelpCircle className="w-4 h-4" />
+              {getHelpText('strengths')}
+            </p>
+          </div>
           <Button variant="outline" size="sm" onClick={addStrength} icon={Plus}>
             Add
           </Button>
@@ -452,7 +475,13 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
       {/* Areas for Improvement */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Areas for Improvement</h3>
+          <div>
+            <h3 className="text-lg font-semibold">Areas for Improvement</h3>
+            <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
+              <HelpCircle className="w-4 h-4" />
+              {getHelpText('improvements')}
+            </p>
+          </div>
           <Button variant="outline" size="sm" onClick={addAreaForImprovement} icon={Plus}>
             Add
           </Button>
@@ -480,7 +509,13 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
       {/* Specific Examples */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Specific Examples</h3>
+          <div>
+            <h3 className="text-lg font-semibold">Specific Examples</h3>
+            <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
+              <HelpCircle className="w-4 h-4" />
+              {getHelpText('examples')}
+            </p>
+          </div>
           <Button variant="outline" size="sm" onClick={addExample} icon={Plus}>
             Add
           </Button>
@@ -508,7 +543,13 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
       {/* Recommendations */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Recommendations</h3>
+          <div>
+            <h3 className="text-lg font-semibold">Recommendations</h3>
+            <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
+              <HelpCircle className="w-4 h-4" />
+              {getHelpText('recommendations')}
+            </p>
+          </div>
           <Button variant="outline" size="sm" onClick={addRecommendation} icon={Plus}>
             Add
           </Button>
@@ -533,14 +574,21 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         </div>
       </Card>
 
-      {/* Goals */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Development Goals (Optional)</h3>
-          <Button variant="outline" size="sm" onClick={addGoal} icon={Plus}>
-            Add Goal
-          </Button>
-        </div>
+      {/* Goals - Only show for Manager Reviews */}
+      {reviewType === ReviewType.MANAGER_REVIEW && (
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold">Development Goals</h3>
+              <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
+                <HelpCircle className="w-4 h-4" />
+                Set 3-5 SMART goals for the employee's growth and development
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={addGoal} icon={Plus}>
+              Add Goal
+            </Button>
+          </div>
         <div className="space-y-4">
           {goals.map((goal, index) => (
             <div key={index} className="p-4 border rounded-md space-y-3">
@@ -601,6 +649,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
           ))}
         </div>
       </Card>
+      )}
 
       {/* Action Buttons */}
       <div className="flex gap-3 justify-end sticky bottom-0 bg-white py-4 border-t">

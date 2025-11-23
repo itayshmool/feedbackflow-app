@@ -159,6 +159,12 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
     return labels[type] || type;
   };
 
+  // Filter to only show Manager Review and Project Review types
+  const visibleFeedbackList = feedbackList.filter(
+    (feedback) =>
+      feedback.reviewType === ReviewType.MANAGER_REVIEW ||
+      feedback.reviewType === ReviewType.PROJECT_REVIEW
+  );
 
   if (error) {
     return (
@@ -236,7 +242,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
             }`}
             onClick={() => setActiveTab('all')}
           >
-            All ({feedbackList.length})
+            All ({visibleFeedbackList.length})
           </button>
         </div>
       )}
@@ -270,11 +276,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
               onChange={(e) => setTypeFilter(e.target.value as ReviewType)}
             >
               <option value="">All Types</option>
-              <option value={ReviewType.SELF_ASSESSMENT}>Self Assessment</option>
               <option value={ReviewType.MANAGER_REVIEW}>Manager Review</option>
-              <option value={ReviewType.PEER_REVIEW}>Peer Review</option>
-              <option value={ReviewType.UPWARD_REVIEW}>Upward Review</option>
-              <option value={ReviewType.THREE_SIXTY_REVIEW}>360° Review</option>
               <option value={ReviewType.PROJECT_REVIEW}>Project Review</option>
             </Select>
           </div>
@@ -297,7 +299,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
       {/* Feedback List */}
       {!isLoading && (
         <div className="space-y-4">
-          {feedbackList.length === 0 ? (
+          {visibleFeedbackList.length === 0 ? (
             <Card className="p-12 text-center">
               <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No feedback found</h3>
@@ -313,7 +315,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
               )}
             </Card>
           ) : (
-            feedbackList.map((feedback) => (
+            visibleFeedbackList.map((feedback) => (
               <Card
                 key={feedback.id}
                 className="p-6 hover:shadow-lg transition-shadow cursor-pointer"
@@ -423,7 +425,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
       )}
 
       {/* Pagination */}
-      {!isLoading && feedbackList.length > 0 && pagination.totalPages > 1 && (
+      {!isLoading && visibleFeedbackList.length > 0 && pagination.totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-600">
             Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
