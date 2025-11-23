@@ -13,6 +13,7 @@ import { DepartmentModelClass } from './modules/admin/models/department.model.js
 import { TeamModelClass } from './modules/admin/models/team.model.js';
 import { CSVParser } from './shared/utils/csv-parser.js';
 import { authenticateToken } from './shared/middleware/auth.middleware.js';
+import { getCookieOptions } from './shared/utils/cookie-helper.js';
 import dbConfig from './config/real-database.js';
 
 // Transform database data to frontend format
@@ -614,13 +615,10 @@ app.post('/api/v1/auth/login/mock', async (req, res) => {
     // Mock JWT token with email embedded
     const mockToken = `mock-jwt-token-${email}-${Date.now()}`;
     
-    // Set authentication cookie
-    res.cookie('authToken', mockToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+    // Set authentication cookie (automatically overwrites existing cookie)
+    const cookieOptions = getCookieOptions(req);
+    console.log('🔐 LOGIN: Setting cookie for', email, 'with options:', cookieOptions);
+    res.cookie('authToken', mockToken, cookieOptions);
     
     res.json({
       success: true,
@@ -642,8 +640,10 @@ app.post('/api/v1/auth/login/mock', async (req, res) => {
 
 app.post('/api/v1/auth/logout', async (req, res) => {
   try {
-    // Clear authentication cookie
-    res.clearCookie('authToken');
+    // Clear authentication cookie with same options used when setting
+    const cookieOptions = getCookieOptions(req);
+    console.log('🚪 LOGOUT: Clearing cookie with options:', cookieOptions);
+    res.clearCookie('authToken', cookieOptions);
     
     res.json({
       success: true,

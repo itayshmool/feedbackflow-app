@@ -39,19 +39,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     console.log('[AuthStore] Login started for:', email)
     set({ isLoading: true })
     try {
-      const response = await api.post('/auth/login/mock', {
+      await api.post('/auth/login/mock', {
         email,
         password: password || 'password',
       })
       
-      const { user } = response.data
       console.log('[AuthStore] Login successful, cookie set by backend')
       
-      set({
-        user,
-        isAuthenticated: true,
-        isLoading: false,
-      })
+      // Fetch fresh user data from server to ensure state matches cookie
+      await get().checkAuth()
     } catch (error) {
       console.error('[AuthStore] Login failed:', error)
       set({ isLoading: false })
@@ -62,18 +58,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   loginWithGoogle: async (idToken: string) => {
     set({ isLoading: true })
     try {
-      const response = await api.post('/auth/login/google', {
+      await api.post('/auth/login/google', {
         idToken,
       })
       
-      const { user } = response.data
       console.log('[AuthStore] Google login successful, cookie set by backend')
       
-      set({
-        user,
-        isAuthenticated: true,
-        isLoading: false,
-      })
+      // Fetch fresh user data from server to ensure state matches cookie
+      await get().checkAuth()
     } catch (error) {
       console.error('[AuthStore] Google login failed:', error)
       set({ isLoading: false })

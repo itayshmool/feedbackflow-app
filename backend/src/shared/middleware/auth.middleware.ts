@@ -6,6 +6,8 @@ const jwtService = new JwtService(process.env.JWT_SECRET || 'changeme');
 async function authenticateTokenAsync(req: Request, res: Response, next: NextFunction) {
   // Read token from cookie instead of Authorization header
   const token = req.cookies?.authToken;
+  console.log('🔍 Auth middleware - received token:', token?.substring(0, 50) + '...', 
+              'hostname:', req.hostname, 'host:', req.get('host'));
 
   if (!token) {
     return res.status(401).json({

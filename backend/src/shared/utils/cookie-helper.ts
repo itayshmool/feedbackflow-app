@@ -28,12 +28,18 @@ export function getCookieOptions(req: Request) {
   // Check if request is HTTPS (direct or behind proxy)
   const isHttps = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https'
 
-  return {
+  const options = {
     httpOnly: true,
     secure: isProduction && !isLocalhost && isHttps,
     sameSite: 'lax' as const,  // 'lax' works for same-site and is more compatible
     maxAge: 24 * 60 * 60 * 1000,
+    path: '/',  // Explicit path required for clearCookie to work properly
     domain: getCookieDomain(hostname)
   }
+  
+  // DEBUG: Log cookie options
+  console.log('🍪 Cookie options:', { hostname, domain: options.domain, path: options.path })
+  
+  return options
 }
 
