@@ -11,7 +11,8 @@ import {
   CycleListResponse, 
   CycleSummary,
   CycleStatus,
-  CycleSettings
+  CycleSettings,
+  ParticipantStatus
 } from '../types/cycle.types';
 import { CycleModelClass } from '../models/cycle.model';
 import { CycleParticipantModelClass } from '../models/cycle-participant.model';
@@ -368,7 +369,7 @@ export class CycleService {
           user_id: participant.userId,
           role: participant.role || 'employee',
           assigned_by: assignedBy,
-          status: 'active',
+          status: ParticipantStatus.ACTIVE,
           metadata: participant.metadata ? JSON.stringify(participant.metadata) : undefined
         }, client);
         

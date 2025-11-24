@@ -1,8 +1,8 @@
 import request from 'supertest';
-import { app } from '../../../app.js';
+import app from '../../../src/app.js';
 
 // Mock authentication middleware
-jest.mock('../../../shared/middleware/auth.middleware.js', () => ({
+jest.mock('../../../src/shared/middleware/auth.middleware.js', () => ({
   authenticateToken: (req: any, res: any, next: any) => {
     req.user = {
       email: 'admin@example.com',
@@ -13,12 +13,12 @@ jest.mock('../../../shared/middleware/auth.middleware.js', () => ({
 }));
 
 // Mock database
-jest.mock('../../../config/database.js', () => ({
+jest.mock('../../../src/config/database.js', () => ({
   query: jest.fn(),
   transaction: jest.fn(),
 }));
 
-import { query } from '../../../config/database.js';
+import { query } from '../../../src/config/database.js';
 
 const mockQuery = query as jest.MockedFunction<typeof query>;
 

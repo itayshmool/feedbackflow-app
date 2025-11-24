@@ -26,7 +26,7 @@ jest.mock('../../../../src/shared/utils/logger');
 
 describe('AdminOrganizationService', () => {
   let service: AdminOrganizationService;
-  let mockDb: jest.Mocked<Pool>;
+  let mockDb: any;
   let mockEventEmitter: EventEmitter;
   let mockLogger: jest.Mocked<Logger>;
   let mockOrganizationModel: jest.Mocked<OrganizationModelClass>;

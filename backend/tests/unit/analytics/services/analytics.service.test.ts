@@ -13,7 +13,7 @@ jest.mock('../../../../src/shared/utils/logger');
 
 describe('AnalyticsService', () => {
   let analyticsService: AnalyticsService;
-  let mockDb: jest.Mocked<Pool>;
+  let mockDb: any;
   let mockEventEmitter: jest.Mocked<EventEmitter>;
   let mockLogger: jest.Mocked<Logger>;
 

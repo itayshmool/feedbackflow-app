@@ -117,7 +117,7 @@ const upload = multer({
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Only PDF and Word documents are allowed'), false);
+      cb(null, false);
     }
   }
 });
@@ -294,7 +294,7 @@ const departmentModel = new DepartmentModelClass(dbConfig.pool);
 const teamModel = new TeamModelClass(dbConfig.pool);
 
 // Mount admin user routes
-app.use('/api/v1/admin', createAdminUserRoutes);
+app.use('/api/v1/admin', createAdminUserRoutes());
 
 // Organization API routes - specific routes first, then parameterized routes
 app.get('/api/v1/admin/organizations', authenticateToken, async (req, res) => {
@@ -1510,7 +1510,7 @@ app.get('/api/v1/admin/users', authenticateToken, async (req, res) => {
 
     // Main query - create separate params array for main query
     const mainQueryParams = [...queryParams];
-    mainQueryParams.push(Number(limit), offset);
+    mainQueryParams.push(Number(limit) as any, offset as any);
     
     const mainQuery = `
       SELECT 
@@ -1962,14 +1962,14 @@ app.get('/api/v1/notifications/stats', authenticateToken, async (req, res) => {
     const priorities = priorityResult.rows;
     
     // Build JSON objects for by_type and by_priority
-    const byType = {};
-    const byPriority = {};
+    const byType: Record<string, number> = {};
+    const byPriority: Record<string, number> = {};
     
-    categories.forEach(row => {
+    categories.forEach((row: any) => {
       byType[row.category] = parseInt(row.count);
     });
     
-    priorities.forEach(row => {
+    priorities.forEach((row: any) => {
       byPriority[row.priority] = parseInt(row.count);
     });
     
@@ -2173,8 +2173,9 @@ app.post('/api/v1/notifications', authenticateToken, async (req, res) => {
 app.get('/api/v1/users/search', authenticateToken, async (req, res) => {
   try {
     const { q, limit = 10 } = req.query;
+    const searchQuery = typeof q === 'string' ? q : '';
     
-    if (!q || q.length < 3) {
+    if (!searchQuery || searchQuery.length < 3) {
       return res.json({ success: true, data: [] });
     }
     
@@ -2198,7 +2199,7 @@ app.get('/api/v1/users/search', authenticateToken, async (req, res) => {
     const organizationId = userResult.rows[0].organization_id;
     
     // Search users in database
-    const searchQuery = `
+    const sql = `
       SELECT 
         u.id,
         u.name,
@@ -2215,7 +2216,7 @@ app.get('/api/v1/users/search', authenticateToken, async (req, res) => {
       LIMIT $3
     `;
     
-    const result = await query(searchQuery, [organizationId, `%${q}%`, limit]);
+    const result = await query(sql, [organizationId, `%${searchQuery}%`, limit]);
     const users = result.rows.map((row: any) => ({
       id: row.id,
       name: row.name,
@@ -3053,7 +3054,7 @@ app.get('/api/v1/hierarchy/manager-chain/:employeeId', async (req, res) => {
     const { employeeId } = req.params;
     
     // Mock manager chain based on employee ID
-    const mockManagerChains = {
+    const mockManagerChains: Record<string, any[]> = {
       'dev-1': [
         {
           id: 'manager-1',
@@ -3370,6 +3371,7 @@ app.get('/api/v1/hierarchy/stats/:organizationId', async (req, res) => {
 app.get('/api/v1/hierarchy/search-employees', async (req, res) => {
   try {
     const { organizationId, q, exclude, role, type } = req.query;
+    const searchTerm = typeof q === 'string' ? q : '';
     
     // Get real employees from database
     let searchQuery = `
@@ -3389,9 +3391,9 @@ app.get('/api/v1/hierarchy/search-employees', async (req, res) => {
     
     const queryParams = [organizationId];
     
-    if (q && q.length >= 2) {
+    if (searchTerm && searchTerm.length >= 2) {
       searchQuery += ` AND (u.name ILIKE $2 OR u.email ILIKE $2)`;
-      queryParams.push(`%${q}%`);
+      queryParams.push(`%${searchTerm}%`);
     }
     
     if (exclude) {
@@ -3428,7 +3430,7 @@ app.get('/api/v1/hierarchy/search-employees', async (req, res) => {
       position: row.position,
       department: row.department,
       avatarUrl: row.avatar_url,
-      roles: row.roles.filter(role => role !== null)
+      roles: row.roles.filter((role: any) => role !== null)
     }));
     
     res.json({ success: true, data: allEmployees });
@@ -3545,13 +3547,13 @@ app.post('/api/v1/hierarchy/bulk/csv', express.text({ type: [ 'text/csv', 'text/
       return res.status(400).json({ success: false, error: 'Empty CSV payload' });
     }
 
-    const lines = body.replace(/\r/g, '').split('\n').filter(l => l.trim().length > 0);
+    const lines = body.replace(/\r/g, '').split('\n').filter((l: string) => l.trim().length > 0);
     if (lines.length === 0) {
       return res.status(400).json({ success: false, error: 'No CSV rows found' });
     }
 
     // Parse header
-    const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+    const header = lines[0].split(',').map((h: string) => h.trim().toLowerCase());
     const orgIdx = header.indexOf('organization_name');
     const empIdx = header.indexOf('employee_email');
     const mgrIdx = header.indexOf('manager_email');
@@ -3741,7 +3743,7 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
     let paramCount = 1;
 
     // Add filters
-    if (toUserId) {
+    if (toUserId && typeof toUserId === 'string') {
       // Check if toUserId is an email or UUID
       if (toUserId.includes('@')) {
         // It's an email, need to get the user ID first
@@ -3758,7 +3760,7 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
         queryParams.push(toUserId);
       }
     }
-    if (fromUserId) {
+    if (fromUserId && typeof fromUserId === 'string') {
       // Check if fromUserId is an email or UUID
       if (fromUserId.includes('@')) {
         // It's an email, need to get the user ID first
@@ -4443,12 +4445,15 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
     res.status(201).json({ success: true, data: newFeedback });
   } catch (error) {
     console.error('Error creating feedback:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    const errorName = error instanceof Error ? error.name : 'Error';
     console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
+      message: errorMessage,
+      stack: errorStack,
+      name: errorName
     });
-    res.status(500).json({ success: false, error: 'Failed to create feedback', details: error.message });
+    res.status(500).json({ success: false, error: 'Failed to create feedback', details: errorMessage });
   }
 });
 
@@ -5171,7 +5176,7 @@ app.get('/api/v1/cycles/:id', authenticateToken, async (req, res) => {
 });
 
 // Simple authentication middleware for real database server
-const authMiddleware = (req, res, next) => {
+const authMiddleware = (req: any, res: any, next: any) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ success: false, error: 'No token provided' });
@@ -5196,10 +5201,10 @@ const authMiddleware = (req, res, next) => {
 };
 
 // Role-based access control middleware
-const rbacMiddleware = (allowedRoles) => {
-  return (req, res, next) => {
+const rbacMiddleware = (allowedRoles: string[]) => {
+  return (req: any, res: any, next: any) => {
     const userRoles = req.user?.roles || [];
-    const hasPermission = allowedRoles.some(role => userRoles.includes(role));
+    const hasPermission = allowedRoles.some((role: string) => userRoles.includes(role));
     
     if (!hasPermission) {
       return res.status(403).json({ 
@@ -5230,7 +5235,7 @@ app.post('/api/v1/cycles', authenticateToken, async (req, res) => {
     // Get creator ID from authenticated user
     const creatorResult = await query(
       'SELECT id FROM users WHERE email = $1',
-      [req.user.email]
+      [(req as any).user.email]
     );
     
     if (creatorResult.rows.length === 0) {

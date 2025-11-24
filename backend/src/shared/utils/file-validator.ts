@@ -182,3 +182,39 @@ export class FileValidator {
     };
   }
 }
+
+// Export a wrapper function that accepts either a number or an options object
+export function createFileValidationMiddleware(options?: number | {
+  allowedTypes?: string[];
+  allowedExtensions?: string[];
+  maxSizeMB?: number;
+  required?: boolean;
+}) {
+  // If called with a number or no args, use the simple static method
+  if (typeof options === 'number' || options === undefined) {
+    return FileValidator.createFileValidationMiddleware(options);
+  }
+  
+  // Otherwise, use the full validateFile method
+  const { allowedTypes, allowedExtensions, maxSizeMB = 10, required = false } = options;
+  
+  return (req: any, res: any, next: any) => {
+    const validation = FileValidator.validateFile(req.file, {
+      allowedTypes,
+      allowedExtensions,
+      maxSizeMB,
+      required
+    });
+    
+    if (!validation.isValid) {
+      return res.status(400).json({ error: validation.error });
+    }
+    
+    // Sanitize filename if file exists
+    if (req.file) {
+      req.file.originalname = FileValidator.sanitizeFileName(req.file.originalname);
+    }
+    
+    next();
+  };
+}

@@ -12,7 +12,7 @@ jest.mock('../../../../src/shared/utils/logger');
 
 describe('FeedbackService', () => {
   let feedbackService: FeedbackService;
-  let mockDb: jest.Mocked<Pool>;
+  let mockDb: any;
   let mockEventEmitter: jest.Mocked<EventEmitter>;
   let mockLogger: jest.Mocked<Logger>;
 

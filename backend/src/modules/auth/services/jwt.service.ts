@@ -1,6 +1,6 @@
 // backend/src/modules/auth/services/jwt.service.ts
 
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 
 export interface JwtPayload {
   sub: string;
@@ -13,8 +13,8 @@ export interface JwtPayload {
 export class JwtService {
   constructor(private secret: string) {}
 
-  sign(payload: JwtPayload, expiresIn: string = '7d'): string {
-    return jwt.sign(payload, this.secret, { expiresIn });
+  sign(payload: JwtPayload, expiresIn: string | number = '7d'): string {
+    return jwt.sign(payload, this.secret, { expiresIn: expiresIn as any });
   }
 
   verify(token: string): JwtPayload {

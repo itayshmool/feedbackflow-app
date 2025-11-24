@@ -110,7 +110,10 @@ export class AdminUserService {
       // Remove all existing roles
       const existingRoles = await this.userModel.getUserRoles(id);
       for (const role of existingRoles) {
-        await this.userModel.removeRole(id, role.roleId, role.organizationId);
+        // Type system expects camelCase, but DB returns snake_case - handle both
+        const roleId = (role as any).role_id || role.roleId;
+        const organizationId = (role as any).organization_id || role.organizationId;
+        await this.userModel.removeRole(id, roleId, organizationId);
       }
 
       // Assign new roles
