@@ -67,7 +67,7 @@ export const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) 
       organizationId: user?.organizationId || '',
       department: user?.department || '',
       position: user?.position || '',
-      roles: user?.roles || [],
+      roles: user?.roles?.map(r => r.roleName) || [],
       isActive: user?.isActive ?? true,
       emailVerified: user?.emailVerified ?? false,
     },
@@ -89,7 +89,7 @@ export const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) 
         organizationId: user.organizationId || '',
         department: user.department || '',
         position: user.position || '',
-        roles: user.roles || [],
+        roles: user.roles?.map(r => r.roleName) || [],
         isActive: user.isActive,
         emailVerified: user.emailVerified,
       });

@@ -303,10 +303,16 @@ export class UserModel {
 
   // Basic CRUD methods
   async findById(id: string): Promise<User | null> {
+    console.log(`🔍 UserModel.findById called with id: ${id}`);
     const result = await dbQuery(
       `SELECT * FROM ${this.tableName} WHERE ${this.primaryKey} = $1`,
       [id]
     );
+    console.log(`📊 UserModel.findById result:`, {
+      rowCount: result.rowCount,
+      hasRows: result.rows.length > 0,
+      firstRow: result.rows[0] ? 'Found' : 'Not found'
+    });
     return result.rows[0] || null;
   }
 
