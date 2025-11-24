@@ -15,18 +15,18 @@ jest.mock('pg', () => ({
 
 describe('OrganizationModelClass', () => {
   let model: OrganizationModelClass;
-  let mockDb: jest.Mocked<Pool>;
-  let mockClient: jest.Mocked<PoolClient>;
+  let mockDb: any;
+  let mockClient: any;
 
   beforeEach(() => {
     mockClient = {
-      query: jest.fn(),
+      query: jest.fn() as any,
       release: jest.fn(),
     } as any;
 
     mockDb = {
       connect: jest.fn().mockResolvedValue(mockClient),
-      query: jest.fn(),
+      query: jest.fn() as any,
     } as any;
 
     model = new OrganizationModelClass(mockDb);
@@ -272,7 +272,7 @@ describe('OrganizationModelClass', () => {
         created_at: new Date(),
         updated_at: new Date(),
       };
-      mockDb.query.mockResolvedValue({ rows: [mockDbRow] } as any);
+      mockDb.query.mockResolvedValue({ rows: [mockDbRow] });
 
       // Act
       const result = await model.getOrganizationById('org-123');
@@ -301,7 +301,7 @@ describe('OrganizationModelClass', () => {
 
     it('should return null when organization not found', async () => {
       // Arrange
-      mockDb.query.mockResolvedValue({ rows: [] } as any);
+      mockDb.query.mockResolvedValue({ rows: [] });
 
       // Act
       const result = await model.getOrganizationById('org-123');
@@ -362,7 +362,7 @@ describe('OrganizationModelClass', () => {
         created_at: new Date(),
         updated_at: new Date(),
       };
-      mockDb.query.mockResolvedValue({ rows: [mockDbRow] } as any);
+      mockDb.query.mockResolvedValue({ rows: [mockDbRow] });
 
       // Act
       const result = await model.getOrganizationBySlug('test-org');
@@ -414,7 +414,7 @@ describe('OrganizationModelClass', () => {
           updated_at: new Date(),
         },
       ];
-      mockDb.query.mockResolvedValue({ rows: mockDbRows } as any);
+      mockDb.query.mockResolvedValue({ rows: mockDbRows });
 
       // Act
       const result = await model.getOrganizations({
@@ -436,7 +436,7 @@ describe('OrganizationModelClass', () => {
 
     it('should return organizations without filters', async () => {
       // Arrange
-      mockDb.query.mockResolvedValue({ rows: [] } as any);
+      mockDb.query.mockResolvedValue({ rows: [] });
 
       // Act
       const result = await model.getOrganizations();
@@ -838,12 +838,12 @@ describe('OrganizationModelClass', () => {
       const mockUserResult = { rows: [{ count: '500' }] };
 
       mockDb.query
-        .mockResolvedValueOnce(mockOrgCountResult as any)
-        .mockResolvedValueOnce(mockPlanResult as any)
-        .mockResolvedValueOnce(mockAvgUsersResult as any)
-        .mockResolvedValueOnce(mockDeptResult as any)
-        .mockResolvedValueOnce(mockTeamResult as any)
-        .mockResolvedValueOnce(mockUserResult as any);
+        .mockResolvedValueOnce(mockOrgCountResult)
+        .mockResolvedValueOnce(mockPlanResult)
+        .mockResolvedValueOnce(mockAvgUsersResult)
+        .mockResolvedValueOnce(mockDeptResult)
+        .mockResolvedValueOnce(mockTeamResult)
+        .mockResolvedValueOnce(mockUserResult);
 
       // Act
       const result = await model.getOrganizationStats();
@@ -889,7 +889,7 @@ describe('OrganizationModelClass', () => {
           updated_at: new Date(),
         },
       ];
-      mockDb.query.mockResolvedValue({ rows: mockSearchResults } as any);
+      mockDb.query.mockResolvedValue({ rows: mockSearchResults });
 
       // Act
       const result = await model.searchOrganizations('test', { isActive: true, limit: 10 });

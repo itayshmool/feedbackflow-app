@@ -249,7 +249,9 @@ export class UserModel {
     const query = `
       UPDATE user_roles 
       SET is_active = false
-      WHERE user_id = $1 AND role_id = $2 AND organization_id = $3
+      WHERE user_id = $1 
+        AND role_id = $2 
+        AND organization_id IS NOT DISTINCT FROM $3
     `;
 
     const result = await dbQuery(query, [userId, roleId, organizationId]);

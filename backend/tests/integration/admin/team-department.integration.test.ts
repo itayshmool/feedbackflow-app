@@ -23,13 +23,13 @@ describe('Team and Department API Integration Tests', () => {
     // Create mock service instance
     mockService = {
       createTeam: jest.fn(),
-      getTeam: jest.fn(),
+      getTeamById: jest.fn(),
       getTeams: jest.fn(),
       updateTeam: jest.fn(),
       deleteTeam: jest.fn(),
       getTeamStats: jest.fn(),
       createDepartment: jest.fn(),
-      getDepartment: jest.fn(),
+      getDepartmentById: jest.fn(),
       getDepartments: jest.fn(),
       updateDepartment: jest.fn(),
       deleteDepartment: jest.fn(),
@@ -44,12 +44,12 @@ describe('Team and Department API Integration Tests', () => {
     app = express();
     app.use(express.json());
 
-    const controller = new AdminOrganizationController();
+    const controller = new AdminOrganizationController(mockService);
 
     // Team routes
     app.post('/api/v1/admin/organizations/:id/teams', controller.createTeam.bind(controller));
     app.get('/api/v1/admin/organizations/:id/teams', controller.getTeams.bind(controller));
-    app.get('/api/v1/admin/organizations/:id/teams/:teamId', controller.getTeam.bind(controller));
+    app.get('/api/v1/admin/organizations/:id/teams/:teamId', controller.getTeamById.bind(controller));
     app.put('/api/v1/admin/organizations/:id/teams/:teamId', controller.updateTeam.bind(controller));
     app.delete('/api/v1/admin/organizations/:id/teams/:teamId', controller.deleteTeam.bind(controller));
     app.get('/api/v1/admin/organizations/:id/teams/stats', controller.getTeamStats.bind(controller));
@@ -57,7 +57,7 @@ describe('Team and Department API Integration Tests', () => {
     // Department routes
     app.post('/api/v1/admin/organizations/:id/departments', controller.createDepartment.bind(controller));
     app.get('/api/v1/admin/organizations/:id/departments', controller.getDepartments.bind(controller));
-    app.get('/api/v1/admin/organizations/:id/departments/:departmentId', controller.getDepartment.bind(controller));
+    app.get('/api/v1/admin/organizations/:id/departments/:departmentId', controller.getDepartmentById.bind(controller));
     app.put('/api/v1/admin/organizations/:id/departments/:departmentId', controller.updateDepartment.bind(controller));
     app.delete('/api/v1/admin/organizations/:id/departments/:departmentId', controller.deleteDepartment.bind(controller));
     app.get('/api/v1/admin/organizations/:id/departments/stats', controller.getDepartmentStats.bind(controller));
@@ -75,11 +75,8 @@ describe('Team and Department API Integration Tests', () => {
         settings: {
           allowPeerFeedback: true,
           requireTeamLeadApproval: false,
-          feedbackFrequency: 30,
-          notificationPreferences: {
-            email: true,
-            inApp: true,
-          },
+          customWorkflows: [],
+          collaborationTools: [],
         },
       };
 
@@ -94,8 +91,8 @@ describe('Team and Department API Integration Tests', () => {
           teamLeadId: 'user-123',
           isActive: true,
           settings: createTeamData.settings,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          createdAt: new Date('2025-01-01'),
+          updatedAt: new Date('2025-01-01'),
         };
 
         mockService.createTeam.mockResolvedValueOnce(mockTeam);
@@ -147,8 +144,26 @@ describe('Team and Department API Integration Tests', () => {
     describe('GET /api/v1/admin/organizations/:id/teams', () => {
       it('should return teams successfully', async () => {
         const mockTeams = [
-          { id: 'team-1', name: 'Team 1', type: TeamType.CORE },
-          { id: 'team-2', name: 'Team 2', type: TeamType.SUPPORT },
+          {
+            id: 'team-1',
+            organizationId,
+            name: 'Team 1',
+            type: TeamType.CORE,
+            isActive: true,
+            settings: { allowPeerFeedback: true, requireTeamLeadApproval: false, customWorkflows: [], collaborationTools: [] },
+            createdAt: new Date('2025-01-01'),
+            updatedAt: new Date('2025-01-01'),
+          },
+          {
+            id: 'team-2',
+            organizationId,
+            name: 'Team 2',
+            type: TeamType.PROJECT,
+            isActive: true,
+            settings: { allowPeerFeedback: true, requireTeamLeadApproval: false, customWorkflows: [], collaborationTools: [] },
+            createdAt: new Date('2025-01-01'),
+            updatedAt: new Date('2025-01-01'),
+          },
         ];
 
         mockService.getTeams.mockResolvedValueOnce(mockTeams);
@@ -166,7 +181,16 @@ describe('Team and Department API Integration Tests', () => {
       });
 
       it('should return teams with query parameters', async () => {
-        const mockTeams = [{ id: 'team-1', name: 'Team 1', type: TeamType.CORE }];
+        const mockTeams = [{
+          id: 'team-1',
+          organizationId,
+          name: 'Team 1',
+          type: TeamType.CORE,
+          isActive: true,
+          settings: { allowPeerFeedback: true, requireTeamLeadApproval: false, customWorkflows: [], collaborationTools: [] },
+          createdAt: new Date('2025-01-01'),
+          updatedAt: new Date('2025-01-01'),
+        }];
         mockService.getTeams.mockResolvedValueOnce(mockTeams);
 
         const response = await request(app)
@@ -203,9 +227,12 @@ describe('Team and Department API Integration Tests', () => {
           name: 'Test Team',
           type: TeamType.CORE,
           isActive: true,
+          settings: { allowPeerFeedback: true, requireTeamLeadApproval: false, customWorkflows: [], collaborationTools: [] },
+          createdAt: new Date('2025-01-01'),
+          updatedAt: new Date('2025-01-01'),
         };
 
-        mockService.getTeam.mockResolvedValueOnce(mockTeam);
+        mockService.getTeamById.mockResolvedValueOnce(mockTeam);
 
         const response = await request(app)
           .get(`/api/v1/admin/organizations/${organizationId}/teams/${teamId}`)
@@ -216,11 +243,11 @@ describe('Team and Department API Integration Tests', () => {
           data: mockTeam,
         });
 
-        expect(mockService.getTeam).toHaveBeenCalledWith(organizationId, teamId);
+        expect(mockService.getTeamById).toHaveBeenCalledWith(organizationId, teamId);
       });
 
       it('should return 404 for non-existent team', async () => {
-        mockService.getTeam.mockRejectedValueOnce(new Error('Team not found'));
+        mockService.getTeamById.mockRejectedValueOnce(new Error('Team not found'));
 
         const response = await request(app)
           .get(`/api/v1/admin/organizations/${organizationId}/teams/${teamId}`)
@@ -246,6 +273,14 @@ describe('Team and Department API Integration Tests', () => {
           description: 'Updated description',
           type: TeamType.PROJECT,
           isActive: true,
+          settings: {
+            allowPeerFeedback: true,
+            requireTeamLeadApproval: false,
+            customWorkflows: [],
+            collaborationTools: [],
+          },
+          createdAt: new Date('2025-01-01'),
+          updatedAt: new Date('2025-01-02'),
         };
 
         mockService.updateTeam.mockResolvedValueOnce(mockUpdatedTeam);
@@ -284,13 +319,13 @@ describe('Team and Department API Integration Tests', () => {
           inactiveTeams: 2,
           byType: {
             core: 5,
-            support: 3,
             project: 2,
-            crossFunctional: 0,
+            cross_functional: 0,
             temporary: 0,
+            custom: 3,
           },
           averageUsersPerTeam: 4.5,
-          totalUsers: 45,
+          crossFunctionalTeams: 0,
         };
 
         mockService.getTeamStats.mockResolvedValueOnce(mockStats);
@@ -321,10 +356,11 @@ describe('Team and Department API Integration Tests', () => {
         settings: {
           allowCrossDepartmentFeedback: true,
           requireManagerApproval: false,
-          feedbackFrequency: 30,
+          customFeedbackTemplates: [],
           notificationPreferences: {
             email: true,
             inApp: true,
+            sms: false,
           },
         },
       };
@@ -341,8 +377,8 @@ describe('Team and Department API Integration Tests', () => {
           budget: 100000,
           isActive: true,
           settings: createDepartmentData.settings,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          createdAt: new Date('2025-01-01'),
+          updatedAt: new Date('2025-01-01'),
         };
 
         mockService.createDepartment.mockResolvedValueOnce(mockDepartment);
@@ -379,8 +415,36 @@ describe('Team and Department API Integration Tests', () => {
     describe('GET /api/v1/admin/organizations/:id/departments', () => {
       it('should return departments successfully', async () => {
         const mockDepartments = [
-          { id: 'dept-1', name: 'Department 1', type: DepartmentType.ENGINEERING },
-          { id: 'dept-2', name: 'Department 2', type: DepartmentType.MARKETING },
+          {
+            id: 'dept-1',
+            organizationId,
+            name: 'Department 1',
+            type: DepartmentType.ENGINEERING,
+            isActive: true,
+            settings: {
+              allowCrossDepartmentFeedback: true,
+              requireManagerApproval: false,
+              customFeedbackTemplates: [],
+              notificationPreferences: { email: true, inApp: true, sms: false },
+            },
+            createdAt: new Date('2025-01-01'),
+            updatedAt: new Date('2025-01-01'),
+          },
+          {
+            id: 'dept-2',
+            organizationId,
+            name: 'Department 2',
+            type: DepartmentType.MARKETING,
+            isActive: true,
+            settings: {
+              allowCrossDepartmentFeedback: true,
+              requireManagerApproval: false,
+              customFeedbackTemplates: [],
+              notificationPreferences: { email: true, inApp: true, sms: false },
+            },
+            createdAt: new Date('2025-01-01'),
+            updatedAt: new Date('2025-01-01'),
+          },
         ];
 
         mockService.getDepartments.mockResolvedValueOnce(mockDepartments);
@@ -398,7 +462,21 @@ describe('Team and Department API Integration Tests', () => {
       });
 
       it('should return departments with query parameters', async () => {
-        const mockDepartments = [{ id: 'dept-1', name: 'Department 1', type: DepartmentType.ENGINEERING }];
+        const mockDepartments = [{
+          id: 'dept-1',
+          organizationId,
+          name: 'Department 1',
+          type: DepartmentType.ENGINEERING,
+          isActive: true,
+          settings: {
+            allowCrossDepartmentFeedback: true,
+            requireManagerApproval: false,
+            customFeedbackTemplates: [],
+            notificationPreferences: { email: true, inApp: true, sms: false },
+          },
+          createdAt: new Date('2025-01-01'),
+          updatedAt: new Date('2025-01-01'),
+        }];
         mockService.getDepartments.mockResolvedValueOnce(mockDepartments);
 
         const response = await request(app)
@@ -435,9 +513,17 @@ describe('Team and Department API Integration Tests', () => {
           name: 'Test Department',
           type: DepartmentType.ENGINEERING,
           isActive: true,
+          settings: {
+            allowCrossDepartmentFeedback: true,
+            requireManagerApproval: false,
+            customFeedbackTemplates: [],
+            notificationPreferences: { email: true, inApp: true, sms: false },
+          },
+          createdAt: new Date('2025-01-01'),
+          updatedAt: new Date('2025-01-01'),
         };
 
-        mockService.getDepartment.mockResolvedValueOnce(mockDepartment);
+        mockService.getDepartmentById.mockResolvedValueOnce(mockDepartment);
 
         const response = await request(app)
           .get(`/api/v1/admin/organizations/${organizationId}/departments/${departmentId}`)
@@ -448,11 +534,11 @@ describe('Team and Department API Integration Tests', () => {
           data: mockDepartment,
         });
 
-        expect(mockService.getDepartment).toHaveBeenCalledWith(organizationId, departmentId);
+        expect(mockService.getDepartmentById).toHaveBeenCalledWith(organizationId, departmentId);
       });
 
       it('should return 404 for non-existent department', async () => {
-        mockService.getDepartment.mockRejectedValueOnce(new Error('Department not found'));
+        mockService.getDepartmentById.mockRejectedValueOnce(new Error('Department not found'));
 
         const response = await request(app)
           .get(`/api/v1/admin/organizations/${organizationId}/departments/${departmentId}`)
@@ -480,6 +566,14 @@ describe('Team and Department API Integration Tests', () => {
           type: DepartmentType.SALES,
           budget: 150000,
           isActive: true,
+          settings: {
+            allowCrossDepartmentFeedback: true,
+            requireManagerApproval: false,
+            customFeedbackTemplates: [],
+            notificationPreferences: { email: true, inApp: true, sms: false },
+          },
+          createdAt: new Date('2025-01-01'),
+          updatedAt: new Date('2025-01-02'),
         };
 
         mockService.updateDepartment.mockResolvedValueOnce(mockUpdatedDepartment);
@@ -517,16 +611,14 @@ describe('Team and Department API Integration Tests', () => {
           activeDepartments: 7,
           inactiveDepartments: 1,
           byType: {
-            engineering: 3,
-            marketing: 2,
+            executive: 1,
+            operations: 0,
             sales: 2,
+            marketing: 2,
+            engineering: 3,
             hr: 1,
             finance: 0,
-            operations: 0,
-            customerSuccess: 0,
-            product: 0,
-            design: 0,
-            other: 0,
+            custom: 1,
           },
           averageTeamsPerDepartment: 2.5,
           averageUsersPerDepartment: 12.5,
@@ -554,20 +646,53 @@ describe('Team and Department API Integration Tests', () => {
         const mockHierarchy = [
           {
             id: 'dept-1',
+            organizationId,
             name: 'Engineering',
-            parentDepartmentId: null,
+            type: DepartmentType.ENGINEERING,
+            parentDepartmentId: undefined,
+            isActive: true,
+            settings: {
+              allowCrossDepartmentFeedback: true,
+              requireManagerApproval: false,
+              customFeedbackTemplates: [],
+              notificationPreferences: { email: true, inApp: true, sms: false },
+            },
+            createdAt: new Date('2025-01-01'),
+            updatedAt: new Date('2025-01-01'),
             level: 0,
           },
           {
             id: 'dept-2',
+            organizationId,
             name: 'Frontend',
+            type: DepartmentType.ENGINEERING,
             parentDepartmentId: 'dept-1',
+            isActive: true,
+            settings: {
+              allowCrossDepartmentFeedback: true,
+              requireManagerApproval: false,
+              customFeedbackTemplates: [],
+              notificationPreferences: { email: true, inApp: true, sms: false },
+            },
+            createdAt: new Date('2025-01-01'),
+            updatedAt: new Date('2025-01-01'),
             level: 1,
           },
           {
             id: 'dept-3',
+            organizationId,
             name: 'Backend',
+            type: DepartmentType.ENGINEERING,
             parentDepartmentId: 'dept-1',
+            isActive: true,
+            settings: {
+              allowCrossDepartmentFeedback: true,
+              requireManagerApproval: false,
+              customFeedbackTemplates: [],
+              notificationPreferences: { email: true, inApp: true, sms: false },
+            },
+            createdAt: new Date('2025-01-01'),
+            updatedAt: new Date('2025-01-01'),
             level: 1,
           },
         ];

@@ -217,7 +217,9 @@ export class AdminOrganizationService {
         });
       });
     } catch (error) {
-      this.logger.error('Delete organization failed', { organizationId, error: error.message, stack: error.stack });
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error('Delete organization failed', { organizationId, error: errorMessage, stack: errorStack });
       throw error;
     }
   }

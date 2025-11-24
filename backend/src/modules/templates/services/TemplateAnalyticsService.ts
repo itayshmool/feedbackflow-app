@@ -171,7 +171,7 @@ export class TemplateAnalyticsService {
       queryParams
     );
 
-    const mostActiveUsers = activeUsersResult.rows.map(row => ({
+    const mostActiveUsers = activeUsersResult.rows.map((row: any) => ({
       userId: row.user_id,
       userName: row.user_name,
       downloadCount: parseInt(row.download_count),
@@ -201,7 +201,7 @@ export class TemplateAnalyticsService {
     );
 
     const usageByDepartment: Record<string, number> = {};
-    departmentResult.rows.forEach(row => {
+    departmentResult.rows.forEach((row: any) => {
       usageByDepartment[row.department_name] = parseInt(row.usage_count);
     });
 
@@ -221,7 +221,7 @@ export class TemplateAnalyticsService {
     );
 
     const usageByRole: Record<string, number> = {};
-    roleResult.rows.forEach(row => {
+    roleResult.rows.forEach((row: any) => {
       usageByRole[row.role_name] = parseInt(row.usage_count);
     });
 
@@ -240,7 +240,7 @@ export class TemplateAnalyticsService {
       queryParams
     );
 
-    const timeSeriesData = timeSeriesResult.rows.map(row => ({
+    const timeSeriesData = timeSeriesResult.rows.map((row: any) => ({
       date: row.date.toISOString().split('T')[0],
       downloads: parseInt(row.downloads),
       views: parseInt(row.views),
@@ -323,7 +323,7 @@ export class TemplateAnalyticsService {
       queryParams
     );
 
-    const mostPopularTemplates = popularTemplatesResult.rows.map(row => ({
+    const mostPopularTemplates = popularTemplatesResult.rows.map((row: any) => ({
       templateId: row.template_id,
       templateName: row.template_name,
       downloadCount: parseInt(row.download_count),
@@ -344,7 +344,7 @@ export class TemplateAnalyticsService {
     );
 
     const usageByTemplateType: Record<string, number> = {};
-    templateTypeResult.rows.forEach(row => {
+    templateTypeResult.rows.forEach((row: any) => {
       usageByTemplateType[row.template_type] = parseInt(row.usage_count);
     });
 
@@ -362,7 +362,7 @@ export class TemplateAnalyticsService {
     );
 
     const usageByFileFormat: Record<string, number> = {};
-    fileFormatResult.rows.forEach(row => {
+    fileFormatResult.rows.forEach((row: any) => {
       usageByFileFormat[row.file_format] = parseInt(row.usage_count);
     });
 
@@ -383,7 +383,7 @@ export class TemplateAnalyticsService {
     );
 
     const usageByDepartment: Record<string, number> = {};
-    departmentResult.rows.forEach(row => {
+    departmentResult.rows.forEach((row: any) => {
       usageByDepartment[row.department_name] = parseInt(row.usage_count);
     });
 
@@ -404,7 +404,7 @@ export class TemplateAnalyticsService {
     );
 
     const usageByRole: Record<string, number> = {};
-    roleResult.rows.forEach(row => {
+    roleResult.rows.forEach((row: any) => {
       usageByRole[row.role_name] = parseInt(row.usage_count);
     });
 
@@ -424,7 +424,7 @@ export class TemplateAnalyticsService {
       queryParams
     );
 
-    const timeSeriesData = timeSeriesResult.rows.map(row => ({
+    const timeSeriesData = timeSeriesResult.rows.map((row: any) => ({
       date: row.date.toISOString().split('T')[0],
       downloads: parseInt(row.downloads),
       views: parseInt(row.views),
@@ -473,7 +473,7 @@ export class TemplateAnalyticsService {
       [templateId, dateTrunc, limit]
     );
 
-    return result.rows.map(row => ({
+    return result.rows.map((row: any) => ({
       period: row.period.toISOString(),
       downloads: parseInt(row.downloads),
       views: parseInt(row.views),
@@ -536,7 +536,7 @@ export class TemplateAnalyticsService {
       queryParams
     );
 
-    const favoriteTemplates = favoriteTemplatesResult.rows.map(row => ({
+    const favoriteTemplates = favoriteTemplatesResult.rows.map((row: any) => ({
       templateId: row.template_id,
       templateName: row.template_name,
       downloadCount: parseInt(row.download_count),
@@ -557,7 +557,7 @@ export class TemplateAnalyticsService {
     );
 
     const usageByTemplateType: Record<string, number> = {};
-    templateTypeResult.rows.forEach(row => {
+    templateTypeResult.rows.forEach((row: any) => {
       usageByTemplateType[row.template_type] = parseInt(row.usage_count);
     });
 
@@ -575,7 +575,7 @@ export class TemplateAnalyticsService {
     );
 
     const usageByFileFormat: Record<string, number> = {};
-    fileFormatResult.rows.forEach(row => {
+    fileFormatResult.rows.forEach((row: any) => {
       usageByFileFormat[row.file_format] = parseInt(row.usage_count);
     });
 
@@ -594,7 +594,7 @@ export class TemplateAnalyticsService {
       queryParams
     );
 
-    const timeSeriesData = timeSeriesResult.rows.map(row => ({
+    const timeSeriesData = timeSeriesResult.rows.map((row: any) => ({
       date: row.date.toISOString().split('T')[0],
       downloads: parseInt(row.downloads),
       views: parseInt(row.views),
@@ -658,7 +658,7 @@ export class TemplateAnalyticsService {
       [templateId, 'download', limit, offset]
     );
 
-    const downloads = downloadsResult.rows.map(row => ({
+    const downloads = downloadsResult.rows.map((row: any) => ({
       userId: row.user_id,
       userName: row.user_name,
       userEmail: row.user_email,
