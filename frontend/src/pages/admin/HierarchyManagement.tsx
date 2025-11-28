@@ -10,6 +10,7 @@ import { Select } from '../../components/ui/Select';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { Badge } from '../../components/ui/Badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/Avatar';
+import { OrganizationStatus } from '../../types/organization.types';
 import { 
   Users, 
   Plus, 
@@ -66,7 +67,7 @@ const HierarchyManagement: React.FC = () => {
 
   // Load organizations on component mount
   useEffect(() => {
-    fetchOrganizations({ limit: 100 }); // Fetch all organizations
+    fetchOrganizations({ limit: 100, status: OrganizationStatus.ACTIVE }); // Fetch only active organizations
   }, [fetchOrganizations]);
 
   useEffect(() => {

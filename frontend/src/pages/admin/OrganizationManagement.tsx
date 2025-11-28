@@ -115,11 +115,22 @@ const OrganizationManagement: React.FC = () => {
     }
   };
 
-  const filteredOrganizations = organizations.filter(org =>
-    org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    org.slug.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    org.contactEmail.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredOrganizations = organizations.filter(org => {
+    // Search term filter - matches if searchTerm is empty OR found in name/slug/email
+    const matchesSearch = !searchTerm || 
+      org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      org.slug.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      org.contactEmail.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Status filter - matches if no status filter OR status equals filter value
+    const matchesStatus = !filters.status || org.status === filters.status;
+    
+    // Subscription plan filter - matches if no plan filter OR plan equals filter value
+    const matchesPlan = !filters.subscriptionPlan || org.subscriptionPlan === filters.subscriptionPlan;
+    
+    // Include organization only if ALL conditions are met
+    return matchesSearch && matchesStatus && matchesPlan;
+  });
 
   if (organizationsError) {
     return (
@@ -192,7 +203,7 @@ const OrganizationManagement: React.FC = () => {
 
         {showFilters && (
           <div className="mt-4 pt-4 border-t border-gray-200">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Status
@@ -223,20 +234,6 @@ const OrganizationManagement: React.FC = () => {
                   <option value={SubscriptionPlan.BASIC}>Basic</option>
                   <option value={SubscriptionPlan.PROFESSIONAL}>Professional</option>
                   <option value={SubscriptionPlan.ENTERPRISE}>Enterprise</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Active Only
-                </label>
-                <select
-                  value={filters.isActive?.toString() || ''}
-                  onChange={(e) => handleFilterChange({ isActive: e.target.value === 'true' ? true : e.target.value === 'false' ? false : undefined })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">All</option>
-                  <option value="true">Active Only</option>
-                  <option value="false">Inactive Only</option>
                 </select>
               </div>
             </div>
