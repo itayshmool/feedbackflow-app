@@ -30,9 +30,7 @@ export class AdminUserService {
   }
 
   async getUserById(id: string): Promise<User | null> {
-    const result = await this.userModel.findWithRoles({}, { limit: 1, offset: 0 });
-    const user = result.data.find(u => u.id === id);
-    return user || null;
+    return this.userModel.findByIdWithRoles(id);
   }
 
   async createUser(userData: CreateUserData): Promise<User> {

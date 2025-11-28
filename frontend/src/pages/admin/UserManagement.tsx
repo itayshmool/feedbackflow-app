@@ -54,6 +54,7 @@ export const UserManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [organizationFilter, setOrganizationFilter] = useState<string>('');
   const [roleFilter, setRoleFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('active'); // Default to active users
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBulkOperations, setShowBulkOperations] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -63,78 +64,24 @@ export const UserManagement: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  // Main effect: fetch users when any filter or pagination changes
   useEffect(() => {
     const paginationOptions = { limit: pageSize, offset: (currentPage - 1) * pageSize };
-    fetchUsers({}, paginationOptions);
+    const currentFilters = {
+      search: searchTerm || undefined,
+      organizationId: organizationFilter || undefined,
+      role: roleFilter || undefined,
+      status: statusFilter || undefined,
+    };
+    
+    // Update store filters
+    setFilters(currentFilters);
+    
+    // Fetch data
+    fetchUsers(currentFilters, paginationOptions);
     fetchUserStats();
     fetchOrganizations({});
-  }, [currentPage, pageSize]);
-
-  useEffect(() => {
-    const debounceTimer = setTimeout(() => {
-      if (searchTerm !== filters.search) {
-        const newFilters = { 
-          search: searchTerm,
-          organizationId: typeof filters.organizationId === 'string' ? filters.organizationId : undefined,
-          role: typeof (filters as any).role === 'string' ? (filters as any).role : undefined,
-          department: typeof filters.department === 'string' ? filters.department : undefined,
-          isActive: typeof filters.isActive === 'boolean' ? filters.isActive : undefined,
-          emailVerified: typeof filters.emailVerified === 'boolean' ? filters.emailVerified : undefined,
-          lastLoginAfter: typeof filters.lastLoginAfter === 'string' ? filters.lastLoginAfter : undefined,
-          lastLoginBefore: typeof filters.lastLoginBefore === 'string' ? filters.lastLoginBefore : undefined,
-          createdAfter: typeof filters.createdAfter === 'string' ? filters.createdAfter : undefined,
-          createdBefore: typeof filters.createdBefore === 'string' ? filters.createdBefore : undefined,
-        };
-        setFilters(newFilters);
-        setCurrentPage(1); // Reset to first page when searching
-        fetchUsers(newFilters, { limit: pageSize, offset: 0 });
-      }
-    }, 300);
-
-    return () => clearTimeout(debounceTimer);
-  }, [searchTerm]);
-
-  // Handle organization filter changes
-  useEffect(() => {
-    if (organizationFilter !== filters.organizationId) {
-      const newFilters = { 
-        search: typeof filters.search === 'string' ? filters.search : undefined,
-        organizationId: organizationFilter || undefined,
-        role: typeof (filters as any).role === 'string' ? (filters as any).role : undefined,
-        department: typeof filters.department === 'string' ? filters.department : undefined,
-        isActive: typeof filters.isActive === 'boolean' ? filters.isActive : undefined,
-        emailVerified: typeof filters.emailVerified === 'boolean' ? filters.emailVerified : undefined,
-        lastLoginAfter: typeof filters.lastLoginAfter === 'string' ? filters.lastLoginAfter : undefined,
-        lastLoginBefore: typeof filters.lastLoginBefore === 'string' ? filters.lastLoginBefore : undefined,
-        createdAfter: typeof filters.createdAfter === 'string' ? filters.createdAfter : undefined,
-        createdBefore: typeof filters.createdBefore === 'string' ? filters.createdBefore : undefined,
-      };
-      setFilters(newFilters);
-      setCurrentPage(1); // Reset to first page when filtering
-      fetchUsers(newFilters, { limit: pageSize, offset: 0 });
-    }
-  }, [organizationFilter]); // Only depend on organizationFilter
-
-  // Handle role filter changes
-  useEffect(() => {
-    if (roleFilter !== (filters as any).role) {
-      const newFilters = {
-        search: typeof filters.search === 'string' ? filters.search : undefined,
-        organizationId: typeof filters.organizationId === 'string' ? filters.organizationId : undefined,
-        role: roleFilter || undefined,
-        department: typeof filters.department === 'string' ? filters.department : undefined,
-        isActive: typeof filters.isActive === 'boolean' ? filters.isActive : undefined,
-        emailVerified: typeof filters.emailVerified === 'boolean' ? filters.emailVerified : undefined,
-        lastLoginAfter: typeof filters.lastLoginAfter === 'string' ? filters.lastLoginAfter : undefined,
-        lastLoginBefore: typeof filters.lastLoginBefore === 'string' ? filters.lastLoginBefore : undefined,
-        createdAfter: typeof filters.createdAfter === 'string' ? filters.createdAfter : undefined,
-        createdBefore: typeof filters.createdBefore === 'string' ? filters.createdBefore : undefined,
-      };
-      setFilters(newFilters);
-      setCurrentPage(1);
-      fetchUsers(newFilters, { limit: pageSize, offset: 0 });
-    }
-  }, [roleFilter]);
+  }, [currentPage, pageSize, searchTerm, organizationFilter, roleFilter, statusFilter]);
 
   const handleUserSelect = (user: User) => {
     setSelectedUser(user);
@@ -151,6 +98,9 @@ export const UserManagement: React.FC = () => {
       const success = await deleteUser(user.id);
       if (success) {
         clearSelectedUsers();
+        // Refresh the user list after deletion
+        fetchUsers(filters, { limit: pageSize, offset: (currentPage - 1) * pageSize });
+        fetchUserStats(); // Also refresh stats
       }
     }
   };
@@ -167,10 +117,12 @@ export const UserManagement: React.FC = () => {
   const handleClearFilters = () => {
     setOrganizationFilter('');
     setRoleFilter('');
+    setStatusFilter('active'); // Reset to default active
     setSearchTerm('');
     setCurrentPage(1);
     const clearedFilters = { 
       search: undefined,
+      status: 'active',
       organizationId: undefined,
       role: undefined,
       department: undefined,
@@ -276,7 +228,6 @@ export const UserManagement: React.FC = () => {
                 <Select
                   value={organizationFilter}
                   onChange={(e) => setOrganizationFilter(e.target.value)}
-                  placeholder="Filter by organization"
                   className="w-48"
                 >
                   <option value="">All Organizations</option>
@@ -290,7 +241,6 @@ export const UserManagement: React.FC = () => {
                 <Select
                   value={roleFilter}
                   onChange={(e) => setRoleFilter(e.target.value)}
-                  placeholder="Filter by role"
                   className="w-40"
                 >
                   <option value="">All Roles</option>
@@ -300,7 +250,17 @@ export const UserManagement: React.FC = () => {
                   <option value="employee">Employee</option>
                 </Select>
 
-                {(organizationFilter || searchTerm || roleFilter) && (
+                <Select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-40"
+                >
+                  <option value="active">Active Users</option>
+                  <option value="inactive">Inactive Users</option>
+                  <option value="">All Users</option>
+                </Select>
+
+                {(organizationFilter || searchTerm || roleFilter || (statusFilter && statusFilter !== 'active')) && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -541,7 +501,7 @@ export const UserManagement: React.FC = () => {
                           pages.push(
                             <Button
                               key={i}
-                              variant={i === currentPage ? "default" : "outline"}
+                              variant={i === currentPage ? "primary" : "outline"}
                               size="sm"
                               onClick={() => handlePageChange(i)}
                               className="w-8 h-8 p-0"
