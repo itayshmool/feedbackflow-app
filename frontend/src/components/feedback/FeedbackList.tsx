@@ -159,12 +159,9 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
     return labels[type] || type;
   };
 
-  // Filter to only show Manager Review and Project Review types
-  const visibleFeedbackList = feedbackList.filter(
-    (feedback) =>
-      feedback.reviewType === ReviewType.MANAGER_REVIEW ||
-      feedback.reviewType === ReviewType.PROJECT_REVIEW
-  );
+  // Show all feedback types (no filtering by reviewType)
+  // Note: Backend returns "manager", "peer", etc. (not "manager_review", "peer_review")
+  const visibleFeedbackList = feedbackList;
 
   if (error) {
     return (
