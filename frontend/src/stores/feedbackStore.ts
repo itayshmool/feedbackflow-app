@@ -101,8 +101,9 @@ export const useFeedbackStore = create<FeedbackState>()(
         set({ isLoading: true, error: null });
         try {
           const response = await feedbackService.getFeedbackList(filters, page, limit);
+          // response is FeedbackListResponse: { data: Feedback[], pagination: {...} }
           set({
-            feedbackList: response.data || [],
+            feedbackList: response.data || [],  // Extract the feedback array
             pagination: response.pagination || { total: 0, page: 1, limit: 20, totalPages: 0 },
             filters,
             isLoading: false,
