@@ -19,24 +19,25 @@ export class AdminUserController {
 
   async getUsers(req: Request, res: Response): Promise<void> {
     try {
-      const {
-        page = 1,
-        limit = 10,
-        search,
-        isActive,
-        emailVerified,
-        organizationId,
-        roleId,
-        role,
-        department,
-        position,
-        lastLoginAfter,
-        lastLoginBefore,
-        createdAfter,
-        createdBefore,
-        sortBy = 'created_at',
-        sortOrder = 'desc'
-      } = req.query;
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      isActive,
+      emailVerified,
+      organizationId,
+      roleId,
+      role,
+      department,
+      position,
+      lastLoginAfter,
+      lastLoginBefore,
+      createdAfter,
+      createdBefore,
+      status, // Added: status filter (active/inactive/verified/unverified)
+      sortBy = 'created_at',
+      sortOrder = 'desc'
+    } = req.query;
 
       // Resolve role name to roleId if needed
       let effectiveRoleId = roleId as string;
@@ -55,10 +56,26 @@ export class AdminUserController {
         }
       }
 
+      // Handle status filter (takes precedence over isActive/emailVerified)
+      let effectiveIsActive = isActive ? isActive === 'true' : undefined;
+      let effectiveEmailVerified = emailVerified ? emailVerified === 'true' : undefined;
+
+      if (status) {
+        if (status === 'active') {
+          effectiveIsActive = true;
+        } else if (status === 'inactive') {
+          effectiveIsActive = false;
+        } else if (status === 'verified') {
+          effectiveEmailVerified = true;
+        } else if (status === 'unverified') {
+          effectiveEmailVerified = false;
+        }
+      }
+
       const filters: UserFilters = {
         search: search as string,
-        isActive: isActive ? isActive === 'true' : undefined,
-        emailVerified: emailVerified ? emailVerified === 'true' : undefined,
+        isActive: effectiveIsActive,
+        emailVerified: effectiveEmailVerified,
         organizationId: organizationId as string,
         roleId: effectiveRoleId,
         department: department as string,

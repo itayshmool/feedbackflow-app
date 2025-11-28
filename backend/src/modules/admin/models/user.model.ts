@@ -318,6 +318,58 @@ export class UserModel {
     return result.rows[0] || null;
   }
 
+  async findByIdWithRoles(id: string): Promise<User | null> {
+    console.log(`🔍 UserModel.findByIdWithRoles called with id: ${id}`);
+    const query = `
+      SELECT 
+        u.id,
+        u.email,
+        u.name,
+        u.avatar_url,
+        u.is_active,
+        u.email_verified,
+        u.last_login_at,
+        u.created_at,
+        u.updated_at,
+        u.organization_id,
+        u.department,
+        u.position,
+        COALESCE(
+          JSON_AGG(
+            JSON_BUILD_OBJECT(
+              'id', ur.id,
+              'roleId', ur.role_id,
+              'roleName', r.name,
+              'organizationId', ur.organization_id,
+              'organizationName', o.name,
+              'grantedAt', ur.granted_at,
+              'expiresAt', ur.expires_at,
+              'isActive', ur.is_active
+            )
+          ) FILTER (WHERE ur.id IS NOT NULL),
+          '[]'
+        ) as roles
+      FROM users u
+      LEFT JOIN user_roles ur ON u.id = ur.user_id AND ur.is_active = true
+      LEFT JOIN roles r ON ur.role_id = r.id
+      LEFT JOIN organizations o ON ur.organization_id = o.id
+      WHERE u.id = $1
+      GROUP BY u.id, u.email, u.name, u.avatar_url, u.is_active, u.email_verified,
+               u.last_login_at, u.created_at, u.updated_at, u.organization_id,
+               u.department, u.position
+    `;
+    
+    const result = await dbQuery(query, [id]);
+    console.log(`📊 UserModel.findByIdWithRoles result:`, {
+      rowCount: result.rowCount,
+      hasRows: result.rows.length > 0,
+      userId: result.rows[0]?.id,
+      rolesCount: result.rows[0]?.roles?.length || 0
+    });
+    
+    return result.rows[0] || null;
+  }
+
   async findWhere(conditions: Record<string, any>): Promise<{ data: User[]; pagination: any }> {
     const whereClause = Object.keys(conditions)
       .map((key, index) => `${key} = $${index + 1}`)
@@ -365,8 +417,9 @@ export class UserModel {
   }
 
   async delete(id: string): Promise<boolean> {
+    // Soft delete - set is_active to false instead of hard delete
     const result = await dbQuery(
-      `DELETE FROM ${this.tableName} WHERE ${this.primaryKey} = $1`,
+      `UPDATE ${this.tableName} SET is_active = false, updated_at = NOW() WHERE ${this.primaryKey} = $1`,
       [id]
     );
     return (result.rowCount || 0) > 0;

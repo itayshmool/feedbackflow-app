@@ -43,6 +43,7 @@ export interface UserFilters {
   organizationId?: string;
   roleId?: string;
   role?: string;
+  status?: string; // active, inactive, or empty for all
   department?: string;
   isActive?: boolean;
   emailVerified?: boolean;
