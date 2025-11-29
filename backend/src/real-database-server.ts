@@ -3853,6 +3853,7 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
           areasForImprovement: [],
           specificExamples: [],
           recommendations: [],
+          goals: [],
           confidential: false
         };
       }
@@ -3900,7 +3901,19 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
           createdAt: row.createdAt
         }] : [],
         comments: [],
-        goals: [],
+        goals: (parsedContent.goals || []).map((g: any, idx: number) => ({
+          id: g.id || `goal-${row.id}-${idx}`,
+          feedbackId: row.id,
+          title: g.title || '',
+          description: g.description || '',
+          category: g.category || 'Technical Skills',
+          priority: g.priority || 'Medium',
+          targetDate: g.targetDate || new Date().toISOString(),
+          status: g.status || 'NOT_STARTED',
+          progress: g.progress || 0,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt
+        })),
         // Include acknowledgment if the feedback has been acknowledged
         ...(row.status === 'acknowledged' && {
           acknowledgment: {
@@ -4097,6 +4110,7 @@ app.get('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
         areasForImprovement: [],
         specificExamples: [],
         recommendations: [],
+        goals: [],
         confidential: false
       };
     }
@@ -4145,7 +4159,19 @@ app.get('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
         createdAt: row.createdAt
       }] : [],
       comments: [],
-      goals: [],
+      goals: (parsedContent.goals || []).map((g: any, idx: number) => ({
+        id: g.id || `goal-${row.id}-${idx}`,
+        feedbackId: row.id,
+        title: g.title || '',
+        description: g.description || '',
+        category: g.category || 'Technical Skills',
+        priority: g.priority || 'Medium',
+        targetDate: g.targetDate || new Date().toISOString(),
+        status: g.status || 'NOT_STARTED',
+        progress: g.progress || 0,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt
+      })),
       // Include acknowledgment if the feedback has been completed and has a message
       ...((row.status === 'completed' || row.status === 'acknowledged') && row.message && {
         acknowledgment: {
@@ -4329,6 +4355,7 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
       areasForImprovement: content?.areasForImprovement || [],
       specificExamples: content?.specificExamples || [],
       recommendations: content?.recommendations || [],
+      goals: goals || [],
       confidential: content?.confidential || false
     };
 
@@ -4475,7 +4502,19 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
             createdAt: feedbackData.createdAt
           }] : [],
           comments: [],
-          goals: [],
+          goals: (parsedContent.goals || []).map((g: any, idx: number) => ({
+            id: g.id || `goal-${feedbackData.id}-${idx}`,
+            feedbackId: feedbackData.id,
+            title: g.title || '',
+            description: g.description || '',
+            category: g.category || 'Technical Skills',
+            priority: g.priority || 'Medium',
+            targetDate: g.targetDate || new Date().toISOString(),
+            status: g.status || 'NOT_STARTED',
+            progress: g.progress || 0,
+            createdAt: feedbackData.createdAt,
+            updatedAt: feedbackData.updatedAt
+          })),
           acknowledgment: null,
           isAnonymous: feedbackData.isAnonymous,
           isApproved: feedbackData.isApproved,
@@ -4792,7 +4831,19 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
           createdAt: feedbackData.createdAt
         }] : [],
         comments: [],
-        goals: [],
+        goals: (parsedContent.goals || []).map((g: any, idx: number) => ({
+          id: g.id || `goal-${feedbackData.id}-${idx}`,
+          feedbackId: feedbackData.id,
+          title: g.title || '',
+          description: g.description || '',
+          category: g.category || 'Technical Skills',
+          priority: g.priority || 'Medium',
+          targetDate: g.targetDate || new Date().toISOString(),
+          status: g.status || 'NOT_STARTED',
+          progress: g.progress || 0,
+          createdAt: feedbackData.createdAt,
+          updatedAt: feedbackData.updatedAt
+        })),
         acknowledgment: null,
         isAnonymous: feedbackData.isAnonymous,
         isApproved: feedbackData.isApproved,
@@ -4948,7 +4999,19 @@ app.post('/api/v1/feedback/:id/submit', authenticateToken, async (req, res) => {
           createdAt: feedbackData.createdAt
         }] : [],
         comments: [],
-        goals: [],
+        goals: (parsedContent.goals || []).map((g: any, idx: number) => ({
+          id: g.id || `goal-${feedbackData.id}-${idx}`,
+          feedbackId: feedbackData.id,
+          title: g.title || '',
+          description: g.description || '',
+          category: g.category || 'Technical Skills',
+          priority: g.priority || 'Medium',
+          targetDate: g.targetDate || new Date().toISOString(),
+          status: g.status || 'NOT_STARTED',
+          progress: g.progress || 0,
+          createdAt: feedbackData.createdAt,
+          updatedAt: feedbackData.updatedAt
+        })),
         acknowledgment: null,
         isAnonymous: feedbackData.isAnonymous,
         isApproved: feedbackData.isApproved,
@@ -5204,7 +5267,19 @@ app.post('/api/v1/feedback/:id/acknowledge', authenticateToken, async (req, res)
       content: parsedContent,
       ratings: [],
       comments: [],
-      goals: [],
+      goals: (parsedContent.goals || []).map((g: any, idx: number) => ({
+        id: g.id || `goal-${row.id}-${idx}`,
+        feedbackId: row.id,
+        title: g.title || '',
+        description: g.description || '',
+        category: g.category || 'Technical Skills',
+        priority: g.priority || 'Medium',
+        targetDate: g.targetDate || new Date().toISOString(),
+        status: g.status || 'NOT_STARTED',
+        progress: g.progress || 0,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt
+      })),
       // Include acknowledgment if the feedback has been completed and has a message
       ...((row.status === 'completed' || row.status === 'acknowledged') && row.message && {
         acknowledgment: {

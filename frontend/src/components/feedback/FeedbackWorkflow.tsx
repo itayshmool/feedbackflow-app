@@ -163,8 +163,9 @@ export const FeedbackWorkflow: React.FC<FeedbackWorkflowProps> = ({
     }
     
     // Receivers can acknowledge at any time after submission (SUBMITTED or COMPLETED)
+    // But only if feedback hasn't been acknowledged yet
     if (action.id === 'acknowledge') {
-      return isRecipient && feedback.status !== FeedbackStatus.DRAFT;
+      return isRecipient && feedback.status !== FeedbackStatus.DRAFT && !feedback.acknowledgment;
     }
     
     return false;
@@ -216,18 +217,14 @@ export const FeedbackWorkflow: React.FC<FeedbackWorkflowProps> = ({
       </div>
 
       {/* Available Actions */}
-      {availableActions.length > 0 && (
+      {availableActions.filter(action => canPerformAction(action)).length > 0 && (
         <div className="space-y-4">
           <h4 className="font-medium text-gray-900">Available Actions</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {availableActions.map((action) => (
+            {availableActions.filter(action => canPerformAction(action)).map((action) => (
               <div
                 key={action.id}
-                className={`p-4 border rounded-lg ${
-                  canPerformAction(action) 
-                    ? 'border-gray-200 hover:border-gray-300' 
-                    : 'border-gray-100 bg-gray-50 opacity-60'
-                }`}
+                className="p-4 border rounded-lg border-gray-200 hover:border-gray-300"
               >
                 <div className="flex items-start gap-3">
                   <div className={`p-2 rounded-lg text-white ${action.color}`}>
@@ -241,35 +238,33 @@ export const FeedbackWorkflow: React.FC<FeedbackWorkflowProps> = ({
                     )}
                   </div>
                 </div>
-                {canPerformAction(action) && (
-                  <div className="mt-3">
-                    {action.requiresComment && (
-                      <div className="mb-3">
-                        <Input
-                          placeholder="Add a comment..."
-                          value={comment}
-                          onChange={(e) => setComment(e.target.value)}
-                          className="text-sm"
-                        />
-                      </div>
+                <div className="mt-3">
+                  {action.requiresComment && (
+                    <div className="mb-3">
+                      <Input
+                        placeholder="Add a comment..."
+                        value={comment}
+                        onChange={(e) => setComment(e.target.value)}
+                        className="text-sm"
+                      />
+                    </div>
+                  )}
+                  <Button
+                    onClick={() => handleAction(action)}
+                    disabled={isProcessing}
+                    className={`w-full ${action.color} text-white`}
+                    size="sm"
+                  >
+                    {isProcessing ? (
+                      <LoadingSpinner size="sm" />
+                    ) : (
+                      <>
+                        {action.icon}
+                        {action.label}
+                      </>
                     )}
-                    <Button
-                      onClick={() => handleAction(action)}
-                      disabled={isProcessing}
-                      className={`w-full ${action.color} text-white`}
-                      size="sm"
-                    >
-                      {isProcessing ? (
-                        <LoadingSpinner size="sm" />
-                      ) : (
-                        <>
-                          {action.icon}
-                          {action.label}
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                )}
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
