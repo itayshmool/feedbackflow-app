@@ -9,7 +9,9 @@ import Input from '../ui/Input';
 import { Select } from '../ui/Select';
 import { useCyclesStore } from '../../stores/cyclesStore';
 import { useOrganizationStore } from '../../stores/organizationStore';
+import { useAuthStore } from '../../stores/authStore';
 import { CycleFormData, CycleType, Cycle } from '../../types/cycles.types';
+import { OrganizationStatus } from '../../types/organization.types';
 
 interface CreateCycleProps {
   onClose: () => void;
@@ -20,6 +22,7 @@ interface CreateCycleProps {
 export const CreateCycle: React.FC<CreateCycleProps> = ({ onClose, onSuccess, editingCycle }) => {
   const { createCycle, updateCycle, isCreating, isUpdating, createError, updateError, clearCreateError, clearUpdateError } = useCyclesStore();
   const { organizations, fetchOrganizations, organizationsLoading } = useOrganizationStore();
+  const { user } = useAuthStore();
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
 
   const {
@@ -42,7 +45,7 @@ export const CreateCycle: React.FC<CreateCycleProps> = ({ onClose, onSuccess, ed
         allowSelfReview: true,
         allowPeerReview: true,
         allowManagerReview: true,
-        allowUpwardReview: false,
+        allowUpwardReview: true,
         requireAcknowledgment: true,
         autoCloseAfterDays: 30,
         reminderSettings: {
@@ -63,9 +66,28 @@ export const CreateCycle: React.FC<CreateCycleProps> = ({ onClose, onSuccess, ed
   useEffect(() => {
     // Fetch organizations when component mounts
     if (organizations.length === 0) {
-      fetchOrganizations();
+      // Admin: fetch all active organizations
+      // Manager: fetch organizations (will be filtered below)
+      if (user?.roles?.includes('admin')) {
+        fetchOrganizations({ status: OrganizationStatus.ACTIVE, limit: 100 });
+      } else {
+        fetchOrganizations({ limit: 100 });
+      }
     }
-  }, [organizations.length, fetchOrganizations]);
+  }, [organizations.length, fetchOrganizations, user]);
+
+  // Filter organizations based on user role
+  const availableOrganizations = React.useMemo(() => {
+    if (!user) return [];
+    
+    // Admin can see all active organizations
+    if (user.roles?.includes('admin')) {
+      return organizations.filter(org => org.status === OrganizationStatus.ACTIVE);
+    }
+    
+    // Manager can only see their own organization
+    return organizations.filter(org => org.id === user.organizationId);
+  }, [organizations, user]);
 
   // Populate form when editing a cycle
   useEffect(() => {
@@ -86,8 +108,11 @@ export const CreateCycle: React.FC<CreateCycleProps> = ({ onClose, onSuccess, ed
         type: editingCycle.type,
         settings: editingCycle.settings,
       });
+    } else if (user && !user.roles?.includes('admin') && user.organizationId) {
+      // Auto-select organization for non-admin users (managers)
+      setValue('organizationId', user.organizationId);
     }
-  }, [editingCycle, reset]);
+  }, [editingCycle, reset, user, setValue]);
 
   const watchedCategories = watch('settings.feedbackSettings.categories');
   const [newCategory, setNewCategory] = useState('');
@@ -211,7 +236,7 @@ export const CreateCycle: React.FC<CreateCycleProps> = ({ onClose, onSuccess, ed
                   disabled={organizationsLoading}
                 >
                   <option value="">Select an organization</option>
-                  {organizations.map((org) => (
+                  {availableOrganizations.map((org) => (
                     <option key={org.id} value={org.id}>
                       {org.name} (@{org.slug})
                     </option>
@@ -264,62 +289,22 @@ export const CreateCycle: React.FC<CreateCycleProps> = ({ onClose, onSuccess, ed
               </h3>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    {...register('settings.allowSelfReview')}
-                    className="rounded border-gray-300"
-                  />
-                  <span className="text-sm text-gray-700">Allow Self Review</span>
-                </label>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  {...register('settings.requireAcknowledgment')}
+                  className="rounded border-gray-300"
+                />
+                <span className="text-sm text-gray-700">Require Acknowledgment</span>
+              </label>
 
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    {...register('settings.allowPeerReview')}
-                    className="rounded border-gray-300"
-                  />
-                  <span className="text-sm text-gray-700">Allow Peer Review</span>
-                </label>
-
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    {...register('settings.allowManagerReview')}
-                    className="rounded border-gray-300"
-                  />
-                  <span className="text-sm text-gray-700">Allow Manager Review</span>
-                </label>
-
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    {...register('settings.allowUpwardReview')}
-                    className="rounded border-gray-300"
-                  />
-                  <span className="text-sm text-gray-700">Allow Upward Review</span>
-                </label>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    {...register('settings.requireAcknowledgment')}
-                    className="rounded border-gray-300"
-                  />
-                  <span className="text-sm text-gray-700">Require Acknowledgment</span>
-                </label>
-
-                <div>
-                  <Input
-                    label="Auto-close after (days)"
-                    type="number"
-                    {...register('settings.autoCloseAfterDays', { valueAsNumber: true })}
-                    placeholder="30"
-                  />
-                </div>
+              <div>
+                <Input
+                  label="Auto-close after (days)"
+                  type="number"
+                  {...register('settings.autoCloseAfterDays', { valueAsNumber: true })}
+                  placeholder="30"
+                />
               </div>
             </CardContent>
           </Card>
