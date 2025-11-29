@@ -273,6 +273,13 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
                 </Button>
               </>
             )}
+            <Button
+              onClick={handleDownloadDocx}
+              icon={Download}
+              disabled={!currentFeedback}
+            >
+              Download
+            </Button>
             <Button variant="ghost" onClick={onClose} icon={X}>
               Close
             </Button>
@@ -669,18 +676,6 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
           )}
         </div>
       </Card>
-
-      {/* Download Button */}
-      <div className="flex justify-end mt-6">
-        <Button
-          onClick={handleDownloadDocx}
-          variant="outline"
-          icon={Download}
-          disabled={!currentFeedback}
-        >
-          Download as DOCX
-        </Button>
-      </div>
     </div>
   );
 };
