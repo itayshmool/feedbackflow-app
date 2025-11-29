@@ -4322,7 +4322,174 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
     
     const dbFeedbackType = feedbackTypeMap[reviewType] || 'peer';
 
-    // Create feedback request in database
+    // Create structured content object for database storage
+    const structuredContent = {
+      overallComment: content?.overallComment || comment || '',
+      strengths: content?.strengths || [],
+      areasForImprovement: content?.areasForImprovement || [],
+      specificExamples: content?.specificExamples || [],
+      recommendations: content?.recommendations || [],
+      confidential: content?.confidential || false
+    };
+
+    // Check if feedback request already exists for this combination
+    // Business rule: One feedback per person per cycle
+    const existingRequestQuery = `
+      SELECT id, status 
+      FROM feedback_requests 
+      WHERE cycle_id = $1 
+        AND requester_id = $2 
+        AND recipient_id = $3 
+        AND feedback_type = $4
+    `;
+
+    const existingRequestResult = await query(existingRequestQuery, [
+      cycleIdToUse,
+      currentUserId,
+      targetUserId,
+      dbFeedbackType
+    ]);
+
+    let requestId: string;
+
+    if (existingRequestResult.rows.length > 0) {
+      // Feedback request already exists
+      const existingRequest = existingRequestResult.rows[0];
+      requestId = existingRequest.id;
+      const requestStatus = existingRequest.status;
+
+      if (requestStatus === 'submitted' || requestStatus === 'completed' || requestStatus === 'acknowledged') {
+        // Feedback already submitted - cannot create another one
+        return res.status(400).json({ 
+          success: false, 
+          error: 'You have already submitted feedback for this person in this cycle. Only one feedback per person per cycle is allowed.'
+        });
+      }
+
+      // Status is 'draft' - update the existing request
+      await query(
+        `UPDATE feedback_requests 
+         SET message = $1, updated_at = NOW()
+         WHERE id = $2`,
+        [content?.overallComment || comment || '', requestId]
+      );
+
+      // Check if feedback_response exists for this request
+      const existingResponseQuery = `
+        SELECT id 
+        FROM feedback_responses 
+        WHERE request_id = $1
+      `;
+      const existingResponseResult = await query(existingResponseQuery, [requestId]);
+
+      if (existingResponseResult.rows.length > 0) {
+        // Update existing feedback_response
+        const responseId = existingResponseResult.rows[0].id;
+        
+        await query(
+          `UPDATE feedback_responses 
+           SET content = $1, rating = $2, updated_at = NOW()
+           WHERE id = $3`,
+          [
+            JSON.stringify(structuredContent),
+            rating || (ratings && ratings.length > 0 ? ratings[0].score || ratings[0].rating : null),
+            responseId
+          ]
+        );
+
+        // Fetch complete feedback to return
+        const completeQuery = `
+          SELECT 
+            fr.id,
+            fr.cycle_id as "cycleId",
+            fc.name as "cycleName",
+            fr.giver_id as "fromUserId",
+            u_giver.name as "fromUserName",
+            u_giver.email as "fromUserEmail",
+            fr.recipient_id as "toUserId",
+            u_recipient.name as "toUserName",
+            u_recipient.email as "toUserEmail",
+            frr.status,
+            frr.feedback_type as "reviewType",
+            fr.rating as "overallRating",
+            fr.content,
+            fr.is_anonymous as "isAnonymous",
+            fr.is_approved as "isApproved",
+            fr.created_at as "createdAt",
+            fr.updated_at as "updatedAt",
+            frr.completed_at as "submittedAt"
+          FROM feedback_responses fr
+          JOIN feedback_requests frr ON fr.request_id = frr.id
+          LEFT JOIN users u_giver ON fr.giver_id = u_giver.id
+          LEFT JOIN users u_recipient ON fr.recipient_id = u_recipient.id
+          LEFT JOIN feedback_cycles fc ON fr.cycle_id = fc.id
+          WHERE fr.id = $1
+        `;
+        
+        const completeResult = await query(completeQuery, [responseId]);
+        const feedbackData = completeResult.rows[0];
+        const parsedContent = typeof feedbackData.content === 'string' 
+          ? JSON.parse(feedbackData.content) 
+          : feedbackData.content;
+        
+        const updatedFeedback = {
+          id: feedbackData.id,
+          cycleId: feedbackData.cycleId,
+          cycleName: feedbackData.cycleName,
+          fromUserId: feedbackData.fromUserId,
+          fromUserEmail: feedbackData.fromUserEmail,
+          toUserId: feedbackData.toUserId,
+          toUserEmail: feedbackData.toUserEmail,
+          fromUser: {
+            id: feedbackData.fromUserId,
+            name: feedbackData.fromUserName,
+            email: feedbackData.fromUserEmail
+          },
+          toUser: {
+            id: feedbackData.toUserId,
+            name: feedbackData.toUserName,
+            email: feedbackData.toUserEmail
+          },
+          reviewType: feedbackData.reviewType,
+          status: feedbackData.status,
+          content: {
+            id: `content-${feedbackData.id}`,
+            feedbackId: feedbackData.id,
+            overallComment: parsedContent.overallComment || '',
+            strengths: parsedContent.strengths || [],
+            areasForImprovement: parsedContent.areasForImprovement || [],
+            specificExamples: parsedContent.specificExamples || [],
+            recommendations: parsedContent.recommendations || [],
+            confidential: parsedContent.confidential || false,
+            createdAt: feedbackData.createdAt,
+            updatedAt: feedbackData.updatedAt
+          },
+          ratings: feedbackData.overallRating ? [{
+            id: `rating-${feedbackData.id}-0`,
+            feedbackId: feedbackData.id,
+            category: 'overall',
+            score: feedbackData.overallRating,
+            maxScore: 5,
+            weight: 1,
+            comment: '',
+            createdAt: feedbackData.createdAt
+          }] : [],
+          comments: [],
+          goals: [],
+          acknowledgment: null,
+          isAnonymous: feedbackData.isAnonymous,
+          isApproved: feedbackData.isApproved,
+          createdAt: feedbackData.createdAt,
+          updatedAt: feedbackData.updatedAt,
+          submittedAt: feedbackData.submittedAt
+        };
+
+        return res.status(200).json({ success: true, data: updatedFeedback });
+      }
+      
+      // No response exists - fall through to create response below
+    } else {
+      // No existing request - create new one
     const requestResult = await query(
       `INSERT INTO feedback_requests 
        (cycle_id, requester_id, recipient_id, feedback_type, status, message, due_date, created_at, updated_at)
@@ -4339,17 +4506,15 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
       ]
     );
 
-    const requestId = requestResult.rows[0].id;
+      requestId = requestResult.rows[0].id;
+    }
 
-    // Create structured content object for database storage
-    const structuredContent = {
-      overallComment: content?.overallComment || comment || '',
-      strengths: content?.strengths || [],
-      areasForImprovement: content?.areasForImprovement || [],
-      specificExamples: content?.specificExamples || [],
-      recommendations: content?.recommendations || [],
-      confidential: content?.confidential || false
-    };
+    // Fetch the request status to use in response
+    const requestStatusQuery = await query(
+      'SELECT status FROM feedback_requests WHERE id = $1',
+      [requestId]
+    );
+    const requestStatus = requestStatusQuery.rows[0].status;
 
     // Create feedback response in database
     const responseResult = await query(
@@ -4400,7 +4565,7 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
         email: recipientEmail
       },
       reviewType,
-      status: requestResult.rows[0].status, // Use actual status from database
+      status: requestStatus, // Use actual status from database
       content: {
         id: `content-${responseId}`,
         feedbackId: responseId,
@@ -4498,16 +4663,42 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
       });
     }
     
+    // Prepare content update - handle both formats
+    let contentToUpdate;
+    if (updates.content) {
+      if (typeof updates.content === 'string') {
+        contentToUpdate = JSON.stringify({
+          overallComment: updates.content,
+          strengths: updates.strengths || [],
+          areasForImprovement: updates.areasForImprovement || [],
+          specificExamples: updates.specificExamples || [],
+          recommendations: updates.recommendations || [],
+          confidential: false
+        });
+      } else {
+        contentToUpdate = JSON.stringify(updates.content);
+      }
+    } else {
+      contentToUpdate = JSON.stringify({
+        overallComment: updates.overallComment || '',
+        strengths: updates.strengths || [],
+        areasForImprovement: updates.areasForImprovement || [],
+        specificExamples: updates.specificExamples || [],
+        recommendations: updates.recommendations || [],
+        confidential: false
+      });
+    }
+    
     // Update the feedback in database
     const updateQuery = `
       UPDATE feedback_responses 
       SET content = $1, rating = $2, updated_at = NOW()
       WHERE id = $3
-      RETURNING id, content, rating, updated_at
+      RETURNING id
     `;
     
     const updateResult = await query(updateQuery, [
-      updates.content?.overallComment || updates.content || '',
+      contentToUpdate,
       updates.rating || updates.ratings?.[0]?.score || null,
       id
     ]);
@@ -4516,15 +4707,98 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ success: false, error: 'Feedback not found' });
     }
     
-    const updatedFeedback = updateResult.rows[0];
+    // Fetch complete feedback data to return
+    const completeQuery = `
+      SELECT 
+        fr.id,
+        fr.cycle_id as "cycleId",
+        fc.name as "cycleName",
+        fr.giver_id as "fromUserId",
+        u_giver.name as "fromUserName",
+        u_giver.email as "fromUserEmail",
+        fr.recipient_id as "toUserId",
+        u_recipient.name as "toUserName",
+        u_recipient.email as "toUserEmail",
+        frr.status,
+        frr.feedback_type as "reviewType",
+        fr.rating as "overallRating",
+        fr.content,
+        fr.is_anonymous as "isAnonymous",
+        fr.is_approved as "isApproved",
+        fr.created_at as "createdAt",
+        fr.updated_at as "updatedAt",
+        frr.completed_at as "submittedAt"
+      FROM feedback_responses fr
+      JOIN feedback_requests frr ON fr.request_id = frr.id
+      LEFT JOIN users u_giver ON fr.giver_id = u_giver.id
+      LEFT JOIN users u_recipient ON fr.recipient_id = u_recipient.id
+      LEFT JOIN feedback_cycles fc ON fr.cycle_id = fc.id
+      WHERE fr.id = $1
+    `;
+    
+    const completeResult = await query(completeQuery, [id]);
+    
+    if (completeResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Feedback not found' });
+    }
+    
+    const feedbackData = completeResult.rows[0];
+    const parsedContent = typeof feedbackData.content === 'string' 
+      ? JSON.parse(feedbackData.content) 
+      : feedbackData.content;
     
     res.json({ 
       success: true, 
       data: {
-        id: updatedFeedback.id,
-        content: updatedFeedback.content,
-        rating: updatedFeedback.rating,
-        updatedAt: updatedFeedback.updated_at
+        id: feedbackData.id,
+        cycleId: feedbackData.cycleId,
+        cycleName: feedbackData.cycleName,
+        fromUserId: feedbackData.fromUserId,
+        fromUserEmail: feedbackData.fromUserEmail,
+        toUserId: feedbackData.toUserId,
+        toUserEmail: feedbackData.toUserEmail,
+        fromUser: {
+          id: feedbackData.fromUserId,
+          name: feedbackData.fromUserName,
+          email: feedbackData.fromUserEmail
+        },
+        toUser: {
+          id: feedbackData.toUserId,
+          name: feedbackData.toUserName,
+          email: feedbackData.toUserEmail
+        },
+        reviewType: feedbackData.reviewType,
+        status: feedbackData.status,
+        content: {
+          id: `content-${feedbackData.id}`,
+          feedbackId: feedbackData.id,
+          overallComment: parsedContent.overallComment || '',
+          strengths: parsedContent.strengths || [],
+          areasForImprovement: parsedContent.areasForImprovement || [],
+          specificExamples: parsedContent.specificExamples || [],
+          recommendations: parsedContent.recommendations || [],
+          confidential: parsedContent.confidential || false,
+          createdAt: feedbackData.createdAt,
+          updatedAt: feedbackData.updatedAt
+        },
+        ratings: feedbackData.overallRating ? [{
+          id: `rating-${feedbackData.id}-0`,
+          feedbackId: feedbackData.id,
+          category: 'overall',
+          score: feedbackData.overallRating,
+          maxScore: 5,
+          weight: 1,
+          comment: '',
+          createdAt: feedbackData.createdAt
+        }] : [],
+        comments: [],
+        goals: [],
+        acknowledgment: null,
+        isAnonymous: feedbackData.isAnonymous,
+        isApproved: feedbackData.isApproved,
+        createdAt: feedbackData.createdAt,
+        updatedAt: feedbackData.updatedAt,
+        submittedAt: feedbackData.submittedAt
       }
     });
   } catch (error) {
@@ -4589,12 +4863,98 @@ app.post('/api/v1/feedback/:id/submit', authenticateToken, async (req, res) => {
       return res.status(404).json({ success: false, error: 'Feedback not found' });
     }
     
+    // Fetch complete feedback data to return
+    const completeQuery = `
+      SELECT 
+        fr.id,
+        fr.cycle_id as "cycleId",
+        fc.name as "cycleName",
+        fr.giver_id as "fromUserId",
+        u_giver.name as "fromUserName",
+        u_giver.email as "fromUserEmail",
+        fr.recipient_id as "toUserId",
+        u_recipient.name as "toUserName",
+        u_recipient.email as "toUserEmail",
+        frr.status,
+        frr.feedback_type as "reviewType",
+        fr.rating as "overallRating",
+        fr.content,
+        fr.is_anonymous as "isAnonymous",
+        fr.is_approved as "isApproved",
+        fr.created_at as "createdAt",
+        fr.updated_at as "updatedAt",
+        frr.completed_at as "submittedAt"
+      FROM feedback_responses fr
+      JOIN feedback_requests frr ON fr.request_id = frr.id
+      LEFT JOIN users u_giver ON fr.giver_id = u_giver.id
+      LEFT JOIN users u_recipient ON fr.recipient_id = u_recipient.id
+      LEFT JOIN feedback_cycles fc ON fr.cycle_id = fc.id
+      WHERE fr.id = $1
+    `;
+    
+    const completeResult = await query(completeQuery, [id]);
+    
+    if (completeResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Feedback not found' });
+    }
+    
+    const feedbackData = completeResult.rows[0];
+    const parsedContent = typeof feedbackData.content === 'string' 
+      ? JSON.parse(feedbackData.content) 
+      : feedbackData.content;
+    
     res.json({ 
       success: true, 
       data: {
-        id: id,
-        status: 'submitted',
-        updatedAt: updateResult.rows[0].updated_at
+        id: feedbackData.id,
+        cycleId: feedbackData.cycleId,
+        cycleName: feedbackData.cycleName,
+        fromUserId: feedbackData.fromUserId,
+        fromUserEmail: feedbackData.fromUserEmail,
+        toUserId: feedbackData.toUserId,
+        toUserEmail: feedbackData.toUserEmail,
+        fromUser: {
+          id: feedbackData.fromUserId,
+          name: feedbackData.fromUserName,
+          email: feedbackData.fromUserEmail
+        },
+        toUser: {
+          id: feedbackData.toUserId,
+          name: feedbackData.toUserName,
+          email: feedbackData.toUserEmail
+        },
+        reviewType: feedbackData.reviewType,
+        status: feedbackData.status,
+        content: {
+          id: `content-${feedbackData.id}`,
+          feedbackId: feedbackData.id,
+          overallComment: parsedContent.overallComment || '',
+          strengths: parsedContent.strengths || [],
+          areasForImprovement: parsedContent.areasForImprovement || [],
+          specificExamples: parsedContent.specificExamples || [],
+          recommendations: parsedContent.recommendations || [],
+          confidential: parsedContent.confidential || false,
+          createdAt: feedbackData.createdAt,
+          updatedAt: feedbackData.updatedAt
+        },
+        ratings: feedbackData.overallRating ? [{
+          id: `rating-${feedbackData.id}-0`,
+          feedbackId: feedbackData.id,
+          category: 'overall',
+          score: feedbackData.overallRating,
+          maxScore: 5,
+          weight: 1,
+          comment: '',
+          createdAt: feedbackData.createdAt
+        }] : [],
+        comments: [],
+        goals: [],
+        acknowledgment: null,
+        isAnonymous: feedbackData.isAnonymous,
+        isApproved: feedbackData.isApproved,
+        createdAt: feedbackData.createdAt,
+        updatedAt: feedbackData.updatedAt,
+        submittedAt: feedbackData.submittedAt
       }
     });
   } catch (error) {
