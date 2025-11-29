@@ -1,7 +1,6 @@
 // frontend/src/pages/dashboard/DashboardPage.tsx
 
 import { useAuthStore } from '@/stores/authStore'
-import AdminDashboard from './AdminDashboard'
 import ManagerDashboard from './ManagerDashboard'
 import EmployeeDashboard from './EmployeeDashboard'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
@@ -20,14 +19,12 @@ export default function DashboardPage() {
 
   // Route to appropriate dashboard based on user role
   // ProtectedRoute already handles authentication checks
-  if (user.roles?.includes('admin')) {
-    return <AdminDashboard />
-  }
-
+  // Note: Admin users should see their manager/employee dashboard here
+  // Use /admin route for admin-specific dashboard
   if (user.roles?.includes('manager')) {
     return <ManagerDashboard />
   }
 
-  // Default to employee dashboard for regular employees
+  // Default to employee dashboard for regular employees and admins
   return <EmployeeDashboard />
 }
