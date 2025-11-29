@@ -23,7 +23,9 @@ import {
   Edit,
   X,
   TrendingUp,
+  Download,
 } from 'lucide-react';
+import { generateFeedbackDocx } from '../../utils/generateFeedbackDocx';
 
 interface FeedbackDetailProps {
   feedbackId: string;
@@ -115,6 +117,16 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
     setIsEditMode(false);
   };
 
+  const handleDownloadDocx = async () => {
+    if (!currentFeedback) return;
+    
+    try {
+      await generateFeedbackDocx(currentFeedback);
+    } catch (error) {
+      console.error('Error generating DOCX:', error);
+      alert('Failed to generate document. Please try again.');
+    }
+  };
 
   const getStatusColor = (status: FeedbackStatus): 'blue' | 'yellow' | 'green' | 'gray' => {
     switch (status) {
@@ -657,6 +669,18 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
           )}
         </div>
       </Card>
+
+      {/* Download Button */}
+      <div className="flex justify-end mt-6">
+        <Button
+          onClick={handleDownloadDocx}
+          variant="outline"
+          icon={Download}
+          disabled={!currentFeedback}
+        >
+          Download as DOCX
+        </Button>
+      </div>
     </div>
   );
 };
