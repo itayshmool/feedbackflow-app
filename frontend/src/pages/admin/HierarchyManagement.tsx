@@ -21,7 +21,6 @@ import {
   CheckCircle,
   Building,
   UserPlus,
-  UserMinus,
   TreePine,
   BarChart3,
   ChevronDown,
@@ -346,7 +345,7 @@ const HierarchyManagement: React.FC = () => {
 
       {/* Statistics */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card className="p-4">
             <div className="flex items-center">
               <Users className="h-8 w-8 text-blue-500 mr-3" />
@@ -380,15 +379,6 @@ const HierarchyManagement: React.FC = () => {
               <div>
                 <p className="text-sm font-medium text-gray-500">Max Depth</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.maxDepth}</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center">
-              <UserMinus className="h-8 w-8 text-red-500 mr-3" />
-              <div>
-                <p className="text-sm font-medium text-gray-500">Orphaned</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.orphanedEmployees}</p>
               </div>
             </div>
           </Card>
