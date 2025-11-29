@@ -1025,7 +1025,7 @@ app.post('/api/v1/cycles', async (req, res) => {
         organization_id, name, description, type, start_date, end_date,
         settings, created_by, status
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'draft')
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'active')
       RETURNING 
         id,
         organization_id as "organizationId",
