@@ -1,7 +1,7 @@
 # End-to-End Test Results
 
-**Date:** 2025-11-26  
-**Status:** ✅ ALL TESTS PASSED  
+**Date:** 2025-11-29 (Updated from 2025-11-26)  
+**Status:** ✅ TESTS IN PROGRESS (6/8 Feedback Workflow Tests Passed)  
 **Testing Method:** Chrome Browser Automation (MCP)
 
 ---
@@ -178,6 +178,103 @@ Organizations (/admin/organizations)
 
 ---
 
+## Feedback Workflow Tests (2025-11-29)
+
+**Test Suite:** Complete Feedback Workflow (Draft → Submitted → Acknowledged)  
+**Date:** 2025-11-29  
+**Status:** ✅ 6/8 TESTS PASSED  
+**Database:** PostgreSQL (Real)
+
+### Test 1: ✅ Create Feedback as Draft
+- **User:** Idan Cohen (idanco@wix.com - Manager)
+- **Recipient:** Guy Baruch (guyba@wix.com - Employee)
+- **Cycle:** Payments end of year 2025
+- **Content:** "Test 1: Creating draft feedback from Idan to Guy"
+- **Result:** Draft created successfully
+- **Verification:** Draft visible in "Drafts (1)" tab, status = "draft"
+
+### Test 2: ✅ Edit Draft Feedback
+- **User:** Idan Cohen (still logged in)
+- **Action:** Edit existing draft feedback
+- **New Content:** "Test 2: EDITED - Updated feedback from Idan to Guy. Guy has demonstrated excellent performance."
+- **Result:** Draft updated successfully
+- **Verification:** Changes saved, draft still editable
+
+### Test 3: ✅ Submit Feedback
+- **User:** Idan Cohen (still logged in)
+- **Action:** Submit the edited draft feedback
+- **Result:** Feedback submitted successfully
+- **Verification:**
+  - Status changed from "draft" to "submitted"
+  - Moved from "Drafts" tab to "Given" tab
+  - Given count increased to 1
+  - Drafts count decreased to 0
+
+### Bug 3: ✅ FIXED - Duplicate Feedback Prevention
+- **Issue:** Creating a second draft to the same user in the same cycle caused 500 error
+- **Root Cause:** UNIQUE constraint violation on `(cycle_id, requester_id, recipient_id, feedback_type)` in `feedback_requests` table
+- **Fix:** Modified `POST /api/v1/feedback` endpoint in `real-database-server.ts`
+  - Check for existing feedback before insert
+  - If draft exists: Update existing draft
+  - If submitted/completed/acknowledged exists: Return 400 with user-friendly error
+  - Business rule: "One feedback per person per cycle"
+- **Frontend Fix:** Updated error handling in `feedbackStore.ts` to display custom backend error messages
+- **Result:** User-friendly error message displayed: "You have already submitted feedback for this person in this cycle. Only one feedback per person per cycle is allowed."
+
+### Test 4: ✅ View Submitted Feedback (Giver's Perspective)
+- **User:** Amit Sagiv (amitsa@wix.com - Manager)
+- **Recipient:** Delmy Fernandez (delmy@wix.com - Manager/Employee)
+- **Cycle:** Payments end of year 2025
+- **Content:** "Test 4: Amit Sagiv giving feedback to Delmy Fernandez. Delmy has shown excellent performance in account services, demonstrating strong customer relations and problem-solving skills."
+- **Result:** Feedback submitted successfully
+- **Verification:**
+  - Given count: 1
+  - Feedback visible in "Given (1)" tab
+  - Status: "submitted"
+  - All details correct (from/to users, cycle, date, content)
+
+### Test 5: ✅ View Submitted Feedback (Receiver's Perspective)
+- **User:** Delmy Fernandez (delmy@wix.com - logged in)
+- **Result:** Feedback visible on receiver's side
+- **Verification:**
+  - Dashboard shows: Received: 1, Given: 0, Pending: 1
+  - Feedback visible in "Received (1)" tab
+  - Status: "submitted"
+  - From: Amit Sagiv
+  - Date: 11/29/2025
+  - Full content visible
+
+### Test 6: ✅ Acknowledge Feedback
+- **User:** Delmy Fernandez (delmy@wix.com - receiver)
+- **Action:** Acknowledge received feedback from Amit Sagiv
+- **Acknowledgment Message:** "Thank you for the feedback, Amit. I appreciate your recognition of my work in account services. I will continue to focus on customer relations and problem-solving to deliver excellent results."
+- **Result:** Feedback acknowledged successfully
+- **Verification:**
+  - Status changed: "submitted" → "completed"
+  - Workflow status: "SUBMITTED" → "COMPLETED"
+  - "Acknowledged" section appeared with:
+    - Timestamp: 11/29/2025, 2:29:59 PM
+    - Acknowledgment message visible
+  - Pending count: 1 → 0
+  - Feedback list shows status: "completed"
+
+### Screenshots
+- `test-1-create-draft-feedback.png` - Draft feedback creation
+- `test-2-edit-draft-feedback.png` - Draft editing
+- `test-3-submit-feedback.png` - Feedback submission
+- `test-4-amit-gives-feedback.png` - Amit giving feedback to Delmy
+- `test-5-delmy-received-feedback.png` - Delmy's received feedback view
+- `test-6-feedback-acknowledged.png` - Feedback acknowledgment form
+- `test-6-acknowledged-section.png` - Acknowledged section with green checkmark
+- `test-6-acknowledged-full.png` - Full acknowledgment message
+- `test-6-feedback-list-completed.png` - Updated feedback list showing "completed" status
+
+### Tests Remaining
+- **Test 7:** Complete Feedback (Manager marks feedback as complete)
+- **Test 8:** Verify Draft Visibility (Draft not visible to receiver)
+
+---
+
 ## System Status
 
 ### Running Processes
@@ -241,7 +338,7 @@ The application is ready for development and testing use.
 ---
 
 **Test Executed By:** AI Assistant (Browser Automation)  
-**Last Updated:** 2025-11-26 07:41 UTC  
-**Test Duration:** ~3 minutes  
-**Result:** ✅ PASS
+**Last Updated:** 2025-11-29 14:30 UTC  
+**Test Duration:** ~30 minutes  
+**Result:** ✅ PASS (Tests 1-6 Complete)
 

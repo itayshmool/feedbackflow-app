@@ -143,9 +143,11 @@ export const useFeedbackStore = create<FeedbackState>()(
             isCreating: false,
           });
           return feedback;
-        } catch (error) {
+        } catch (error: any) {
+          // Extract user-friendly error message from axios response
+          const errorMessage = error?.response?.data?.error || error?.message || 'Failed to create feedback';
           set({
-            createError: error instanceof Error ? error.message : 'Failed to create feedback',
+            createError: errorMessage,
             isCreating: false,
           });
           return null;
@@ -162,9 +164,11 @@ export const useFeedbackStore = create<FeedbackState>()(
             isUpdating: false,
           });
           return feedback;
-        } catch (error) {
+        } catch (error: any) {
+          // Extract user-friendly error message from axios response
+          const errorMessage = error?.response?.data?.error || error?.message || 'Failed to update feedback';
           set({
-            updateError: error instanceof Error ? error.message : 'Failed to update feedback',
+            updateError: errorMessage,
             isUpdating: false,
           });
           return null;
@@ -181,9 +185,11 @@ export const useFeedbackStore = create<FeedbackState>()(
             isDeleting: false,
           });
           return true;
-        } catch (error) {
+        } catch (error: any) {
+          // Extract user-friendly error message from axios response
+          const errorMessage = error?.response?.data?.error || error?.message || 'Failed to delete feedback';
           set({
-            deleteError: error instanceof Error ? error.message : 'Failed to delete feedback',
+            deleteError: errorMessage,
             isDeleting: false,
           });
           return false;
@@ -200,9 +206,11 @@ export const useFeedbackStore = create<FeedbackState>()(
             isSubmitting: false,
           });
           return feedback;
-        } catch (error) {
+        } catch (error: any) {
+          // Extract user-friendly error message from axios response
+          const errorMessage = error?.response?.data?.error || error?.message || 'Failed to submit feedback';
           set({
-            error: error instanceof Error ? error.message : 'Failed to submit feedback',
+            error: errorMessage,
             isSubmitting: false,
           });
           return null;
@@ -219,9 +227,11 @@ export const useFeedbackStore = create<FeedbackState>()(
             isUpdating: false,
           });
           return feedback;
-        } catch (error) {
+        } catch (error: any) {
+          // Extract user-friendly error message from axios response
+          const errorMessage = error?.response?.data?.error || error?.message || 'Failed to complete feedback';
           set({
-            updateError: error instanceof Error ? error.message : 'Failed to complete feedback',
+            updateError: errorMessage,
             isUpdating: false,
           });
           return null;
@@ -238,9 +248,11 @@ export const useFeedbackStore = create<FeedbackState>()(
             isUpdating: false,
           });
           return feedback;
-        } catch (error) {
+        } catch (error: any) {
+          // Extract user-friendly error message from axios response
+          const errorMessage = error?.response?.data?.error || error?.message || 'Failed to acknowledge feedback';
           set({
-            updateError: error instanceof Error ? error.message : 'Failed to acknowledge feedback',
+            updateError: errorMessage,
             isUpdating: false,
           });
           return null;
