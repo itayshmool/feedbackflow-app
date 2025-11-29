@@ -74,8 +74,11 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
     }
   }, [clearErrors, fetchCycles, user?.id, fetchDirectReports]);
 
-  // Get active cycles for selection
-  const activeCycles = (cycles || []).filter(cycle => cycle.status === 'active');
+  // Get active cycles for selection - filtered by organization for managers
+  const activeCycles = (cycles || []).filter(cycle => 
+    cycle.status === 'active' && 
+    (user?.roles?.includes('admin') || cycle.organizationId === user?.organizationId)
+  );
 
   // Determine if current review type requires direct reports only
   const requiresDirectReports = reviewType === ReviewType.MANAGER_REVIEW;

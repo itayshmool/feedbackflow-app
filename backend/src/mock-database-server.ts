@@ -768,15 +768,45 @@ app.get('/api/v1/profile/stats', (req, res) => {
 // GET /api/v1/cycles - Get cycles list
 // GET /api/v1/cycles - List cycles with filters (REAL DATABASE)
 app.get('/api/v1/cycles', async (req, res) => {
+  const token = req.cookies?.authToken;
+  
+  if (!token) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+  
   const { page = 1, limit = 20, status, organizationId, type, createdBy, dateFrom, dateTo } = req.query;
   
   try {
+    // Decode JWT to get user info
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const currentUserId = decoded.userId;
+    
+    // Get user roles and organization
+    const userResult = await query(
+      `SELECT DISTINCT r.name as role, ur.organization_id
+       FROM user_roles ur
+       JOIN roles r ON ur.role_id = r.id
+       WHERE ur.user_id = $1 AND ur.is_active = true`,
+      [currentUserId]
+    );
+    
+    const userRoles = userResult.rows.map(r => r.role);
+    const userOrganizationId = userResult.rows[0]?.organization_id;
+    const isAdmin = userRoles.includes('admin');
+    const isManager = userRoles.includes('manager');
+    
     // Build WHERE clause
     let whereConditions: string[] = [];
     let queryParams: any[] = [];
     let paramIndex = 1;
     
-    if (organizationId) {
+    // For managers (not admins), restrict to their organization
+    if (isManager && !isAdmin && userOrganizationId) {
+      queryParams.push(userOrganizationId);
+      whereConditions.push(`fc.organization_id = $${paramIndex}`);
+      paramIndex++;
+    } else if (organizationId) {
+      // Admin can filter by specific organization
       queryParams.push(organizationId);
       whereConditions.push(`fc.organization_id = $${paramIndex}`);
       paramIndex++;
@@ -1552,9 +1582,33 @@ app.post('/api/v1/cycles/validate-feedback', async (req, res) => {
 // GET /api/v1/feedback - List feedback with filters
 // GET /api/v1/feedback - Get feedback list (REAL DATABASE)
 app.get('/api/v1/feedback', async (req, res) => {
+  const token = req.cookies?.authToken;
+  
+  if (!token) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+  
   const { toUserId, toUserEmail, fromUserId, cycleId, status, page = 1, limit = 20 } = req.query;
   
   try {
+    // Decode JWT to get user info
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const currentUserId = decoded.userId;
+    
+    // Get user roles and organization
+    const userResult = await query(
+      `SELECT DISTINCT r.name as role, ur.organization_id
+       FROM user_roles ur
+       JOIN roles r ON ur.role_id = r.id
+       WHERE ur.user_id = $1 AND ur.is_active = true`,
+      [currentUserId]
+    );
+    
+    const userRoles = userResult.rows.map(r => r.role);
+    const userOrganizationId = userResult.rows[0]?.organization_id;
+    const isAdmin = userRoles.includes('admin');
+    const isManager = userRoles.includes('manager');
+    
     // Build WHERE clause
     let whereConditions: string[] = [];
     let queryParams: any[] = [];
@@ -1595,6 +1649,13 @@ app.get('/api/v1/feedback', async (req, res) => {
       paramIndex++;
     }
     
+    // Filter by organization for managers (not admins)
+    if (isManager && !isAdmin && userOrganizationId) {
+      queryParams.push(userOrganizationId);
+      whereConditions.push(`fc.organization_id = $${paramIndex}`);
+      paramIndex++;
+    }
+    
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
     
     // Get total count
@@ -1603,6 +1664,7 @@ app.get('/api/v1/feedback', async (req, res) => {
        FROM feedback_responses fr
        LEFT JOIN feedback_requests freq ON fr.request_id = freq.id
        LEFT JOIN users u_recipient ON fr.recipient_id = u_recipient.id
+       LEFT JOIN feedback_cycles fc ON fr.cycle_id = fc.id
        ${whereClause}`,
       queryParams
     );
