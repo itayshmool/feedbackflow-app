@@ -816,7 +816,7 @@ app.post('/api/v1/auth/login/google', async (req, res) => {
     }
     
     // Generate mock JWT token (similar to mock login)
-    const mockToken = `google-jwt-token-${email}-${Date.now()}`;
+    const mockToken = `mock-jwt-token-${email}-${Date.now()}`;
     
     // Set authentication cookie
     const cookieOptions = getCookieOptions(req);
