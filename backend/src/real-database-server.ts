@@ -1,3 +1,4 @@
+import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -5,7 +6,11 @@ import multer from 'multer';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import fs from 'fs';
+import { OAuth2Client } from 'google-auth-library';
 import { query, testConnection, pool } from './config/real-database.js';
+
+// Load environment variables from .env file
+dotenv.config();
 import { DatabaseOrganizationService } from './services/DatabaseOrganizationService.js';
 import { AdminUserService } from './modules/admin/services/admin-user.service.js';
 import { createAdminUserRoutes } from './modules/admin/routes/admin-user.routes.js';
@@ -630,6 +635,200 @@ app.post('/api/v1/auth/login/mock', async (req, res) => {
     });
   } catch (error) {
     console.error('Error in mock login:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Login failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Google OAuth login endpoint
+app.post('/api/v1/auth/login/google', async (req, res) => {
+  try {
+    const { idToken } = req.body;
+    
+    if (!idToken) {
+      return res.status(400).json({
+        success: false,
+        error: 'idToken is required'
+      });
+    }
+    
+    // Verify Google ID token
+    const googleClientId = process.env.GOOGLE_CLIENT_ID;
+    if (!googleClientId) {
+      console.error('GOOGLE_CLIENT_ID environment variable not set');
+      return res.status(500).json({
+        success: false,
+        error: 'Google OAuth not configured'
+      });
+    }
+    
+    const client = new OAuth2Client(googleClientId);
+    let payload;
+    
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken: idToken,
+        audience: googleClientId,
+      });
+      payload = ticket.getPayload();
+    } catch (verifyError) {
+      console.error('Google token verification failed:', verifyError);
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid Google token'
+      });
+    }
+    
+    if (!payload || !payload.email) {
+      return res.status(400).json({
+        success: false,
+        error: 'Google token missing email'
+      });
+    }
+    
+    const email = payload.email;
+    const name = payload.name || email.split('@')[0];
+    const picture = payload.picture || null;
+    
+    // Try to find or create user in database
+    let user;
+    try {
+      // First, try to find existing user
+      const userQuery = `
+        SELECT 
+          u.id,
+          u.email,
+          u.name,
+          u.avatar_url,
+          u.is_active,
+          u.email_verified,
+          u.last_login_at,
+          u.created_at,
+          u.updated_at,
+          u.organization_id,
+          u.department,
+          u.position,
+          o.name as organization_name,
+          COALESCE(
+            JSON_AGG(r.name) FILTER (WHERE r.name IS NOT NULL),
+            '[]'
+          ) as roles
+        FROM users u
+        LEFT JOIN user_roles ur ON u.id = ur.user_id AND ur.is_active = true
+        LEFT JOIN roles r ON ur.role_id = r.id
+        LEFT JOIN organizations o ON u.organization_id = o.id
+        WHERE u.email = $1
+        GROUP BY u.id, u.email, u.name, u.avatar_url, u.is_active, u.email_verified, 
+                 u.last_login_at, u.created_at, u.updated_at, u.organization_id, u.department, u.position, o.name
+      `;
+      
+      const result = await query(userQuery, [email]);
+      
+      if (result.rows.length > 0) {
+        // User exists - update last login and picture if provided
+        const dbUser = result.rows[0];
+        
+        if (picture) {
+          await query(
+            'UPDATE users SET last_login_at = NOW(), avatar_url = $1, updated_at = NOW() WHERE id = $2',
+            [picture, dbUser.id]
+          );
+        } else {
+          await query(
+            'UPDATE users SET last_login_at = NOW(), updated_at = NOW() WHERE id = $1',
+            [dbUser.id]
+          );
+        }
+        
+        user = {
+          id: dbUser.id,
+          email: dbUser.email,
+          name: dbUser.name,
+          avatarUrl: picture || dbUser.avatar_url,
+          isActive: dbUser.is_active,
+          emailVerified: true, // Google verified
+          lastLoginAt: new Date().toISOString(),
+          createdAt: dbUser.created_at,
+          updatedAt: new Date().toISOString(),
+          organizationId: dbUser.organization_id,
+          organizationName: dbUser.organization_name,
+          department: dbUser.department,
+          position: dbUser.position,
+          roles: dbUser.roles || []
+        };
+      } else {
+        // User doesn't exist - create new user
+        // For now, assign to default organization and employee role
+        const defaultOrgResult = await query('SELECT id FROM organizations LIMIT 1');
+        const defaultOrgId = defaultOrgResult.rows[0]?.id || '00000000-0000-0000-0000-000000000001';
+        
+        const employeeRoleResult = await query('SELECT id FROM roles WHERE name = $1', ['employee']);
+        const employeeRoleId = employeeRoleResult.rows[0]?.id;
+        
+        // Create user
+        const newUserResult = await query(
+          `INSERT INTO users (email, name, avatar_url, email_verified, is_active, organization_id, last_login_at)
+           VALUES ($1, $2, $3, true, true, $4, NOW())
+           RETURNING id, email, name, avatar_url, is_active, email_verified, last_login_at, created_at, updated_at, organization_id`,
+          [email, name, picture, defaultOrgId]
+        );
+        
+        const newUser = newUserResult.rows[0];
+        
+        // Assign employee role if it exists
+        if (employeeRoleId) {
+          await query(
+            'INSERT INTO user_roles (user_id, role_id, organization_id, is_active) VALUES ($1, $2, $3, true)',
+            [newUser.id, employeeRoleId, defaultOrgId]
+          );
+        }
+        
+        // Get organization name
+        const orgResult = await query('SELECT name FROM organizations WHERE id = $1', [defaultOrgId]);
+        const orgName = orgResult.rows[0]?.name;
+        
+        user = {
+          id: newUser.id,
+          email: newUser.email,
+          name: newUser.name,
+          avatarUrl: newUser.avatar_url,
+          isActive: newUser.is_active,
+          emailVerified: true,
+          lastLoginAt: newUser.last_login_at,
+          createdAt: newUser.created_at,
+          updatedAt: newUser.updated_at,
+          organizationId: defaultOrgId,
+          organizationName: orgName,
+          department: null,
+          position: null,
+          roles: ['employee']
+        };
+      }
+    } catch (dbError) {
+      console.error('Database error during Google login:', dbError);
+      return res.status(500).json({
+        success: false,
+        error: 'Database error during authentication'
+      });
+    }
+    
+    // Generate mock JWT token (similar to mock login)
+    const mockToken = `google-jwt-token-${email}-${Date.now()}`;
+    
+    // Set authentication cookie
+    const cookieOptions = getCookieOptions(req);
+    console.log('🔐 GOOGLE LOGIN: Setting cookie for', email, 'with options:', cookieOptions);
+    res.cookie('authToken', mockToken, cookieOptions);
+    
+    res.json({
+      success: true,
+      user: user
+    });
+  } catch (error) {
+    console.error('Error in Google login:', error);
     res.status(500).json({
       success: false,
       error: 'Login failed',
