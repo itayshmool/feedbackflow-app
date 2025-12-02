@@ -6,7 +6,7 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 }
 
 const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, variant = 'default', children, ...props }, ref) => {
+  ({ className, variant = 'default', children, onChange, value, ...props }, ref) => {
     const baseClasses = 'flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
     
     const variantClasses = {
@@ -18,6 +18,8 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
       <select
         className={cn(baseClasses, variantClasses[variant], className)}
         ref={ref}
+        onChange={onChange}
+        value={value}
         {...props}
       >
         {children}
