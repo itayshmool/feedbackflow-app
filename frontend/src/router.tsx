@@ -28,6 +28,7 @@ import ProfilePage from './pages/profile/ProfilePage';
 import SettingsPage from './pages/settings/SettingsPage';
 import HierarchyManagement from './pages/admin/HierarchyManagement';
 import TemplatesManagement from './pages/admin/TemplatesManagement';
+import TemplateLibrary from './pages/manager/TemplateLibrary';
 import NotFoundPage from './pages/NotFoundPage';
 
 // Layout
@@ -137,22 +138,16 @@ const AppRouter: React.FC = () => {
             },
           ],
         },
-import TemplateLibrary from './pages/manager/TemplateLibrary';
-
-// ... existing imports ...
-
-// ... inside the router configuration, probably near 'team-feedback' ...
         {
           path: 'team-feedback',
           element: <TeamFeedbackPage />,
         },
         {
           path: 'templates',
-          element: <TemplateLibrary />, // Accessible to all authenticated users (including managers)
+          element: <TemplateLibrary />,
         },
         {
           path: 'analytics',
-// ...
           element: <AnalyticsPage />,
         },
         {
