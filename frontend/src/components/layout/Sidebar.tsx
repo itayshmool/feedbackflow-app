@@ -27,6 +27,7 @@ const navigation = [
 
 const managerNavigation = [
   { name: 'Team Feedback', href: '/team-feedback', icon: Users2 },
+  { name: 'Templates', href: '/templates', icon: FileText },
 ]
 
 const adminNavigation = [
