@@ -50,9 +50,16 @@ const TemplatesManagement: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       // Validate file type
-      const validTypes = ['application/pdf', 'application/msword', 
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-      if (!validTypes.includes(file.type)) {
+      const validTypes = [
+        'application/pdf', 
+        'application/msword', 
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      ];
+      // Also check file extension as fallback for some browsers/OSs
+      const validExtensions = ['.pdf', '.doc', '.docx'];
+      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+      
+      if (!validTypes.includes(file.type) && !validExtensions.includes(fileExtension)) {
         setError('Only PDF and Word documents are allowed');
         return;
       }
@@ -208,7 +215,7 @@ const TemplatesManagement: React.FC = () => {
                 </label>
                 <Select
                   value={formData.templateType}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, templateType: value as any }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, templateType: e.target.value as any }))}
                 >
                   <option value="peer">Peer Review</option>
                   <option value="manager">Manager Review</option>

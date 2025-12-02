@@ -25,11 +25,13 @@ async function authenticateTokenAsync(req: Request, res: Response, next: NextFun
         const email = parts.slice(3, -1).join('-');
         
         // Assign mock user with admin + employee roles for testing
+        // Note: Using a mock organization ID - in production this should be fetched from database
         (req as any).user = {
-          id: 'mock-user-id',
+          id: '00000000-0000-0000-0000-000000000000', // Valid UUID for DB compatibility
           email: email,
           name: email.split('@')[0],
-          roles: ['admin', 'employee'] // Mock roles for all authenticated users
+          roles: ['admin', 'employee'], // Mock roles for all authenticated users
+          organizationId: '00000000-0000-0000-0000-000000000001' // Default Wix.com organization
         };
         
         console.log('🔍 Auth middleware - mock token authenticated:', email);
