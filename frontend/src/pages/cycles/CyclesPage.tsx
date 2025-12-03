@@ -223,7 +223,7 @@ export default function CyclesPage() {
 
                   {/* Created by */}
                   <div className="text-xs text-gray-500">
-                    Created by {cycle.creatorName || cycle.createdBy} • {dateUtils.formatRelative(new Date(cycle.createdAt))}
+                    Created by {(cycle as any).creatorName || cycle.createdBy} • {dateUtils.formatRelative(new Date(cycle.createdAt))}
                   </div>
 
                   {/* Actions */}

@@ -133,7 +133,7 @@ export const CreateCycle: React.FC<CreateCycleProps> = ({ onClose, onSuccess, ed
           description: updateData.description,
           startDate: updateData.startDate,
           endDate: updateData.endDate,
-          type: updateData.type,
+          // type cannot be changed
           settings: updateData.settings,
         });
       } else {

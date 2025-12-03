@@ -33,14 +33,15 @@ export default function GoogleOAuthTestPage() {
     })
   }
 
-  const handleGoogleError = (errorResponse: any) => {
-    console.error('❌ Google Login Error:', errorResponse)
-    setError(JSON.stringify(errorResponse, null, 2))
+  const handleGoogleError = () => {
+    const errorMsg = 'Google Login Failed';
+    console.error('❌ Google Login Error:', errorMsg)
+    setError(errorMsg)
     setSuccess(null)
     setDebugInfo({
       timestamp: new Date().toISOString(),
-      error: errorResponse,
-      fullError: errorResponse,
+      error: errorMsg,
+      fullError: errorMsg,
     })
   }
 

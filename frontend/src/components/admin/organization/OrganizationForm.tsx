@@ -124,7 +124,7 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({ organization, onClo
         // Update existing organization
         const updateData: UpdateOrganizationRequest = {
           name: data.name,
-          slug: data.slug,
+          // slug is immutable
           description: data.description || undefined,
           contactEmail: data.contactEmail,
           phone: data.phone || undefined,

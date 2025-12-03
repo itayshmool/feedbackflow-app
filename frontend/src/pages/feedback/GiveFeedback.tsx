@@ -103,7 +103,7 @@ const GiveFeedback: React.FC = () => {
           <p className="text-gray-600 mb-4">
             You don't have any direct reports to give feedback to. Only managers can give feedback to their direct reports.
           </p>
-          <Badge variant="info">Manager Role Required</Badge>
+          <Badge variant="secondary">Manager Role Required</Badge>
         </Card>
       </div>
     );

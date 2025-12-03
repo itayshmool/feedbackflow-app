@@ -377,7 +377,7 @@ export const CycleDetails: React.FC<CycleDetailsProps> = ({ cycleId, onClose, on
                 variant="outline"
                 leftIcon={<Trash2 className="h-4 w-4" />}
                 onClick={() => setShowDeleteConfirm(true)}
-                disabled={isUpdating || (deleteStatus && !deleteStatus.canDelete)}
+                disabled={isUpdating || (deleteStatus ? !deleteStatus.canDelete : false)}
                 title={deleteStatus && !deleteStatus.canDelete ? deleteStatus.reason : 'Delete cycle'}
               >
                 Delete
@@ -414,7 +414,7 @@ export const CycleDetails: React.FC<CycleDetailsProps> = ({ cycleId, onClose, on
               <Button 
                 variant="outline" 
                 onClick={handleDelete} 
-                disabled={isUpdating || (deleteStatus && !deleteStatus.canDelete)}
+                disabled={isUpdating || (deleteStatus ? !deleteStatus.canDelete : false)}
               >
                 {isUpdating ? 'Deleting...' : 'Delete'}
               </Button>
