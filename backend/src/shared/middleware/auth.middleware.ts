@@ -18,7 +18,8 @@ async function authenticateTokenAsync(req: Request, res: Response, next: NextFun
   
   try {
     // Handle mock tokens (format: mock-jwt-token-EMAIL-TIMESTAMP)
-    if (token.startsWith('mock-jwt-token-')) {
+    // ONLY allowed in development environment
+    if (process.env.NODE_ENV !== 'production' && token.startsWith('mock-jwt-token-')) {
       const parts = token.split('-');
       if (parts.length >= 4) {
         // Extract email from token (everything between 'mock-jwt-token-' and last '-TIMESTAMP')
