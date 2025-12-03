@@ -31,7 +31,7 @@ This guide outlines the steps to deploy the FeedbackFlow application to **Render
     -   **Branch**: `main`
     -   **Root Directory**: `backend` (Important!)
     -   **Runtime**: Node
-    -   **Build Command**: `npm install && npm run build`
+    -   **Build Command**: `cd backend && npm install --production=false && npm run build`
     -   **Start Command**: `npm start`
 4.  **Environment Variables**:
     -   Click **Advanced** or **Environment**.
