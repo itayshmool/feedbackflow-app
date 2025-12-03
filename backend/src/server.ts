@@ -2,6 +2,7 @@
 
 import 'dotenv/config'
 import app from './app.js'
+// @ts-ignore
 import { Pool } from 'pg'
 
 const PORT = process.env.PORT || 5000

@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import cookieParser from 'cookie-parser'
+// @ts-ignore
 import { Pool } from 'pg'
 import { EventEmitter } from 'events'
 import { GoogleOAuthService } from './modules/auth/services/google-oauth.service.js'
