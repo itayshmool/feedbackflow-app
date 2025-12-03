@@ -85,7 +85,7 @@ export class CycleService {
             user_id: participantReq.userId,
             role: participantReq.role,
             assigned_by: createdBy,
-            status: 'pending' as any,
+            status: ParticipantStatus.PENDING,
             metadata: participantReq.metadata ? JSON.stringify(participantReq.metadata) : undefined
           }, client);
         }
