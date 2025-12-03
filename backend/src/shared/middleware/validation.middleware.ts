@@ -9,7 +9,7 @@ export function validateRequest(schema: ZodSchema) {
         body: req.body,
         query: req.query,
         params: req.params,
-      });
+      }) as any;
       
       // Replace request data with validated data
       req.body = validatedData.body || req.body;
@@ -22,7 +22,7 @@ export function validateRequest(schema: ZodSchema) {
         return res.status(400).json({
           error: 'Validation Error',
           message: 'Invalid request data',
-          details: error.errors,
+          details: (error as any).errors,
         });
       }
       next(error);

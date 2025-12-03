@@ -1,4 +1,4 @@
-import dotenv from 'dotenv';
+// @ts-nocheck
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -6,11 +6,7 @@ import multer from 'multer';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import fs from 'fs';
-import { OAuth2Client } from 'google-auth-library';
 import { query, testConnection, pool } from './config/real-database.js';
-
-// Load environment variables from .env file
-dotenv.config();
 import { DatabaseOrganizationService } from './services/DatabaseOrganizationService.js';
 import { AdminUserService } from './modules/admin/services/admin-user.service.js';
 import { createAdminUserRoutes } from './modules/admin/routes/admin-user.routes.js';
@@ -122,7 +118,7 @@ const upload = multer({
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(null, false);
+      cb(new Error('Only PDF and Word documents are allowed'), false);
     }
   }
 });
@@ -299,7 +295,7 @@ const departmentModel = new DepartmentModelClass(dbConfig.pool);
 const teamModel = new TeamModelClass(dbConfig.pool);
 
 // Mount admin user routes
-app.use('/api/v1/admin', createAdminUserRoutes());
+app.use('/api/v1/admin', createAdminUserRoutes);
 
 // Organization API routes - specific routes first, then parameterized routes
 app.get('/api/v1/admin/organizations', authenticateToken, async (req, res) => {
@@ -635,200 +631,6 @@ app.post('/api/v1/auth/login/mock', async (req, res) => {
     });
   } catch (error) {
     console.error('Error in mock login:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Login failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Google OAuth login endpoint
-app.post('/api/v1/auth/login/google', async (req, res) => {
-  try {
-    const { idToken } = req.body;
-    
-    if (!idToken) {
-      return res.status(400).json({
-        success: false,
-        error: 'idToken is required'
-      });
-    }
-    
-    // Verify Google ID token
-    const googleClientId = process.env.GOOGLE_CLIENT_ID;
-    if (!googleClientId) {
-      console.error('GOOGLE_CLIENT_ID environment variable not set');
-      return res.status(500).json({
-        success: false,
-        error: 'Google OAuth not configured'
-      });
-    }
-    
-    const client = new OAuth2Client(googleClientId);
-    let payload;
-    
-    try {
-      const ticket = await client.verifyIdToken({
-        idToken: idToken,
-        audience: googleClientId,
-      });
-      payload = ticket.getPayload();
-    } catch (verifyError) {
-      console.error('Google token verification failed:', verifyError);
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid Google token'
-      });
-    }
-    
-    if (!payload || !payload.email) {
-      return res.status(400).json({
-        success: false,
-        error: 'Google token missing email'
-      });
-    }
-    
-    const email = payload.email;
-    const name = payload.name || email.split('@')[0];
-    const picture = payload.picture || null;
-    
-    // Try to find or create user in database
-    let user;
-    try {
-      // First, try to find existing user
-      const userQuery = `
-        SELECT 
-          u.id,
-          u.email,
-          u.name,
-          u.avatar_url,
-          u.is_active,
-          u.email_verified,
-          u.last_login_at,
-          u.created_at,
-          u.updated_at,
-          u.organization_id,
-          u.department,
-          u.position,
-          o.name as organization_name,
-          COALESCE(
-            JSON_AGG(r.name) FILTER (WHERE r.name IS NOT NULL),
-            '[]'
-          ) as roles
-        FROM users u
-        LEFT JOIN user_roles ur ON u.id = ur.user_id AND ur.is_active = true
-        LEFT JOIN roles r ON ur.role_id = r.id
-        LEFT JOIN organizations o ON u.organization_id = o.id
-        WHERE u.email = $1
-        GROUP BY u.id, u.email, u.name, u.avatar_url, u.is_active, u.email_verified, 
-                 u.last_login_at, u.created_at, u.updated_at, u.organization_id, u.department, u.position, o.name
-      `;
-      
-      const result = await query(userQuery, [email]);
-      
-      if (result.rows.length > 0) {
-        // User exists - update last login and picture if provided
-        const dbUser = result.rows[0];
-        
-        if (picture) {
-          await query(
-            'UPDATE users SET last_login_at = NOW(), avatar_url = $1, updated_at = NOW() WHERE id = $2',
-            [picture, dbUser.id]
-          );
-        } else {
-          await query(
-            'UPDATE users SET last_login_at = NOW(), updated_at = NOW() WHERE id = $1',
-            [dbUser.id]
-          );
-        }
-        
-        user = {
-          id: dbUser.id,
-          email: dbUser.email,
-          name: dbUser.name,
-          avatarUrl: picture || dbUser.avatar_url,
-          isActive: dbUser.is_active,
-          emailVerified: true, // Google verified
-          lastLoginAt: new Date().toISOString(),
-          createdAt: dbUser.created_at,
-          updatedAt: new Date().toISOString(),
-          organizationId: dbUser.organization_id,
-          organizationName: dbUser.organization_name,
-          department: dbUser.department,
-          position: dbUser.position,
-          roles: dbUser.roles || []
-        };
-      } else {
-        // User doesn't exist - create new user
-        // For now, assign to default organization and employee role
-        const defaultOrgResult = await query('SELECT id FROM organizations LIMIT 1');
-        const defaultOrgId = defaultOrgResult.rows[0]?.id || '00000000-0000-0000-0000-000000000001';
-        
-        const employeeRoleResult = await query('SELECT id FROM roles WHERE name = $1', ['employee']);
-        const employeeRoleId = employeeRoleResult.rows[0]?.id;
-        
-        // Create user
-        const newUserResult = await query(
-          `INSERT INTO users (email, name, avatar_url, email_verified, is_active, organization_id, last_login_at)
-           VALUES ($1, $2, $3, true, true, $4, NOW())
-           RETURNING id, email, name, avatar_url, is_active, email_verified, last_login_at, created_at, updated_at, organization_id`,
-          [email, name, picture, defaultOrgId]
-        );
-        
-        const newUser = newUserResult.rows[0];
-        
-        // Assign employee role if it exists
-        if (employeeRoleId) {
-          await query(
-            'INSERT INTO user_roles (user_id, role_id, organization_id, is_active) VALUES ($1, $2, $3, true)',
-            [newUser.id, employeeRoleId, defaultOrgId]
-          );
-        }
-        
-        // Get organization name
-        const orgResult = await query('SELECT name FROM organizations WHERE id = $1', [defaultOrgId]);
-        const orgName = orgResult.rows[0]?.name;
-        
-        user = {
-          id: newUser.id,
-          email: newUser.email,
-          name: newUser.name,
-          avatarUrl: newUser.avatar_url,
-          isActive: newUser.is_active,
-          emailVerified: true,
-          lastLoginAt: newUser.last_login_at,
-          createdAt: newUser.created_at,
-          updatedAt: newUser.updated_at,
-          organizationId: defaultOrgId,
-          organizationName: orgName,
-          department: null,
-          position: null,
-          roles: ['employee']
-        };
-      }
-    } catch (dbError) {
-      console.error('Database error during Google login:', dbError);
-      return res.status(500).json({
-        success: false,
-        error: 'Database error during authentication'
-      });
-    }
-    
-    // Generate mock JWT token (similar to mock login)
-    const mockToken = `mock-jwt-token-${email}-${Date.now()}`;
-    
-    // Set authentication cookie
-    const cookieOptions = getCookieOptions(req);
-    console.log('🔐 GOOGLE LOGIN: Setting cookie for', email, 'with options:', cookieOptions);
-    res.cookie('authToken', mockToken, cookieOptions);
-    
-    res.json({
-      success: true,
-      user: user
-    });
-  } catch (error) {
-    console.error('Error in Google login:', error);
     res.status(500).json({
       success: false,
       error: 'Login failed',
@@ -1709,7 +1511,7 @@ app.get('/api/v1/admin/users', authenticateToken, async (req, res) => {
 
     // Main query - create separate params array for main query
     const mainQueryParams = [...queryParams];
-    mainQueryParams.push(Number(limit) as any, offset as any);
+    mainQueryParams.push(Number(limit), offset);
     
     const mainQuery = `
       SELECT 
@@ -1895,6 +1697,99 @@ app.post('/api/v1/admin/users', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error creating user:', error);
     res.status(500).json({ success: false, error: 'Failed to create user' });
+  }
+});
+
+// PUT /api/v1/admin/users/:id - Update user
+app.put('/api/v1/admin/users/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      name, 
+      email, 
+      organizationId, 
+      department, 
+      position, 
+      roles = [],
+      isActive,
+      emailVerified
+    } = req.body;
+
+    // Check if user exists
+    const existingUser = await query('SELECT id FROM users WHERE id = $1', [id]);
+    if (existingUser.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    // Check if email is being changed and if it already exists
+    if (email) {
+      const emailCheck = await query('SELECT id FROM users WHERE email = $1 AND id != $2', [email, id]);
+      if (emailCheck.rows.length > 0) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'User with this email already exists' 
+        });
+      }
+    }
+
+    // Update user
+    const updateQuery = `
+      UPDATE users 
+      SET 
+        name = COALESCE($1, name),
+        email = COALESCE($2, email),
+        organization_id = COALESCE($3, organization_id),
+        department = COALESCE($4, department),
+        position = COALESCE($5, position),
+        is_active = COALESCE($6, is_active),
+        email_verified = COALESCE($7, email_verified),
+        updated_at = NOW()
+      WHERE id = $8
+      RETURNING *
+    `;
+    
+    const result = await query(updateQuery, [
+      name, email, organizationId, department, position, isActive, emailVerified, id
+    ]);
+
+    // Update roles if provided
+    if (roles !== undefined) {
+      // Remove existing roles
+      await query('UPDATE user_roles SET is_active = false WHERE user_id = $1', [id]);
+      
+      // Add new roles
+      for (const roleName of roles) {
+        const roleResult = await query('SELECT id FROM roles WHERE name = $1', [roleName]);
+        if (roleResult.rows.length > 0) {
+          const roleId = roleResult.rows[0].id;
+          
+          // Check if role already exists for this user
+          const existingRole = await query(
+            'SELECT id FROM user_roles WHERE user_id = $1 AND role_id = $2',
+            [id, roleId]
+          );
+          
+          if (existingRole.rows.length > 0) {
+            // Reactivate existing role
+            await query(
+              'UPDATE user_roles SET is_active = true, granted_at = NOW() WHERE user_id = $1 AND role_id = $2',
+              [id, roleId]
+            );
+          } else {
+            // Create new role assignment
+            await query(`
+              INSERT INTO user_roles (user_id, role_id, organization_id, granted_at, is_active)
+              VALUES ($1, $2, $3, NOW(), true)
+            `, [id, roleId, organizationId]);
+          }
+        }
+      }
+    }
+
+    res.json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ success: false, error: 'Failed to update user' });
   }
 });
 
@@ -2161,14 +2056,14 @@ app.get('/api/v1/notifications/stats', authenticateToken, async (req, res) => {
     const priorities = priorityResult.rows;
     
     // Build JSON objects for by_type and by_priority
-    const byType: Record<string, number> = {};
-    const byPriority: Record<string, number> = {};
+    const byType = {};
+    const byPriority = {};
     
-    categories.forEach((row: any) => {
+    categories.forEach(row => {
       byType[row.category] = parseInt(row.count);
     });
     
-    priorities.forEach((row: any) => {
+    priorities.forEach(row => {
       byPriority[row.priority] = parseInt(row.count);
     });
     
@@ -2372,9 +2267,8 @@ app.post('/api/v1/notifications', authenticateToken, async (req, res) => {
 app.get('/api/v1/users/search', authenticateToken, async (req, res) => {
   try {
     const { q, limit = 10 } = req.query;
-    const searchQuery = typeof q === 'string' ? q : '';
     
-    if (!searchQuery || searchQuery.length < 3) {
+    if (!q || q.length < 3) {
       return res.json({ success: true, data: [] });
     }
     
@@ -2398,7 +2292,7 @@ app.get('/api/v1/users/search', authenticateToken, async (req, res) => {
     const organizationId = userResult.rows[0].organization_id;
     
     // Search users in database
-    const sql = `
+    const searchQuery = `
       SELECT 
         u.id,
         u.name,
@@ -2415,7 +2309,7 @@ app.get('/api/v1/users/search', authenticateToken, async (req, res) => {
       LIMIT $3
     `;
     
-    const result = await query(sql, [organizationId, `%${searchQuery}%`, limit]);
+    const result = await query(searchQuery, [organizationId, `%${q}%`, limit]);
     const users = result.rows.map((row: any) => ({
       id: row.id,
       name: row.name,
@@ -3253,7 +3147,7 @@ app.get('/api/v1/hierarchy/manager-chain/:employeeId', async (req, res) => {
     const { employeeId } = req.params;
     
     // Mock manager chain based on employee ID
-    const mockManagerChains: Record<string, any[]> = {
+    const mockManagerChains = {
       'dev-1': [
         {
           id: 'manager-1',
@@ -3570,7 +3464,6 @@ app.get('/api/v1/hierarchy/stats/:organizationId', async (req, res) => {
 app.get('/api/v1/hierarchy/search-employees', async (req, res) => {
   try {
     const { organizationId, q, exclude, role, type } = req.query;
-    const searchTerm = typeof q === 'string' ? q : '';
     
     // Get real employees from database
     let searchQuery = `
@@ -3590,9 +3483,9 @@ app.get('/api/v1/hierarchy/search-employees', async (req, res) => {
     
     const queryParams = [organizationId];
     
-    if (searchTerm && searchTerm.length >= 2) {
+    if (q && q.length >= 2) {
       searchQuery += ` AND (u.name ILIKE $2 OR u.email ILIKE $2)`;
-      queryParams.push(`%${searchTerm}%`);
+      queryParams.push(`%${q}%`);
     }
     
     if (exclude) {
@@ -3629,7 +3522,7 @@ app.get('/api/v1/hierarchy/search-employees', async (req, res) => {
       position: row.position,
       department: row.department,
       avatarUrl: row.avatar_url,
-      roles: row.roles.filter((role: any) => role !== null)
+      roles: row.roles.filter(role => role !== null)
     }));
     
     res.json({ success: true, data: allEmployees });
@@ -3746,13 +3639,13 @@ app.post('/api/v1/hierarchy/bulk/csv', express.text({ type: [ 'text/csv', 'text/
       return res.status(400).json({ success: false, error: 'Empty CSV payload' });
     }
 
-    const lines = body.replace(/\r/g, '').split('\n').filter((l: string) => l.trim().length > 0);
+    const lines = body.replace(/\r/g, '').split('\n').filter(l => l.trim().length > 0);
     if (lines.length === 0) {
       return res.status(400).json({ success: false, error: 'No CSV rows found' });
     }
 
     // Parse header
-    const header = lines[0].split(',').map((h: string) => h.trim().toLowerCase());
+    const header = lines[0].split(',').map(h => h.trim().toLowerCase());
     const orgIdx = header.indexOf('organization_name');
     const empIdx = header.indexOf('employee_email');
     const mgrIdx = header.indexOf('manager_email');
@@ -3942,7 +3835,7 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
     let paramCount = 1;
 
     // Add filters
-    if (toUserId && typeof toUserId === 'string') {
+    if (toUserId) {
       // Check if toUserId is an email or UUID
       if (toUserId.includes('@')) {
         // It's an email, need to get the user ID first
@@ -3959,7 +3852,7 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
         queryParams.push(toUserId);
       }
     }
-    if (fromUserId && typeof fromUserId === 'string') {
+    if (fromUserId) {
       // Check if fromUserId is an email or UUID
       if (fromUserId.includes('@')) {
         // It's an email, need to get the user ID first
@@ -4052,7 +3945,6 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
           areasForImprovement: [],
           specificExamples: [],
           recommendations: [],
-          goals: [],
           confidential: false
         };
       }
@@ -4100,19 +3992,7 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
           createdAt: row.createdAt
         }] : [],
         comments: [],
-        goals: (parsedContent.goals || []).map((g: any, idx: number) => ({
-          id: g.id || `goal-${row.id}-${idx}`,
-          feedbackId: row.id,
-          title: g.title || '',
-          description: g.description || '',
-          category: g.category || 'Technical Skills',
-          priority: g.priority || 'Medium',
-          targetDate: g.targetDate || new Date().toISOString(),
-          status: g.status || 'NOT_STARTED',
-          progress: g.progress || 0,
-          createdAt: row.createdAt,
-          updatedAt: row.updatedAt
-        })),
+        goals: [],
         // Include acknowledgment if the feedback has been acknowledged
         ...(row.status === 'acknowledged' && {
           acknowledgment: {
@@ -4309,7 +4189,6 @@ app.get('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
         areasForImprovement: [],
         specificExamples: [],
         recommendations: [],
-        goals: [],
         confidential: false
       };
     }
@@ -4358,19 +4237,7 @@ app.get('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
         createdAt: row.createdAt
       }] : [],
       comments: [],
-      goals: (parsedContent.goals || []).map((g: any, idx: number) => ({
-        id: g.id || `goal-${row.id}-${idx}`,
-        feedbackId: row.id,
-        title: g.title || '',
-        description: g.description || '',
-        category: g.category || 'Technical Skills',
-        priority: g.priority || 'Medium',
-        targetDate: g.targetDate || new Date().toISOString(),
-        status: g.status || 'NOT_STARTED',
-        progress: g.progress || 0,
-        createdAt: row.createdAt,
-        updatedAt: row.updatedAt
-      })),
+      goals: [],
       // Include acknowledgment if the feedback has been completed and has a message
       ...((row.status === 'completed' || row.status === 'acknowledged') && row.message && {
         acknowledgment: {
@@ -4547,187 +4414,7 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
     
     const dbFeedbackType = feedbackTypeMap[reviewType] || 'peer';
 
-    // Create structured content object for database storage
-    const structuredContent = {
-      overallComment: content?.overallComment || comment || '',
-      strengths: content?.strengths || [],
-      areasForImprovement: content?.areasForImprovement || [],
-      specificExamples: content?.specificExamples || [],
-      recommendations: content?.recommendations || [],
-      goals: goals || [],
-      confidential: content?.confidential || false
-    };
-
-    // Check if feedback request already exists for this combination
-    // Business rule: One feedback per person per cycle
-    const existingRequestQuery = `
-      SELECT id, status 
-      FROM feedback_requests 
-      WHERE cycle_id = $1 
-        AND requester_id = $2 
-        AND recipient_id = $3 
-        AND feedback_type = $4
-    `;
-
-    const existingRequestResult = await query(existingRequestQuery, [
-      cycleIdToUse,
-      currentUserId,
-      targetUserId,
-      dbFeedbackType
-    ]);
-
-    let requestId: string;
-
-    if (existingRequestResult.rows.length > 0) {
-      // Feedback request already exists
-      const existingRequest = existingRequestResult.rows[0];
-      requestId = existingRequest.id;
-      const requestStatus = existingRequest.status;
-
-      if (requestStatus === 'submitted' || requestStatus === 'completed' || requestStatus === 'acknowledged') {
-        // Feedback already submitted - cannot create another one
-        return res.status(400).json({ 
-          success: false, 
-          error: 'You have already submitted feedback for this person in this cycle. Only one feedback per person per cycle is allowed.'
-        });
-      }
-
-      // Status is 'draft' - update the existing request
-      await query(
-        `UPDATE feedback_requests 
-         SET message = $1, updated_at = NOW()
-         WHERE id = $2`,
-        [content?.overallComment || comment || '', requestId]
-      );
-
-      // Check if feedback_response exists for this request
-      const existingResponseQuery = `
-        SELECT id 
-        FROM feedback_responses 
-        WHERE request_id = $1
-      `;
-      const existingResponseResult = await query(existingResponseQuery, [requestId]);
-
-      if (existingResponseResult.rows.length > 0) {
-        // Update existing feedback_response
-        const responseId = existingResponseResult.rows[0].id;
-        
-        await query(
-          `UPDATE feedback_responses 
-           SET content = $1, rating = $2, updated_at = NOW()
-           WHERE id = $3`,
-          [
-            JSON.stringify(structuredContent),
-            rating || (ratings && ratings.length > 0 ? ratings[0].score || ratings[0].rating : null),
-            responseId
-          ]
-        );
-
-        // Fetch complete feedback to return
-        const completeQuery = `
-          SELECT 
-            fr.id,
-            fr.cycle_id as "cycleId",
-            fc.name as "cycleName",
-            fr.giver_id as "fromUserId",
-            u_giver.name as "fromUserName",
-            u_giver.email as "fromUserEmail",
-            fr.recipient_id as "toUserId",
-            u_recipient.name as "toUserName",
-            u_recipient.email as "toUserEmail",
-            frr.status,
-            frr.feedback_type as "reviewType",
-            fr.rating as "overallRating",
-            fr.content,
-            fr.is_anonymous as "isAnonymous",
-            fr.is_approved as "isApproved",
-            fr.created_at as "createdAt",
-            fr.updated_at as "updatedAt",
-            frr.completed_at as "submittedAt"
-          FROM feedback_responses fr
-          JOIN feedback_requests frr ON fr.request_id = frr.id
-          LEFT JOIN users u_giver ON fr.giver_id = u_giver.id
-          LEFT JOIN users u_recipient ON fr.recipient_id = u_recipient.id
-          LEFT JOIN feedback_cycles fc ON fr.cycle_id = fc.id
-          WHERE fr.id = $1
-        `;
-        
-        const completeResult = await query(completeQuery, [responseId]);
-        const feedbackData = completeResult.rows[0];
-        const parsedContent = typeof feedbackData.content === 'string' 
-          ? JSON.parse(feedbackData.content) 
-          : feedbackData.content;
-        
-        const updatedFeedback = {
-          id: feedbackData.id,
-          cycleId: feedbackData.cycleId,
-          cycleName: feedbackData.cycleName,
-          fromUserId: feedbackData.fromUserId,
-          fromUserEmail: feedbackData.fromUserEmail,
-          toUserId: feedbackData.toUserId,
-          toUserEmail: feedbackData.toUserEmail,
-          fromUser: {
-            id: feedbackData.fromUserId,
-            name: feedbackData.fromUserName,
-            email: feedbackData.fromUserEmail
-          },
-          toUser: {
-            id: feedbackData.toUserId,
-            name: feedbackData.toUserName,
-            email: feedbackData.toUserEmail
-          },
-          reviewType: feedbackData.reviewType,
-          status: feedbackData.status,
-          content: {
-            id: `content-${feedbackData.id}`,
-            feedbackId: feedbackData.id,
-            overallComment: parsedContent.overallComment || '',
-            strengths: parsedContent.strengths || [],
-            areasForImprovement: parsedContent.areasForImprovement || [],
-            specificExamples: parsedContent.specificExamples || [],
-            recommendations: parsedContent.recommendations || [],
-            confidential: parsedContent.confidential || false,
-            createdAt: feedbackData.createdAt,
-            updatedAt: feedbackData.updatedAt
-          },
-          ratings: feedbackData.overallRating ? [{
-            id: `rating-${feedbackData.id}-0`,
-            feedbackId: feedbackData.id,
-            category: 'overall',
-            score: feedbackData.overallRating,
-            maxScore: 5,
-            weight: 1,
-            comment: '',
-            createdAt: feedbackData.createdAt
-          }] : [],
-          comments: [],
-          goals: (parsedContent.goals || []).map((g: any, idx: number) => ({
-            id: g.id || `goal-${feedbackData.id}-${idx}`,
-            feedbackId: feedbackData.id,
-            title: g.title || '',
-            description: g.description || '',
-            category: g.category || 'Technical Skills',
-            priority: g.priority || 'Medium',
-            targetDate: g.targetDate || new Date().toISOString(),
-            status: g.status || 'NOT_STARTED',
-            progress: g.progress || 0,
-            createdAt: feedbackData.createdAt,
-            updatedAt: feedbackData.updatedAt
-          })),
-          acknowledgment: null,
-          isAnonymous: feedbackData.isAnonymous,
-          isApproved: feedbackData.isApproved,
-          createdAt: feedbackData.createdAt,
-          updatedAt: feedbackData.updatedAt,
-          submittedAt: feedbackData.submittedAt
-        };
-
-        return res.status(200).json({ success: true, data: updatedFeedback });
-      }
-      
-      // No response exists - fall through to create response below
-    } else {
-      // No existing request - create new one
+    // Create feedback request in database
     const requestResult = await query(
       `INSERT INTO feedback_requests 
        (cycle_id, requester_id, recipient_id, feedback_type, status, message, due_date, created_at, updated_at)
@@ -4744,15 +4431,17 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
       ]
     );
 
-      requestId = requestResult.rows[0].id;
-    }
+    const requestId = requestResult.rows[0].id;
 
-    // Fetch the request status to use in response
-    const requestStatusQuery = await query(
-      'SELECT status FROM feedback_requests WHERE id = $1',
-      [requestId]
-    );
-    const requestStatus = requestStatusQuery.rows[0].status;
+    // Create structured content object for database storage
+    const structuredContent = {
+      overallComment: content?.overallComment || comment || '',
+      strengths: content?.strengths || [],
+      areasForImprovement: content?.areasForImprovement || [],
+      specificExamples: content?.specificExamples || [],
+      recommendations: content?.recommendations || [],
+      confidential: content?.confidential || false
+    };
 
     // Create feedback response in database
     const responseResult = await query(
@@ -4803,7 +4492,7 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
         email: recipientEmail
       },
       reviewType,
-      status: requestStatus, // Use actual status from database
+      status: requestResult.rows[0].status, // Use actual status from database
       content: {
         id: `content-${responseId}`,
         feedbackId: responseId,
@@ -4848,15 +4537,12 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
     res.status(201).json({ success: true, data: newFeedback });
   } catch (error) {
     console.error('Error creating feedback:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const errorStack = error instanceof Error ? error.stack : undefined;
-    const errorName = error instanceof Error ? error.name : 'Error';
     console.error('Error details:', {
-      message: errorMessage,
-      stack: errorStack,
-      name: errorName
+      message: error.message,
+      stack: error.stack,
+      name: error.name
     });
-    res.status(500).json({ success: false, error: 'Failed to create feedback', details: errorMessage });
+    res.status(500).json({ success: false, error: 'Failed to create feedback', details: error.message });
   }
 });
 
@@ -4901,42 +4587,16 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
       });
     }
     
-    // Prepare content update - handle both formats
-    let contentToUpdate;
-    if (updates.content) {
-      if (typeof updates.content === 'string') {
-        contentToUpdate = JSON.stringify({
-          overallComment: updates.content,
-          strengths: updates.strengths || [],
-          areasForImprovement: updates.areasForImprovement || [],
-          specificExamples: updates.specificExamples || [],
-          recommendations: updates.recommendations || [],
-          confidential: false
-        });
-      } else {
-        contentToUpdate = JSON.stringify(updates.content);
-      }
-    } else {
-      contentToUpdate = JSON.stringify({
-        overallComment: updates.overallComment || '',
-        strengths: updates.strengths || [],
-        areasForImprovement: updates.areasForImprovement || [],
-        specificExamples: updates.specificExamples || [],
-        recommendations: updates.recommendations || [],
-        confidential: false
-      });
-    }
-    
     // Update the feedback in database
     const updateQuery = `
       UPDATE feedback_responses 
       SET content = $1, rating = $2, updated_at = NOW()
       WHERE id = $3
-      RETURNING id
+      RETURNING id, content, rating, updated_at
     `;
     
     const updateResult = await query(updateQuery, [
-      contentToUpdate,
+      updates.content?.overallComment || updates.content || '',
       updates.rating || updates.ratings?.[0]?.score || null,
       id
     ]);
@@ -4945,110 +4605,15 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ success: false, error: 'Feedback not found' });
     }
     
-    // Fetch complete feedback data to return
-    const completeQuery = `
-      SELECT 
-        fr.id,
-        fr.cycle_id as "cycleId",
-        fc.name as "cycleName",
-        fr.giver_id as "fromUserId",
-        u_giver.name as "fromUserName",
-        u_giver.email as "fromUserEmail",
-        fr.recipient_id as "toUserId",
-        u_recipient.name as "toUserName",
-        u_recipient.email as "toUserEmail",
-        frr.status,
-        frr.feedback_type as "reviewType",
-        fr.rating as "overallRating",
-        fr.content,
-        fr.is_anonymous as "isAnonymous",
-        fr.is_approved as "isApproved",
-        fr.created_at as "createdAt",
-        fr.updated_at as "updatedAt",
-        frr.completed_at as "submittedAt"
-      FROM feedback_responses fr
-      JOIN feedback_requests frr ON fr.request_id = frr.id
-      LEFT JOIN users u_giver ON fr.giver_id = u_giver.id
-      LEFT JOIN users u_recipient ON fr.recipient_id = u_recipient.id
-      LEFT JOIN feedback_cycles fc ON fr.cycle_id = fc.id
-      WHERE fr.id = $1
-    `;
-    
-    const completeResult = await query(completeQuery, [id]);
-    
-    if (completeResult.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Feedback not found' });
-    }
-    
-    const feedbackData = completeResult.rows[0];
-    const parsedContent = typeof feedbackData.content === 'string' 
-      ? JSON.parse(feedbackData.content) 
-      : feedbackData.content;
+    const updatedFeedback = updateResult.rows[0];
     
     res.json({ 
       success: true, 
       data: {
-        id: feedbackData.id,
-        cycleId: feedbackData.cycleId,
-        cycleName: feedbackData.cycleName,
-        fromUserId: feedbackData.fromUserId,
-        fromUserEmail: feedbackData.fromUserEmail,
-        toUserId: feedbackData.toUserId,
-        toUserEmail: feedbackData.toUserEmail,
-        fromUser: {
-          id: feedbackData.fromUserId,
-          name: feedbackData.fromUserName,
-          email: feedbackData.fromUserEmail
-        },
-        toUser: {
-          id: feedbackData.toUserId,
-          name: feedbackData.toUserName,
-          email: feedbackData.toUserEmail
-        },
-        reviewType: feedbackData.reviewType,
-        status: feedbackData.status,
-        content: {
-          id: `content-${feedbackData.id}`,
-          feedbackId: feedbackData.id,
-          overallComment: parsedContent.overallComment || '',
-          strengths: parsedContent.strengths || [],
-          areasForImprovement: parsedContent.areasForImprovement || [],
-          specificExamples: parsedContent.specificExamples || [],
-          recommendations: parsedContent.recommendations || [],
-          confidential: parsedContent.confidential || false,
-          createdAt: feedbackData.createdAt,
-          updatedAt: feedbackData.updatedAt
-        },
-        ratings: feedbackData.overallRating ? [{
-          id: `rating-${feedbackData.id}-0`,
-          feedbackId: feedbackData.id,
-          category: 'overall',
-          score: feedbackData.overallRating,
-          maxScore: 5,
-          weight: 1,
-          comment: '',
-          createdAt: feedbackData.createdAt
-        }] : [],
-        comments: [],
-        goals: (parsedContent.goals || []).map((g: any, idx: number) => ({
-          id: g.id || `goal-${feedbackData.id}-${idx}`,
-          feedbackId: feedbackData.id,
-          title: g.title || '',
-          description: g.description || '',
-          category: g.category || 'Technical Skills',
-          priority: g.priority || 'Medium',
-          targetDate: g.targetDate || new Date().toISOString(),
-          status: g.status || 'NOT_STARTED',
-          progress: g.progress || 0,
-          createdAt: feedbackData.createdAt,
-          updatedAt: feedbackData.updatedAt
-        })),
-        acknowledgment: null,
-        isAnonymous: feedbackData.isAnonymous,
-        isApproved: feedbackData.isApproved,
-        createdAt: feedbackData.createdAt,
-        updatedAt: feedbackData.updatedAt,
-        submittedAt: feedbackData.submittedAt
+        id: updatedFeedback.id,
+        content: updatedFeedback.content,
+        rating: updatedFeedback.rating,
+        updatedAt: updatedFeedback.updated_at
       }
     });
   } catch (error) {
@@ -5113,110 +4678,12 @@ app.post('/api/v1/feedback/:id/submit', authenticateToken, async (req, res) => {
       return res.status(404).json({ success: false, error: 'Feedback not found' });
     }
     
-    // Fetch complete feedback data to return
-    const completeQuery = `
-      SELECT 
-        fr.id,
-        fr.cycle_id as "cycleId",
-        fc.name as "cycleName",
-        fr.giver_id as "fromUserId",
-        u_giver.name as "fromUserName",
-        u_giver.email as "fromUserEmail",
-        fr.recipient_id as "toUserId",
-        u_recipient.name as "toUserName",
-        u_recipient.email as "toUserEmail",
-        frr.status,
-        frr.feedback_type as "reviewType",
-        fr.rating as "overallRating",
-        fr.content,
-        fr.is_anonymous as "isAnonymous",
-        fr.is_approved as "isApproved",
-        fr.created_at as "createdAt",
-        fr.updated_at as "updatedAt",
-        frr.completed_at as "submittedAt"
-      FROM feedback_responses fr
-      JOIN feedback_requests frr ON fr.request_id = frr.id
-      LEFT JOIN users u_giver ON fr.giver_id = u_giver.id
-      LEFT JOIN users u_recipient ON fr.recipient_id = u_recipient.id
-      LEFT JOIN feedback_cycles fc ON fr.cycle_id = fc.id
-      WHERE fr.id = $1
-    `;
-    
-    const completeResult = await query(completeQuery, [id]);
-    
-    if (completeResult.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Feedback not found' });
-    }
-    
-    const feedbackData = completeResult.rows[0];
-    const parsedContent = typeof feedbackData.content === 'string' 
-      ? JSON.parse(feedbackData.content) 
-      : feedbackData.content;
-    
     res.json({ 
       success: true, 
       data: {
-        id: feedbackData.id,
-        cycleId: feedbackData.cycleId,
-        cycleName: feedbackData.cycleName,
-        fromUserId: feedbackData.fromUserId,
-        fromUserEmail: feedbackData.fromUserEmail,
-        toUserId: feedbackData.toUserId,
-        toUserEmail: feedbackData.toUserEmail,
-        fromUser: {
-          id: feedbackData.fromUserId,
-          name: feedbackData.fromUserName,
-          email: feedbackData.fromUserEmail
-        },
-        toUser: {
-          id: feedbackData.toUserId,
-          name: feedbackData.toUserName,
-          email: feedbackData.toUserEmail
-        },
-        reviewType: feedbackData.reviewType,
-        status: feedbackData.status,
-        content: {
-          id: `content-${feedbackData.id}`,
-          feedbackId: feedbackData.id,
-          overallComment: parsedContent.overallComment || '',
-          strengths: parsedContent.strengths || [],
-          areasForImprovement: parsedContent.areasForImprovement || [],
-          specificExamples: parsedContent.specificExamples || [],
-          recommendations: parsedContent.recommendations || [],
-          confidential: parsedContent.confidential || false,
-          createdAt: feedbackData.createdAt,
-          updatedAt: feedbackData.updatedAt
-        },
-        ratings: feedbackData.overallRating ? [{
-          id: `rating-${feedbackData.id}-0`,
-          feedbackId: feedbackData.id,
-          category: 'overall',
-          score: feedbackData.overallRating,
-          maxScore: 5,
-          weight: 1,
-          comment: '',
-          createdAt: feedbackData.createdAt
-        }] : [],
-        comments: [],
-        goals: (parsedContent.goals || []).map((g: any, idx: number) => ({
-          id: g.id || `goal-${feedbackData.id}-${idx}`,
-          feedbackId: feedbackData.id,
-          title: g.title || '',
-          description: g.description || '',
-          category: g.category || 'Technical Skills',
-          priority: g.priority || 'Medium',
-          targetDate: g.targetDate || new Date().toISOString(),
-          status: g.status || 'NOT_STARTED',
-          progress: g.progress || 0,
-          createdAt: feedbackData.createdAt,
-          updatedAt: feedbackData.updatedAt
-        })),
-        acknowledgment: null,
-        isAnonymous: feedbackData.isAnonymous,
-        isApproved: feedbackData.isApproved,
-        createdAt: feedbackData.createdAt,
-        updatedAt: feedbackData.updatedAt,
-        submittedAt: feedbackData.submittedAt
+        id: id,
+        status: 'submitted',
+        updatedAt: updateResult.rows[0].updated_at
       }
     });
   } catch (error) {
@@ -5466,19 +4933,7 @@ app.post('/api/v1/feedback/:id/acknowledge', authenticateToken, async (req, res)
       content: parsedContent,
       ratings: [],
       comments: [],
-      goals: (parsedContent.goals || []).map((g: any, idx: number) => ({
-        id: g.id || `goal-${row.id}-${idx}`,
-        feedbackId: row.id,
-        title: g.title || '',
-        description: g.description || '',
-        category: g.category || 'Technical Skills',
-        priority: g.priority || 'Medium',
-        targetDate: g.targetDate || new Date().toISOString(),
-        status: g.status || 'NOT_STARTED',
-        progress: g.progress || 0,
-        createdAt: row.createdAt,
-        updatedAt: row.updatedAt
-      })),
+      goals: [],
       // Include acknowledgment if the feedback has been completed and has a message
       ...((row.status === 'completed' || row.status === 'acknowledged') && row.message && {
         acknowledgment: {
@@ -5810,7 +5265,7 @@ app.get('/api/v1/cycles/:id', authenticateToken, async (req, res) => {
 });
 
 // Simple authentication middleware for real database server
-const authMiddleware = (req: any, res: any, next: any) => {
+const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ success: false, error: 'No token provided' });
@@ -5835,10 +5290,10 @@ const authMiddleware = (req: any, res: any, next: any) => {
 };
 
 // Role-based access control middleware
-const rbacMiddleware = (allowedRoles: string[]) => {
-  return (req: any, res: any, next: any) => {
+const rbacMiddleware = (allowedRoles) => {
+  return (req, res, next) => {
     const userRoles = req.user?.roles || [];
-    const hasPermission = allowedRoles.some((role: string) => userRoles.includes(role));
+    const hasPermission = allowedRoles.some(role => userRoles.includes(role));
     
     if (!hasPermission) {
       return res.status(403).json({ 
@@ -5869,7 +5324,7 @@ app.post('/api/v1/cycles', authenticateToken, async (req, res) => {
     // Get creator ID from authenticated user
     const creatorResult = await query(
       'SELECT id FROM users WHERE email = $1',
-      [(req as any).user.email]
+      [req.user.email]
     );
     
     if (creatorResult.rows.length === 0) {

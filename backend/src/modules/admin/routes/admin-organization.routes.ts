@@ -45,7 +45,7 @@ const createOrganizationSchema = z.object({
     maxUsers: z.number().int().min(1, 'Max users must be at least 1'),
     maxCycles: z.number().int().min(1, 'Max cycles must be at least 1'),
     storageLimitGb: z.number().int().min(1, 'Storage limit must be at least 1GB'),
-    featureFlags: z.record(z.boolean()).optional(),
+    featureFlags: z.record(z.string(), z.boolean()).optional(),
     settings: z.object({
       timezone: z.string().optional(),
       language: z.string().optional(),
@@ -106,7 +106,7 @@ const updateOrganizationSchema = z.object({
     maxUsers: z.number().int().min(1, 'Max users must be at least 1').optional(),
     maxCycles: z.number().int().min(1, 'Max cycles must be at least 1').optional(),
     storageLimitGb: z.number().int().min(1, 'Storage limit must be at least 1GB').optional(),
-    featureFlags: z.record(z.boolean()).optional(),
+    featureFlags: z.record(z.string(), z.boolean()).optional(),
     settings: z.object({
       timezone: z.string().optional(),
       language: z.string().optional(),

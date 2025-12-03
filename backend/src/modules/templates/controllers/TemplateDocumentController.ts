@@ -99,7 +99,7 @@ export class TemplateDocumentController {
         return res.status(400).json({
           success: false,
           error: 'Invalid request data',
-          details: validation.error.errors,
+          details: (validation.error as any).errors,
         });
       }
 
@@ -184,7 +184,7 @@ export class TemplateDocumentController {
         return res.status(400).json({
           success: false,
           error: 'Invalid query parameters',
-          details: validation.error.errors,
+          details: (validation.error as any).errors,
         });
       }
 
@@ -278,7 +278,7 @@ export class TemplateDocumentController {
         return res.status(400).json({
           success: false,
           error: 'Invalid request data',
-          details: validation.error.errors,
+          details: (validation.error as any).errors,
         });
       }
 
@@ -365,7 +365,7 @@ export class TemplateDocumentController {
         return res.status(400).json({
           success: false,
           error: 'Invalid request data',
-          details: validation.error.errors,
+          details: (validation.error as any).errors,
         });
       }
 
