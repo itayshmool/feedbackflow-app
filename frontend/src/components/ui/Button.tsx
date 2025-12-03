@@ -5,11 +5,12 @@ import { cn } from '@/lib/utils'
 import LoadingSpinner from './LoadingSpinner'
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success'
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success' | 'default' | 'destructive'
   size?: 'sm' | 'md' | 'lg'
   loading?: boolean
-  leftIcon?: React.ReactNode
-  rightIcon?: React.ReactNode
+  leftIcon?: React.ReactNode | React.ElementType
+  rightIcon?: React.ReactNode | React.ElementType
+  icon?: React.ReactNode | React.ElementType
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -20,6 +21,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     loading = false,
     leftIcon,
     rightIcon,
+    icon,
     children, 
     disabled,
     ...props 
@@ -33,6 +35,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       ghost: 'btn-ghost',
       danger: 'btn-danger',
       success: 'btn-success',
+      default: 'btn-primary',
+      destructive: 'btn-danger',
     }
     
     const sizeClasses = {
@@ -43,6 +47,15 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     
     const isDisabled = disabled || loading
     
+    const renderIcon = (iconProp: React.ReactNode | React.ElementType) => {
+      if (!iconProp) return null;
+      if (typeof iconProp === 'function' || (typeof iconProp === 'object' && 'render' in iconProp)) {
+         const Icon = iconProp as React.ElementType;
+         return <Icon className="w-4 h-4" />;
+      }
+      return iconProp as React.ReactNode;
+    };
+
     return (
       <button
         className={cn(
@@ -58,12 +71,12 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {loading && (
           <LoadingSpinner size="sm" className="mr-2" />
         )}
-        {!loading && leftIcon && (
-          <span className="mr-2">{leftIcon}</span>
+        {!loading && (leftIcon || icon) && (
+          <span className={children ? "mr-2" : ""}>{renderIcon(leftIcon || icon)}</span>
         )}
         {children}
         {!loading && rightIcon && (
-          <span className="ml-2">{rightIcon}</span>
+          <span className="ml-2">{renderIcon(rightIcon)}</span>
         )}
       </button>
     )

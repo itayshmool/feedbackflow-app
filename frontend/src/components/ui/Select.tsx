@@ -3,22 +3,35 @@ import { cn } from '@/lib/utils'
 
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   variant?: 'default' | 'error'
+  label?: string
+  onValueChange?: (value: string) => void
+  placeholder?: string
+  error?: string
 }
 
 const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, variant = 'default', children, onChange, value, ...props }, ref) => {
+  ({ className, variant = 'default', children, onChange, onValueChange, value, label, placeholder, error, ...props }, ref) => {
     const baseClasses = 'flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
     
     const variantClasses = {
       default: 'border-gray-300 focus:ring-blue-500',
       error: 'border-red-500 focus:ring-red-500',
     }
+
+    const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      if (onValueChange) {
+        onValueChange(e.target.value)
+      }
+      if (onChange) {
+        onChange(e)
+      }
+    }
     
     return (
       <select
         className={cn(baseClasses, variantClasses[variant], className)}
         ref={ref}
-        onChange={onChange}
+        onChange={handleChange}
         value={value}
         {...props}
       >

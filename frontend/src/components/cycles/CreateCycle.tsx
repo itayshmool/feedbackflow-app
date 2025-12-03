@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from '../ui/Card';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import { Select } from '../ui/Select';
+import { Textarea } from '../ui/Textarea';
 import { useCyclesStore } from '../../stores/cyclesStore';
 import { useOrganizationStore } from '../../stores/organizationStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -126,14 +127,14 @@ export const CreateCycle: React.FC<CreateCycleProps> = ({ onClose, onSuccess, ed
       
       if (editingCycle) {
         // Update existing cycle
+        const { organizationId, ...updateData } = data;
         result = await updateCycle(editingCycle.id, {
-          name: data.name,
-          description: data.description,
-          organizationId: data.organizationId,
-          startDate: data.startDate,
-          endDate: data.endDate,
-          type: data.type,
-          settings: data.settings,
+          name: updateData.name,
+          description: updateData.description,
+          startDate: updateData.startDate,
+          endDate: updateData.endDate,
+          type: updateData.type,
+          settings: updateData.settings,
         });
       } else {
         // Create new cycle
@@ -219,12 +220,13 @@ export const CreateCycle: React.FC<CreateCycleProps> = ({ onClose, onSuccess, ed
               </div>
 
               <div>
-                <Input
-                  label="Description"
-                  {...register('description')}
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <Textarea
                   placeholder="Brief description of this cycle"
-                  multiline
                   rows={3}
+                  {...register('description')}
                 />
               </div>
 

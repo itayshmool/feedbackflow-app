@@ -10,7 +10,7 @@ import { Download, Search, FileText } from 'lucide-react';
 
 const TemplateLibrary: React.FC = () => {
   const { isAuthenticated } = useAuthStore();
-  const hasHydrated = useAuthStore.persist?.hasHydrated?.() ?? true;
+  const hasHydrated = (useAuthStore as any).persist?.hasHydrated?.() ?? true;
   const [templates, setTemplates] = useState<Template[]>([]);
   const [filteredTemplates, setFilteredTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(false);
@@ -44,7 +44,7 @@ const TemplateLibrary: React.FC = () => {
     try {
       const response = await templatesService.getTemplates();
       // Filter only active templates
-      const activeTemplates = (response.data || []).filter(t => t.is_active);
+      const activeTemplates = (response.data || []).filter((t: any) => t.is_active);
       setTemplates(activeTemplates);
       setFilteredTemplates(activeTemplates);
     } catch (err: any) {
@@ -145,7 +145,7 @@ const TemplateLibrary: React.FC = () => {
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                   <div className="text-3xl mr-3">{getFileIcon(template.file_mime_type)}</div>
-                  <Badge variant={template.is_default ? 'default' : 'secondary'} className="text-xs">
+                  <Badge variant={template.is_default ? 'primary' : 'secondary'} className="text-xs">
                     {template.template_type}
                   </Badge>
                 </div>

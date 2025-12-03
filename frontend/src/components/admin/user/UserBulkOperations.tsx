@@ -306,9 +306,9 @@ const UserBulkOperations: React.FC<UserBulkOperationsProps> = ({ onClose }) => {
                     <div className="p-4 bg-green-50 border border-green-200 rounded-md">
                       <h4 className="font-medium text-green-800 mb-2">Import Results</h4>
                       <div className="text-sm text-green-700">
-                        <p>Total: {bulkImportResult.total}</p>
-                        <p>Successful: {bulkImportResult.successful}</p>
-                        <p>Failed: {bulkImportResult.failed}</p>
+                        <p>Total: {bulkImportResult.totalProcessed}</p>
+                        <p>Successful: {bulkImportResult.totalSuccess}</p>
+                        <p>Failed: {bulkImportResult.totalErrors}</p>
                       </div>
                     </div>
 
@@ -317,7 +317,7 @@ const UserBulkOperations: React.FC<UserBulkOperationsProps> = ({ onClose }) => {
                         <h4 className="font-medium text-yellow-800 mb-2">Errors</h4>
                         <div className="text-sm text-yellow-700 space-y-1">
                           {bulkImportResult.errors.map((error, index) => (
-                            <p key={index}>Row {error.row}: {error.error}</p>
+                            <p key={index}>Row {index + 1}: {error.error}</p>
                           ))}
                         </div>
                       </div>

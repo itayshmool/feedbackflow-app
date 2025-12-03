@@ -26,7 +26,7 @@ interface TeamFeedback {
 }
 
 export default function TeamFeedbackPage() {
-  const { user, token } = useAuthStore();
+  const { user } = useAuthStore();
   const [feedback, setFeedback] = useState<TeamFeedback[]>([]);
   const [filteredFeedback, setFilteredFeedback] = useState<TeamFeedback[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +59,6 @@ export default function TeamFeedbackPage() {
       setLoading(true);
       const response = await fetch('/api/v1/team/feedback', {
         headers: {
-          'Authorization': `Bearer ${token || ''}`,
           'Content-Type': 'application/json',
         },
       });

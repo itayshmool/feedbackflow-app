@@ -33,6 +33,8 @@ export interface Insight {
   description: string;
   severity: 'positive' | 'negative' | 'neutral';
   createdAt: string;
+  actionable?: boolean;
+  recommendation?: string;
 }
 
 export interface AnalyticsData {

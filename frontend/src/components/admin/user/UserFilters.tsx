@@ -4,12 +4,12 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Select } from '@/components/ui/Select';
 import { Switch } from '@/components/ui/Switch';
-import { UserFilters } from '@/types/user.types';
+import { UserFilters as UserFiltersType } from '@/types/user.types';
 import { X, Filter } from 'lucide-react';
 
 interface UserFiltersProps {
-  filters: UserFilters;
-  onFiltersChange: (filters: UserFilters) => void;
+  filters: UserFiltersType;
+  onFiltersChange: (filters: UserFiltersType) => void;
   onClearFilters: () => void;
 }
 
@@ -18,7 +18,7 @@ export const UserFilters: React.FC<UserFiltersProps> = ({
   onFiltersChange,
   onClearFilters,
 }) => {
-  const handleFilterChange = (key: keyof UserFilters, value: any) => {
+  const handleFilterChange = (key: keyof UserFiltersType, value: any) => {
     onFiltersChange({
       ...filters,
       [key]: value,

@@ -12,7 +12,7 @@ import { Upload, Download, Trash2, FileText, X } from 'lucide-react';
 
 const TemplatesManagement: React.FC = () => {
   const { isAuthenticated } = useAuthStore();
-  const hasHydrated = useAuthStore.persist?.hasHydrated?.() ?? true;
+  const hasHydrated = (useAuthStore as any).persist?.hasHydrated?.() ?? true;
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -355,7 +355,7 @@ const TemplatesManagement: React.FC = () => {
                             {template.name}
                           </h3>
                           {template.is_default && (
-                            <Badge variant="default">Default</Badge>
+                            <Badge variant="primary">Default</Badge>
                           )}
                           {template.is_active ? (
                             <Badge variant="secondary">Active</Badge>

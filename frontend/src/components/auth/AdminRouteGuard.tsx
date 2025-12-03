@@ -13,7 +13,7 @@ export default function AdminRouteGuard({ children }: AdminRouteGuardProps) {
   const { user, isLoading, isAuthenticated } = useAuthStore();
   
   // Use Zustand's built-in hydration check
-  const hasHydrated = useAuthStore.persist?.hasHydrated?.() ?? true;
+  const hasHydrated = (useAuthStore as any).persist?.hasHydrated?.() ?? true;
 
   // Wait for hydration
   if (!hasHydrated || isLoading) {

@@ -163,7 +163,7 @@ const ManagerDashboard: React.FC = () => {
                   <div key={feedback.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-150">
                     <div className={`w-2 h-2 rounded-full ${
                       feedback.status === 'completed' ? 'bg-green-500' :
-                      feedback.status === 'pending' ? 'bg-yellow-500' : 
+                      (feedback.status as any) === 'pending' || feedback.status === 'submitted' ? 'bg-yellow-500' : 
                       feedback.status === 'draft' ? 'bg-gray-400' : 'bg-blue-500'
                     }`}></div>
                     <div className="flex-1">

@@ -136,8 +136,8 @@ export const useUserStore = create<UserState>()(
           
           if (response.success) {
             set({
-              users: response.data || [],
-              pagination: response.pagination || { total: 0, limit: 10, offset: 0, hasMore: false },
+              users: response.data.data || [],
+              pagination: response.data.pagination || { total: 0, limit: 10, offset: 0, hasMore: false },
               filters: currentFilters,
               isLoading: false,
             });

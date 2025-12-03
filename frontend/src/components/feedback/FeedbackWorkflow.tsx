@@ -140,9 +140,11 @@ export const FeedbackWorkflow: React.FC<FeedbackWorkflowProps> = ({
         });
       }
 
-      setComment('');
-      setSelectedAction('');
-      onStatusChange?.(updatedFeedback);
+      if (updatedFeedback) {
+        setComment('');
+        setSelectedAction('');
+        onStatusChange?.(updatedFeedback);
+      }
     } catch (error) {
       console.error('Failed to update feedback status:', error);
       alert('Failed to update feedback status');

@@ -201,7 +201,7 @@ export const CycleDetails: React.FC<CycleDetailsProps> = ({ cycleId, onClose, on
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Created By</label>
-                  <p className="text-sm text-gray-900">{currentCycle.creatorName || currentCycle.createdBy}</p>
+                  <p className="text-sm text-gray-900">{(currentCycle as any).creatorName || currentCycle.createdBy}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Created At</label>

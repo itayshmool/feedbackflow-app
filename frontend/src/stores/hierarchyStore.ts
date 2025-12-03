@@ -229,7 +229,6 @@ export const useHierarchyStore = create<HierarchyState>()(
         hierarchyTree: null,
         directReports: [],
         managerChain: [],
-        hierarchyList: [],
         searchResults: [],
         managerSearchResults: [],
         employeeSearchResults: [],

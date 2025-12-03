@@ -78,7 +78,7 @@ const OrganizationAnalytics: React.FC<OrganizationAnalyticsProps> = ({ organizat
     },
     {
       name: 'Custom',
-      value: teams?.filter(t => t.type === 'custom').length || 0,
+      value: teams?.filter(t => (t.type as any) === 'custom').length || 0,
     },
   ].filter(item => item.value > 0);
 
