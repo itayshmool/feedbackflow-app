@@ -104,6 +104,7 @@ export interface UserImportData {
   position?: string;
   organizationId?: string;
   organizationName?: string; // Added for CSV import using organization name
+  organizationSlug?: string; // Added for CSV import to uniquely identify organization
   roles?: string[];
 }
 

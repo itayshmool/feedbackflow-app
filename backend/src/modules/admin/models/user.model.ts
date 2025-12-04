@@ -432,4 +432,12 @@ export class UserModel {
     );
     return result.rows[0] || null;
   }
+
+  async findOrganizationByNameAndSlug(name: string, slug: string): Promise<{ id: string; name: string; slug: string } | null> {
+    const result = await dbQuery(
+      'SELECT id, name, slug FROM organizations WHERE LOWER(name) = LOWER($1) AND LOWER(slug) = LOWER($2)',
+      [name, slug]
+    );
+    return result.rows[0] || null;
+  }
 }
