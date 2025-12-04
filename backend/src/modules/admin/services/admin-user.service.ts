@@ -228,8 +228,19 @@ export class AdminUserService {
       try {
         let organizationId = userData.organizationId;
         
-        // If organizationName is provided, look up the organization ID
-        if (userData.organizationName && !organizationId) {
+        // If organizationName and organizationSlug are provided, use both for unique lookup
+        if (userData.organizationName && userData.organizationSlug && !organizationId) {
+          const organization = await this.userModel.findOrganizationByNameAndSlug(
+            userData.organizationName,
+            userData.organizationSlug
+          );
+          if (!organization) {
+            throw new Error(`Organization "${userData.organizationName}" with slug "${userData.organizationSlug}" not found`);
+          }
+          organizationId = organization.id;
+        }
+        // Fallback: If only organizationName is provided (backward compatibility)
+        else if (userData.organizationName && !organizationId) {
           const organization = await this.userModel.findOrganizationByName(userData.organizationName);
           if (!organization) {
             throw new Error(`Organization "${userData.organizationName}" not found`);

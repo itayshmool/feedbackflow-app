@@ -134,13 +134,14 @@ export class CSVParser {
             roles = record.roles.split(',').map((role: string) => role.trim()).filter((role: string) => role.length > 0);
           }
 
-          // Parse the user data - now using organizationName instead of organizationId
+          // Parse the user data - using organizationName + organizationSlug for unique identification
           const user: UserImportData = {
             email: record.email,
             name: record.name,
             department: record.department || undefined,
             position: record.position || undefined,
-            organizationName: record.organizationName || undefined, // Changed from organizationId
+            organizationName: record.organizationName || undefined,
+            organizationSlug: record.organizationSlug || undefined, // Added for unique org identification
             roles: roles.length > 0 ? roles : undefined,
           };
 
@@ -235,6 +236,7 @@ export class CSVParser {
       'department',
       'position',
       'organizationName',
+      'organizationSlug',
       'roles',
     ];
 
@@ -243,8 +245,9 @@ export class CSVParser {
       'John Doe',
       'Engineering',
       'Senior Developer',
-      'Creative Agency Final Test',
-      'employee,developer',
+      'wix.com',
+      'premium',
+      'employee',
     ];
 
     return stringify([headers, example], {
