@@ -656,6 +656,107 @@ app.post('/api/v1/auth/login/mock', async (req, res) => {
   }
 });
 
+// Google OAuth login endpoint
+app.post('/api/v1/auth/login/google', async (req, res) => {
+  try {
+    const { idToken } = req.body;
+    
+    if (!idToken) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID token is required'
+      });
+    }
+
+    // Verify Google token
+    const { OAuth2Client } = await import('google-auth-library');
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    
+    let payload;
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      payload = ticket.getPayload();
+    } catch (verifyError) {
+      console.error('Google token verification failed:', verifyError);
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid Google token'
+      });
+    }
+
+    if (!payload || !payload.email) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid token payload'
+      });
+    }
+
+    const email = payload.email;
+    const name = payload.name || email.split('@')[0];
+
+    // Find or create user
+    let user: any = null;
+    try {
+      const userResult = await query('SELECT * FROM users WHERE email = $1', [email]);
+      user = userResult.rows[0];
+
+      if (!user) {
+        // Create new user from Google account
+        const insertResult = await query(
+          `INSERT INTO users (email, name, is_active, email_verified, created_at, updated_at)
+           VALUES ($1, $2, true, true, NOW(), NOW())
+           RETURNING *`,
+          [email, name]
+        );
+        user = insertResult.rows[0];
+        console.log('Created new user from Google login:', email);
+      }
+    } catch (dbError) {
+      console.error('Database error during Google login:', dbError);
+      // Fall back to mock user if database fails
+      user = {
+        id: 'google-' + Date.now(),
+        email: email,
+        name: name,
+        roles: ['employee'],
+        isActive: true
+      };
+    }
+
+    // Generate token (same format as mock login for compatibility)
+    const token = `mock-jwt-token-${email}-${Date.now()}`;
+
+    // Set cookie
+    const cookieOptions = getCookieOptions(req);
+    console.log('🔐 GOOGLE LOGIN: Setting cookie for', email);
+    res.cookie('authToken', token, cookieOptions);
+
+    res.json({
+      success: true,
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role || 'employee',
+          organizationId: user.organization_id,
+          department: user.department,
+        },
+        token
+      }
+    });
+  } catch (error) {
+    console.error('Google login error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Google login failed'
+    });
+  }
+});
+
 app.post('/api/v1/auth/logout', async (req, res) => {
   try {
     // Clear authentication cookie with same options used when setting
