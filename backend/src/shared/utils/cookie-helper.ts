@@ -28,17 +28,21 @@ export function getCookieOptions(req: Request) {
   // Check if request is HTTPS (direct or behind proxy)
   const isHttps = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https'
 
+  // For cross-origin cookies (frontend and backend on different subdomains),
+  // we need sameSite: 'none' with secure: true in production
+  const sameSite = isProduction && !isLocalhost ? 'none' as const : 'lax' as const
+
   const options = {
     httpOnly: true,
-    secure: isProduction && !isLocalhost && isHttps,
-    sameSite: 'lax' as const,  // 'lax' works for same-site and is more compatible
+    secure: isProduction && !isLocalhost,  // Must be true when sameSite is 'none'
+    sameSite,
     maxAge: 24 * 60 * 60 * 1000,
     path: '/',  // Explicit path required for clearCookie to work properly
     domain: getCookieDomain(hostname)
   }
   
   // DEBUG: Log cookie options
-  console.log('🍪 Cookie options:', { hostname, domain: options.domain, path: options.path })
+  console.log('🍪 Cookie options:', { hostname, domain: options.domain, path: options.path, sameSite: options.sameSite })
   
   return options
 }
