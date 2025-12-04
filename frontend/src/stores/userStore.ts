@@ -135,9 +135,17 @@ export const useUserStore = create<UserState>()(
           const response = await userService.getUsers(currentFilters, currentOptions);
           
           if (response.success) {
+            // Handle both API formats: 
+            // Format 1: { success, data: [...users], pagination }
+            // Format 2: { success, data: { data: [...users], pagination } }
+            const usersData = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+            const paginationData = Array.isArray(response.data) 
+              ? (response as any).pagination 
+              : (response.data?.pagination || { total: 0, limit: 10, offset: 0, hasMore: false });
+            
             set({
-              users: response.data.data || [],
-              pagination: response.data.pagination || { total: 0, limit: 10, offset: 0, hasMore: false },
+              users: usersData,
+              pagination: paginationData || { total: 0, limit: 10, offset: 0, hasMore: false },
               filters: currentFilters,
               isLoading: false,
             });

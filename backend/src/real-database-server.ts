@@ -717,21 +717,56 @@ app.post('/api/v1/auth/login/google', async (req, res) => {
       });
     }
 
-    // Find or create user
+    // Find or create user with roles from user_roles table
     let user: any = null;
     try {
-      const userResult = await query('SELECT * FROM users WHERE email = $1', [email]);
-      user = userResult.rows[0];
-
-      if (!user) {
-        // Create new user from Google account with default 'employee' role
+      // Query user with roles from user_roles table (same as mock login)
+      const userQuery = `
+        SELECT 
+          u.id, u.email, u.name, u.avatar_url, u.is_active, u.email_verified,
+          u.last_login_at, u.created_at, u.updated_at, u.organization_id, u.department, u.position,
+          o.name as organization_name,
+          COALESCE(
+            json_agg(DISTINCT r.name) FILTER (WHERE r.name IS NOT NULL),
+            '[]'
+          ) as roles
+        FROM users u
+        LEFT JOIN user_roles ur ON u.id = ur.user_id AND ur.is_active = true
+        LEFT JOIN roles r ON ur.role_id = r.id
+        LEFT JOIN organizations o ON u.organization_id = o.id
+        WHERE u.email = $1
+        GROUP BY u.id, u.email, u.name, u.avatar_url, u.is_active, u.email_verified, 
+                 u.last_login_at, u.created_at, u.updated_at, u.organization_id, u.department, u.position, o.name
+      `;
+      
+      const userResult = await query(userQuery, [email]);
+      
+      if (userResult.rows.length > 0) {
+        user = userResult.rows[0];
+      } else {
+        // Create new user from Google account
         const insertResult = await query(
           `INSERT INTO users (email, name, role, is_active, email_verified, created_at, updated_at)
            VALUES ($1, $2, 'employee', true, true, NOW(), NOW())
            RETURNING *`,
           [email, name]
         );
-        user = insertResult.rows[0];
+        const newUser = insertResult.rows[0];
+        
+        // Add 'employee' role to user_roles table
+        const employeeRoleResult = await query('SELECT id FROM roles WHERE LOWER(name) = $1', ['employee']);
+        if (employeeRoleResult.rows.length > 0) {
+          const employeeRoleId = employeeRoleResult.rows[0].id;
+          await query(
+            'INSERT INTO user_roles (user_id, role_id, is_active, granted_at) VALUES ($1, $2, true, NOW()) ON CONFLICT DO NOTHING',
+            [newUser.id, employeeRoleId]
+          );
+        }
+        
+        user = {
+          ...newUser,
+          roles: ['employee']
+        };
         console.log('Created new user from Google login:', email, 'with role: employee');
       }
     } catch (dbError) {
@@ -754,6 +789,9 @@ app.post('/api/v1/auth/login/google', async (req, res) => {
     console.log('🔐 GOOGLE LOGIN: Setting cookie for', email);
     res.cookie('authToken', token, cookieOptions);
 
+    // Ensure roles is always an array
+    const userRoles = Array.isArray(user.roles) ? user.roles : (user.roles ? [user.roles] : ['employee']);
+
     res.json({
       success: true,
       data: {
@@ -761,9 +799,11 @@ app.post('/api/v1/auth/login/google', async (req, res) => {
           id: user.id,
           email: user.email,
           name: user.name,
-          roles: [user.role || 'employee'],
+          roles: userRoles,
           organizationId: user.organization_id,
+          organizationName: user.organization_name,
           department: user.department,
+          position: user.position,
         },
         token
       }
@@ -3756,8 +3796,8 @@ app.post('/api/v1/hierarchy/bulk', async (req, res) => {
 app.get('/api/v1/hierarchy/template', async (req, res) => {
   try {
     const csv = [
-      'organization_name,employee_email,manager_email',
-      'wix.com,alice@wix.com,bob.manager@wix.com'
+      'organization_name,organization_slug,employee_email,manager_email',
+      'wix.com,premium,alice@wix.com,bob.manager@wix.com'
     ].join('\n');
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="hierarchy-template.csv"');
@@ -3769,7 +3809,7 @@ app.get('/api/v1/hierarchy/template', async (req, res) => {
 });
 
 // POST /api/v1/hierarchy/bulk/csv - Bulk create relationships from CSV
-// Expected headers row: organization_name,employee_email,manager_email
+// Expected headers row: organization_name,organization_slug,employee_email,manager_email
 app.post('/api/v1/hierarchy/bulk/csv', express.text({ type: [ 'text/csv', 'text/plain', 'application/octet-stream' ] }), async (req, res) => {
   try {
     const body = (req.body || '').toString();
@@ -3784,31 +3824,33 @@ app.post('/api/v1/hierarchy/bulk/csv', express.text({ type: [ 'text/csv', 'text/
 
     // Parse header
     const header = lines[0].split(',').map(h => h.trim().toLowerCase());
-    const orgIdx = header.indexOf('organization_name');
+    const orgNameIdx = header.indexOf('organization_name');
+    const orgSlugIdx = header.indexOf('organization_slug');
     const empIdx = header.indexOf('employee_email');
     const mgrIdx = header.indexOf('manager_email');
-    if (orgIdx === -1 || empIdx === -1 || mgrIdx === -1) {
-      return res.status(400).json({ success: false, error: 'CSV must include organization_name, employee_email, manager_email' });
+    if (orgNameIdx === -1 || orgSlugIdx === -1 || empIdx === -1 || mgrIdx === -1) {
+      return res.status(400).json({ success: false, error: 'CSV must include organization_name, organization_slug, employee_email, manager_email' });
     }
 
     let created = 0;
     let updated = 0;
     const errors: Array<{ row: number; employeeEmail: string; managerEmail: string; error: string }> = [];
 
-    // Cache for organization name -> id
+    // Cache for organization name+slug -> id
     const orgCache = new Map<string, string>();
     // Cache for email -> user id per org
     const userCache = new Map<string, string>(); // key: `${orgId}:${email}`
     // Cache for role name -> role id
     const roleIdCache = new Map<string, string>();
 
-    const getOrgIdByName = async (name: string): Promise<string | null> => {
-      const cached = orgCache.get(name);
+    const getOrgIdByNameAndSlug = async (name: string, slug: string): Promise<string | null> => {
+      const cacheKey = `${name.toLowerCase()}:${slug.toLowerCase()}`;
+      const cached = orgCache.get(cacheKey);
       if (cached) return cached;
-      const r = await query('SELECT id FROM organizations WHERE LOWER(name) = LOWER($1)', [name]);
+      const r = await query('SELECT id FROM organizations WHERE LOWER(name) = LOWER($1) AND LOWER(slug) = LOWER($2)', [name, slug]);
       if (r.rows.length === 0) return null;
       const id = r.rows[0].id;
-      orgCache.set(name, id);
+      orgCache.set(cacheKey, id);
       return id;
     };
 
@@ -3837,35 +3879,33 @@ app.post('/api/v1/hierarchy/bulk/csv', express.text({ type: [ 'text/csv', 'text/
     const ensureUserHasRole = async (userId: string, orgId: string, roleName: string): Promise<void> => {
       const roleId = await getRoleIdByName(roleName);
       if (!roleId) return; // role not defined in DB; skip silently
-      const existing = await query(
-        'SELECT 1 FROM user_roles WHERE user_id = $1 AND role_id = $2 AND organization_id = $3 AND is_active = true LIMIT 1',
+      // Use ON CONFLICT to handle race conditions and existing inactive roles
+      await query(
+        `INSERT INTO user_roles (user_id, role_id, organization_id, is_active, granted_at) 
+         VALUES ($1, $2, $3, true, NOW())
+         ON CONFLICT (user_id, role_id, organization_id) DO UPDATE SET is_active = true, granted_at = NOW()`,
         [userId, roleId, orgId]
       );
-      if (existing.rows.length === 0) {
-        await query(
-          'INSERT INTO user_roles (user_id, role_id, organization_id, is_active, granted_at) VALUES ($1, $2, $3, true, NOW())',
-          [userId, roleId, orgId]
-        );
-      }
     };
 
     for (let i = 1; i < lines.length; i++) {
       const raw = lines[i];
       if (!raw || raw.trim().length === 0) continue;
       const cols = raw.split(',');
-      const organizationName = (cols[orgIdx] || '').trim();
+      const organizationName = (cols[orgNameIdx] || '').trim();
+      const organizationSlug = (cols[orgSlugIdx] || '').trim();
       const employeeEmail = (cols[empIdx] || '').trim();
       const managerEmail = (cols[mgrIdx] || '').trim();
 
-      if (!organizationName || !employeeEmail || !managerEmail) {
+      if (!organizationName || !organizationSlug || !employeeEmail || !managerEmail) {
         errors.push({ row: i + 1, employeeEmail, managerEmail, error: 'Missing required fields' });
         continue;
       }
 
       try {
-        const orgId = await getOrgIdByName(organizationName);
+        const orgId = await getOrgIdByNameAndSlug(organizationName, organizationSlug);
         if (!orgId) {
-          errors.push({ row: i + 1, employeeEmail, managerEmail, error: 'Organization not found' });
+          errors.push({ row: i + 1, employeeEmail, managerEmail, error: `Organization not found: ${organizationName} (${organizationSlug})` });
           continue;
         }
 
