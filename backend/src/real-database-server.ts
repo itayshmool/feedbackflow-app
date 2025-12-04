@@ -717,21 +717,56 @@ app.post('/api/v1/auth/login/google', async (req, res) => {
       });
     }
 
-    // Find or create user
+    // Find or create user with roles from user_roles table
     let user: any = null;
     try {
-      const userResult = await query('SELECT * FROM users WHERE email = $1', [email]);
-      user = userResult.rows[0];
-
-      if (!user) {
-        // Create new user from Google account with default 'employee' role
+      // Query user with roles from user_roles table (same as mock login)
+      const userQuery = `
+        SELECT 
+          u.id, u.email, u.name, u.avatar_url, u.is_active, u.email_verified,
+          u.last_login_at, u.created_at, u.updated_at, u.organization_id, u.department, u.position,
+          o.name as organization_name,
+          COALESCE(
+            json_agg(DISTINCT r.name) FILTER (WHERE r.name IS NOT NULL),
+            '[]'
+          ) as roles
+        FROM users u
+        LEFT JOIN user_roles ur ON u.id = ur.user_id AND ur.is_active = true
+        LEFT JOIN roles r ON ur.role_id = r.id
+        LEFT JOIN organizations o ON u.organization_id = o.id
+        WHERE u.email = $1
+        GROUP BY u.id, u.email, u.name, u.avatar_url, u.is_active, u.email_verified, 
+                 u.last_login_at, u.created_at, u.updated_at, u.organization_id, u.department, u.position, o.name
+      `;
+      
+      const userResult = await query(userQuery, [email]);
+      
+      if (userResult.rows.length > 0) {
+        user = userResult.rows[0];
+      } else {
+        // Create new user from Google account
         const insertResult = await query(
           `INSERT INTO users (email, name, role, is_active, email_verified, created_at, updated_at)
            VALUES ($1, $2, 'employee', true, true, NOW(), NOW())
            RETURNING *`,
           [email, name]
         );
-        user = insertResult.rows[0];
+        const newUser = insertResult.rows[0];
+        
+        // Add 'employee' role to user_roles table
+        const employeeRoleResult = await query('SELECT id FROM roles WHERE LOWER(name) = $1', ['employee']);
+        if (employeeRoleResult.rows.length > 0) {
+          const employeeRoleId = employeeRoleResult.rows[0].id;
+          await query(
+            'INSERT INTO user_roles (user_id, role_id, is_active, granted_at) VALUES ($1, $2, true, NOW()) ON CONFLICT DO NOTHING',
+            [newUser.id, employeeRoleId]
+          );
+        }
+        
+        user = {
+          ...newUser,
+          roles: ['employee']
+        };
         console.log('Created new user from Google login:', email, 'with role: employee');
       }
     } catch (dbError) {
@@ -754,6 +789,9 @@ app.post('/api/v1/auth/login/google', async (req, res) => {
     console.log('🔐 GOOGLE LOGIN: Setting cookie for', email);
     res.cookie('authToken', token, cookieOptions);
 
+    // Ensure roles is always an array
+    const userRoles = Array.isArray(user.roles) ? user.roles : (user.roles ? [user.roles] : ['employee']);
+
     res.json({
       success: true,
       data: {
@@ -761,9 +799,11 @@ app.post('/api/v1/auth/login/google', async (req, res) => {
           id: user.id,
           email: user.email,
           name: user.name,
-          roles: [user.role || 'employee'],
+          roles: userRoles,
           organizationId: user.organization_id,
+          organizationName: user.organization_name,
           department: user.department,
+          position: user.position,
         },
         token
       }
