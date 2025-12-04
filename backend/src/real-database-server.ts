@@ -312,7 +312,7 @@ const departmentModel = new DepartmentModelClass(dbConfig.pool);
 const teamModel = new TeamModelClass(dbConfig.pool);
 
 // Mount admin user routes
-app.use('/api/v1/admin', createAdminUserRoutes);
+app.use('/api/v1/admin', createAdminUserRoutes());
 
 // Organization API routes - specific routes first, then parameterized routes
 app.get('/api/v1/admin/organizations', authenticateToken, async (req, res) => {
