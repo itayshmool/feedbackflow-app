@@ -175,15 +175,12 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       partialize: (state) => ({ token: state.token, user: state.user }),
-      onRehydrate: () => {
-        return (state) => {
-          // Restore token to API headers after rehydration
-          if (state?.token) {
-            setApiToken(state.token)
-            state.isAuthenticated = true
-          }
-        }
-      },
     }
   )
 )
+
+// Restore token on module load (handles page refresh)
+const storedState = useAuthStore.getState()
+if (storedState.token) {
+  setApiToken(storedState.token)
+}
