@@ -32,7 +32,6 @@ SELECT
         )
         ELSE 0 
     END as positive_feedback_percentage,
-    COUNT(DISTINCT fa.id) as feedback_acknowledged_count,
     COUNT(DISTINCT CASE WHEN fa.acknowledged_at IS NOT NULL THEN fa.id END) as feedback_acknowledged_count,
     CASE 
         WHEN COUNT(DISTINCT fres_received.id) > 0 

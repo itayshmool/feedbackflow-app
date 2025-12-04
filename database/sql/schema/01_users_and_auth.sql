@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
     avatar_url TEXT,
+    organization_id UUID, -- Added for backward compatibility with backend queries
     is_active BOOLEAN DEFAULT true,
     email_verified BOOLEAN DEFAULT false,
     last_login_at TIMESTAMP WITH TIME ZONE,

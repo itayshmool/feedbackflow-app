@@ -12,8 +12,8 @@ CREATE EXTENSION IF NOT EXISTS "btree_gin";
 \i sql/schema/03_feedback_system.sql
 \i sql/schema/04_cycles_and_workflows.sql
 \i sql/schema/05_organizational_hierarchy.sql
-\i sql/schema/06_notifications.sql
-\i sql/schema/07_analytics_and_audit.sql
+\i sql/schema/05_notifications.sql
+\i sql/schema/06_analytics_and_audit.sql
 
 -- Create views
 \i sql/views/cycle_completion_rates.sql
@@ -46,94 +46,8 @@ INSERT INTO notification_templates (name, type, category, subject, body, is_syst
 ('Organization Invitation', 'email', 'invitation', 'Invitation to Join {{organization_name}}', 'You have been invited to join {{organization_name}} on FeedbackFlow. Click the link below to accept your invitation: {{invitation_link}}', true)
 ON CONFLICT DO NOTHING;
 
--- Insert default feedback templates
-INSERT INTO feedback_templates (name, description, type, questions, is_default, is_system_template) VALUES
-('Default Feedback Template', 'Standard feedback template for general use', 'default', '[
-    {
-        "id": "strengths",
-        "type": "textarea",
-        "label": "What are this person''s key strengths?",
-        "required": true,
-        "placeholder": "Please provide specific examples of their strengths..."
-    },
-    {
-        "id": "improvements",
-        "type": "textarea", 
-        "label": "What areas could this person improve?",
-        "required": true,
-        "placeholder": "Please provide constructive feedback on areas for improvement..."
-    },
-    {
-        "id": "rating",
-        "type": "rating",
-        "label": "Overall performance rating",
-        "required": true,
-        "scale": 5,
-        "labels": ["Needs Improvement", "Below Average", "Average", "Above Average", "Excellent"]
-    },
-    {
-        "id": "additional",
-        "type": "textarea",
-        "label": "Additional comments",
-        "required": false,
-        "placeholder": "Any additional feedback or comments..."
-    }
-]', true, true),
-('Manager Feedback Template', 'Template specifically for manager feedback', 'manager', '[
-    {
-        "id": "leadership",
-        "type": "textarea",
-        "label": "How does this person demonstrate leadership?",
-        "required": true,
-        "placeholder": "Please provide specific examples of their leadership abilities..."
-    },
-    {
-        "id": "team_management",
-        "type": "textarea",
-        "label": "How effectively does this person manage their team?",
-        "required": true,
-        "placeholder": "Please provide feedback on their team management skills..."
-    },
-    {
-        "id": "rating",
-        "type": "rating",
-        "label": "Overall management performance rating",
-        "required": true,
-        "scale": 5,
-        "labels": ["Needs Improvement", "Below Average", "Average", "Above Average", "Excellent"]
-    }
-]', false, true),
-('Self Assessment Template', 'Template for self-assessment feedback', 'self', '[
-    {
-        "id": "achievements",
-        "type": "textarea",
-        "label": "What are your key achievements this period?",
-        "required": true,
-        "placeholder": "Please describe your main accomplishments..."
-    },
-    {
-        "id": "challenges",
-        "type": "textarea",
-        "label": "What challenges did you face and how did you address them?",
-        "required": true,
-        "placeholder": "Please describe the challenges you encountered and your approach to solving them..."
-    },
-    {
-        "id": "goals",
-        "type": "textarea",
-        "label": "What are your goals for the next period?",
-        "required": true,
-        "placeholder": "Please outline your objectives and goals for the upcoming period..."
-    },
-    {
-        "id": "support",
-        "type": "textarea",
-        "label": "What support do you need to achieve your goals?",
-        "required": false,
-        "placeholder": "Please describe any resources or support you need..."
-    }
-]', false, true)
-ON CONFLICT DO NOTHING;
+-- Note: Feedback templates are created per-organization when organizations are set up
+-- They require organization_id and created_by which are NOT NULL
 
 -- Create a function to get organization statistics
 CREATE OR REPLACE FUNCTION get_organization_stats(org_id UUID)
@@ -255,7 +169,7 @@ CREATE POLICY team_isolation ON teams
     USING (true); -- This should be customized based on your security requirements
 
 -- Create indexes for RLS performance
-CREATE INDEX IF NOT EXISTS idx_organizations_rls ON organizations(id, organization_id);
+CREATE INDEX IF NOT EXISTS idx_organizations_rls ON organizations(id);
 CREATE INDEX IF NOT EXISTS idx_departments_rls ON departments(id, organization_id);
 CREATE INDEX IF NOT EXISTS idx_teams_rls ON teams(id, organization_id);
 

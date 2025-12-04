@@ -288,7 +288,7 @@ WHERE template_document_id IS NOT NULL;
 
 -- Add constraint for template analytics (prevent spam)
 CREATE UNIQUE INDEX IF NOT EXISTS idx_template_analytics_unique_action_window 
-ON feedback_template_analytics(template_document_id, user_id, action, DATE_TRUNC('minute', created_at));
+ON feedback_template_analytics(template_document_id, user_id, action, DATE_TRUNC('minute', created_at AT TIME ZONE 'UTC'));
 
 -- Create triggers for updated_at timestamps
 CREATE TRIGGER update_template_documents_updated_at BEFORE UPDATE ON feedback_template_documents
