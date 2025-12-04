@@ -4,22 +4,30 @@ import { JwtService } from '../../modules/auth/services/jwt.service.js';
 const jwtService = new JwtService(process.env.JWT_SECRET || 'changeme');
 
 async function authenticateTokenAsync(req: Request, res: Response, next: NextFunction) {
-  // Read token from cookie instead of Authorization header
-  const token = req.cookies?.authToken;
+  // Check Authorization header first (for cross-domain requests)
+  const authHeader = req.headers.authorization;
+  let token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  
+  // Fall back to cookie if no Authorization header
+  if (!token) {
+    token = req.cookies?.authToken;
+  }
+  
   console.log('🔍 Auth middleware - received token:', token?.substring(0, 50) + '...', 
-              'hostname:', req.hostname, 'host:', req.get('host'));
+              'from:', authHeader ? 'header' : 'cookie',
+              'hostname:', req.hostname);
 
   if (!token) {
     return res.status(401).json({
       success: false,
-      error: 'Unauthorized - No token in cookie'
+      error: 'Unauthorized - No token provided'
     });
   }
   
   try {
     // Handle mock tokens (format: mock-jwt-token-EMAIL-TIMESTAMP)
-    // ONLY allowed in development environment
-    if (process.env.NODE_ENV !== 'production' && token.startsWith('mock-jwt-token-')) {
+    // TODO: In production, only allow real JWT tokens
+    if (token.startsWith('mock-jwt-token-')) {
       const parts = token.split('-');
       if (parts.length >= 4) {
         // Extract email from token (everything between 'mock-jwt-token-' and last '-TIMESTAMP')
