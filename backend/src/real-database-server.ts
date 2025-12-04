@@ -3796,8 +3796,8 @@ app.post('/api/v1/hierarchy/bulk', async (req, res) => {
 app.get('/api/v1/hierarchy/template', async (req, res) => {
   try {
     const csv = [
-      'organization_name,employee_email,manager_email',
-      'wix.com,alice@wix.com,bob.manager@wix.com'
+      'organization_name,organization_slug,employee_email,manager_email',
+      'wix.com,premium,alice@wix.com,bob.manager@wix.com'
     ].join('\n');
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="hierarchy-template.csv"');
@@ -3809,7 +3809,7 @@ app.get('/api/v1/hierarchy/template', async (req, res) => {
 });
 
 // POST /api/v1/hierarchy/bulk/csv - Bulk create relationships from CSV
-// Expected headers row: organization_name,employee_email,manager_email
+// Expected headers row: organization_name,organization_slug,employee_email,manager_email
 app.post('/api/v1/hierarchy/bulk/csv', express.text({ type: [ 'text/csv', 'text/plain', 'application/octet-stream' ] }), async (req, res) => {
   try {
     const body = (req.body || '').toString();
@@ -3824,31 +3824,33 @@ app.post('/api/v1/hierarchy/bulk/csv', express.text({ type: [ 'text/csv', 'text/
 
     // Parse header
     const header = lines[0].split(',').map(h => h.trim().toLowerCase());
-    const orgIdx = header.indexOf('organization_name');
+    const orgNameIdx = header.indexOf('organization_name');
+    const orgSlugIdx = header.indexOf('organization_slug');
     const empIdx = header.indexOf('employee_email');
     const mgrIdx = header.indexOf('manager_email');
-    if (orgIdx === -1 || empIdx === -1 || mgrIdx === -1) {
-      return res.status(400).json({ success: false, error: 'CSV must include organization_name, employee_email, manager_email' });
+    if (orgNameIdx === -1 || orgSlugIdx === -1 || empIdx === -1 || mgrIdx === -1) {
+      return res.status(400).json({ success: false, error: 'CSV must include organization_name, organization_slug, employee_email, manager_email' });
     }
 
     let created = 0;
     let updated = 0;
     const errors: Array<{ row: number; employeeEmail: string; managerEmail: string; error: string }> = [];
 
-    // Cache for organization name -> id
+    // Cache for organization name+slug -> id
     const orgCache = new Map<string, string>();
     // Cache for email -> user id per org
     const userCache = new Map<string, string>(); // key: `${orgId}:${email}`
     // Cache for role name -> role id
     const roleIdCache = new Map<string, string>();
 
-    const getOrgIdByName = async (name: string): Promise<string | null> => {
-      const cached = orgCache.get(name);
+    const getOrgIdByNameAndSlug = async (name: string, slug: string): Promise<string | null> => {
+      const cacheKey = `${name.toLowerCase()}:${slug.toLowerCase()}`;
+      const cached = orgCache.get(cacheKey);
       if (cached) return cached;
-      const r = await query('SELECT id FROM organizations WHERE LOWER(name) = LOWER($1)', [name]);
+      const r = await query('SELECT id FROM organizations WHERE LOWER(name) = LOWER($1) AND LOWER(slug) = LOWER($2)', [name, slug]);
       if (r.rows.length === 0) return null;
       const id = r.rows[0].id;
-      orgCache.set(name, id);
+      orgCache.set(cacheKey, id);
       return id;
     };
 
@@ -3877,35 +3879,33 @@ app.post('/api/v1/hierarchy/bulk/csv', express.text({ type: [ 'text/csv', 'text/
     const ensureUserHasRole = async (userId: string, orgId: string, roleName: string): Promise<void> => {
       const roleId = await getRoleIdByName(roleName);
       if (!roleId) return; // role not defined in DB; skip silently
-      const existing = await query(
-        'SELECT 1 FROM user_roles WHERE user_id = $1 AND role_id = $2 AND organization_id = $3 AND is_active = true LIMIT 1',
+      // Use ON CONFLICT to handle race conditions and existing inactive roles
+      await query(
+        `INSERT INTO user_roles (user_id, role_id, organization_id, is_active, granted_at) 
+         VALUES ($1, $2, $3, true, NOW())
+         ON CONFLICT (user_id, role_id, organization_id) DO UPDATE SET is_active = true, granted_at = NOW()`,
         [userId, roleId, orgId]
       );
-      if (existing.rows.length === 0) {
-        await query(
-          'INSERT INTO user_roles (user_id, role_id, organization_id, is_active, granted_at) VALUES ($1, $2, $3, true, NOW())',
-          [userId, roleId, orgId]
-        );
-      }
     };
 
     for (let i = 1; i < lines.length; i++) {
       const raw = lines[i];
       if (!raw || raw.trim().length === 0) continue;
       const cols = raw.split(',');
-      const organizationName = (cols[orgIdx] || '').trim();
+      const organizationName = (cols[orgNameIdx] || '').trim();
+      const organizationSlug = (cols[orgSlugIdx] || '').trim();
       const employeeEmail = (cols[empIdx] || '').trim();
       const managerEmail = (cols[mgrIdx] || '').trim();
 
-      if (!organizationName || !employeeEmail || !managerEmail) {
+      if (!organizationName || !organizationSlug || !employeeEmail || !managerEmail) {
         errors.push({ row: i + 1, employeeEmail, managerEmail, error: 'Missing required fields' });
         continue;
       }
 
       try {
-        const orgId = await getOrgIdByName(organizationName);
+        const orgId = await getOrgIdByNameAndSlug(organizationName, organizationSlug);
         if (!orgId) {
-          errors.push({ row: i + 1, employeeEmail, managerEmail, error: 'Organization not found' });
+          errors.push({ row: i + 1, employeeEmail, managerEmail, error: `Organization not found: ${organizationName} (${organizationSlug})` });
           continue;
         }
 
