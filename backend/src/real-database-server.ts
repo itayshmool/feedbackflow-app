@@ -52,7 +52,24 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: 'http://localhost:3006', // Frontend URL - allow credentials
+  origin: function(origin, callback) {
+    const allowedOrigins = [
+      'http://localhost:3006',
+      'http://localhost:3000',
+      'http://localhost:5173',
+      process.env.FRONTEND_URL,
+    ].filter(Boolean) as string[];
+    
+    // Allow requests with no origin (mobile apps, curl, etc)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`🚫 CORS blocked request from origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true // Enable cookies to be sent cross-origin
 }));
 app.use(express.json());
