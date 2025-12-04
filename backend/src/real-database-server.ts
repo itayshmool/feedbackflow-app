@@ -761,7 +761,7 @@ app.post('/api/v1/auth/login/google', async (req, res) => {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role || 'employee',
+          roles: [user.role || 'employee'],
           organizationId: user.organization_id,
           department: user.department,
         },
