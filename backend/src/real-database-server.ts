@@ -520,7 +520,15 @@ app.delete('/api/v1/admin/organizations/:id', authenticateToken, async (req, res
 // Authentication endpoints
 app.post('/api/v1/auth/login/mock', async (req, res) => {
   try {
-    // Mock authentication - accept any credentials
+    // Disable mock login in production for security
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({
+        success: false,
+        error: 'Demo login is disabled in production. Please use Google Sign-In.'
+      });
+    }
+
+    // Mock authentication - accept any credentials (development only)
     const { email, password } = req.body;
     
     if (!email || !password) {
@@ -697,6 +705,18 @@ app.post('/api/v1/auth/login/google', async (req, res) => {
     const email = payload.email;
     const name = payload.name || email.split('@')[0];
 
+    // Restrict to @wix.com organization in production
+    const allowedDomain = 'wix.com';
+    const emailDomain = email.split('@')[1]?.toLowerCase();
+    
+    if (process.env.NODE_ENV === 'production' && emailDomain !== allowedDomain) {
+      console.log(`Google login rejected: ${email} is not from @${allowedDomain}`);
+      return res.status(403).json({
+        success: false,
+        error: `Access restricted to @${allowedDomain} organization members only.`
+      });
+    }
+
     // Find or create user
     let user: any = null;
     try {
@@ -704,15 +724,15 @@ app.post('/api/v1/auth/login/google', async (req, res) => {
       user = userResult.rows[0];
 
       if (!user) {
-        // Create new user from Google account
+        // Create new user from Google account with default 'employee' role
         const insertResult = await query(
-          `INSERT INTO users (email, name, is_active, email_verified, created_at, updated_at)
-           VALUES ($1, $2, true, true, NOW(), NOW())
+          `INSERT INTO users (email, name, role, is_active, email_verified, created_at, updated_at)
+           VALUES ($1, $2, 'employee', true, true, NOW(), NOW())
            RETURNING *`,
           [email, name]
         );
         user = insertResult.rows[0];
-        console.log('Created new user from Google login:', email);
+        console.log('Created new user from Google login:', email, 'with role: employee');
       }
     } catch (dbError) {
       console.error('Database error during Google login:', dbError);

@@ -30,6 +30,9 @@ export default function LoginPage() {
   // Check if Google OAuth is configured
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
   const isGoogleOAuthEnabled = Boolean(googleClientId && googleClientId.trim() !== '')
+  
+  // Check if we're in production (hide demo login in production)
+  const isProduction = import.meta.env.PROD
 
   const from = location.state?.from?.pathname || '/dashboard'
 
@@ -99,130 +102,165 @@ export default function LoginPage() {
             Sign in to FeedbackFlow
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Enter your credentials to access your account
+            {isProduction 
+              ? 'Sign in with your Wix Google account'
+              : 'Enter your credentials to access your account'
+            }
           </p>
         </div>
 
         <Card>
           <CardHeader>
-            <h3 className="text-lg font-medium text-gray-900">Login</h3>
+            <h3 className="text-lg font-medium text-gray-900">
+              {isProduction ? 'Wix Organization Login' : 'Login'}
+            </h3>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              <Input
-                {...register('email')}
-                type="email"
-                label="Email address"
-                placeholder="Enter your email"
-                leftIcon={<Mail className="h-4 w-4" />}
-                error={errors.email?.message}
-                autoComplete="email"
-              />
+            {/* Production: Google-only login */}
+            {isProduction ? (
+              <div className="space-y-6">
+                {isGoogleOAuthEnabled ? (
+                  <div>
+                    <p className="text-sm text-gray-600 mb-4 text-center">
+                      Please sign in with your @wix.com Google account
+                    </p>
+                    <GoogleLogin
+                      onSuccess={handleGoogleSuccess}
+                      onError={handleGoogleError}
+                      useOneTap={false}
+                      theme="outline"
+                      size="large"
+                      text="signin_with"
+                      shape="rectangular"
+                      width="100%"
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center text-red-600">
+                    Google OAuth is not configured. Please contact your administrator.
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Development: Full login options */
+              <>
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                  <Input
+                    {...register('email')}
+                    type="email"
+                    label="Email address"
+                    placeholder="Enter your email"
+                    leftIcon={<Mail className="h-4 w-4" />}
+                    error={errors.email?.message}
+                    autoComplete="email"
+                  />
 
-              <Input
-                {...register('password')}
-                type={showPassword ? 'text' : 'password'}
-                label="Password"
-                placeholder="Enter your password"
-                leftIcon={<Lock className="h-4 w-4" />}
-                rightIcon={
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="text-gray-400 hover:text-gray-600"
+                  <Input
+                    {...register('password')}
+                    type={showPassword ? 'text' : 'password'}
+                    label="Password"
+                    placeholder="Enter your password"
+                    leftIcon={<Lock className="h-4 w-4" />}
+                    rightIcon={
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    }
+                    error={errors.password?.message}
+                    autoComplete="current-password"
+                  />
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <input
+                        id="remember-me"
+                        name="remember-me"
+                        type="checkbox"
+                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                        Remember me
+                      </label>
+                    </div>
+
+                    <div className="text-sm">
+                      <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
+                        Forgot your password?
+                      </a>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    loading={isSubmitting}
+                    disabled={isSubmitting}
                   >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                }
-                error={errors.password?.message}
-                autoComplete="current-password"
-              />
+                    Sign in
+                  </Button>
+                </form>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <input
-                    id="remember-me"
-                    name="remember-me"
-                    type="checkbox"
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                    Remember me
-                  </label>
-                </div>
+                {isGoogleOAuthEnabled && (
+                  <div className="mt-6">
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-300" />
+                      </div>
+                      <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                      </div>
+                    </div>
 
-                <div className="text-sm">
-                  <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
-                    Forgot your password?
-                  </a>
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full"
-                loading={isSubmitting}
-                disabled={isSubmitting}
-              >
-                Sign in
-              </Button>
-            </form>
-
-            {isGoogleOAuthEnabled && (
-              <div className="mt-6">
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-300" />
+                    <div className="mt-4">
+                      <GoogleLogin
+                        onSuccess={handleGoogleSuccess}
+                        onError={handleGoogleError}
+                        useOneTap={false}
+                        theme="outline"
+                        size="large"
+                        text="signin_with"
+                        shape="rectangular"
+                        width="100%"
+                      />
+                    </div>
                   </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                )}
+
+                <div className="mt-6">
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300" />
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white text-gray-500">Demo credentials (dev only)</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 space-y-2">
+                    <div className="text-sm text-gray-600">
+                      <strong>Admin:</strong> itays@wix.com
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <strong>Manager:</strong> efratr@wix.com
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <strong>Employee:</strong> tovahc@wix.com
+                    </div>
+                    <div className="text-xs text-gray-500 mt-2">
+                      Use any password to login (mock authentication)
+                    </div>
                   </div>
                 </div>
-
-                <div className="mt-4">
-                  <GoogleLogin
-                    onSuccess={handleGoogleSuccess}
-                    onError={handleGoogleError}
-                    useOneTap={false}
-                    theme="outline"
-                    size="large"
-                    text="signin_with"
-                    shape="rectangular"
-                    width="100%"
-                  />
-                </div>
-              </div>
+              </>
             )}
-
-            <div className="mt-6">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Demo credentials</span>
-                </div>
-              </div>
-
-              <div className="mt-4 space-y-2">
-                <div className="text-sm text-gray-600">
-                  <strong>Admin:</strong> itays@wix.com
-                </div>
-                <div className="text-sm text-gray-600">
-                  <strong>Manager:</strong> efratr@wix.com
-                </div>
-                <div className="text-sm text-gray-600">
-                  <strong>Employee:</strong> tovahc@wix.com
-                </div>
-                <div className="text-xs text-gray-500 mt-2">
-                  Use any password to login (mock authentication)
-                </div>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>
