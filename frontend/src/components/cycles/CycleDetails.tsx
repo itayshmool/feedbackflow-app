@@ -1,7 +1,7 @@
 // frontend/src/components/cycles/CycleDetails.tsx
 
 import React, { useEffect, useState } from 'react';
-import { Calendar, Users, Settings, Edit, Play, Square, Archive, Trash2, X, UserPlus } from 'lucide-react';
+import { Calendar, Users, Settings, Edit, Square, Archive, Trash2, X, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
@@ -24,7 +24,6 @@ export const CycleDetails: React.FC<CycleDetailsProps> = ({ cycleId, onClose, on
     error,
     fetchCycle,
     fetchCycleParticipants,
-    activateCycle,
     closeCycle,
     deleteCycle,
     canDeleteCycle,
@@ -75,12 +74,6 @@ export const CycleDetails: React.FC<CycleDetailsProps> = ({ cycleId, onClose, on
         return 'Custom';
       default:
         return type;
-    }
-  };
-
-  const handleActivate = async () => {
-    if (currentCycle) {
-      await activateCycle(currentCycle.id);
     }
   };
 
@@ -342,15 +335,6 @@ export const CycleDetails: React.FC<CycleDetailsProps> = ({ cycleId, onClose, on
                   onClick={() => onEdit?.(currentCycle)}
                 >
                   Edit
-                </Button>
-              )}
-              {currentCycle.status === CycleStatus.DRAFT && (
-                <Button
-                  leftIcon={<Play className="h-4 w-4" />}
-                  onClick={handleActivate}
-                  disabled={isUpdating}
-                >
-                  Activate
                 </Button>
               )}
               {currentCycle.status === CycleStatus.ACTIVE && (

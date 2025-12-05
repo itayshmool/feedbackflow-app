@@ -5550,7 +5550,7 @@ app.post('/api/v1/cycles', authenticateToken, async (req, res) => {
       name,
       description,
       type,
-      'draft', // Default status
+      'active', // Cycles are created as active by default
       startDate,
       endDate,
       feedbackStartDate,
