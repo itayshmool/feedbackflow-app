@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
+import { api } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -57,20 +58,11 @@ export default function TeamFeedbackPage() {
   const fetchTeamFeedback = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/v1/team/feedback', {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch team feedback');
-      }
-
-      const data = await response.json();
-      setFeedback(data.data || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch team feedback');
+      const response = await api.get('/team/feedback');
+      setFeedback(response.data.data || []);
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.error || err?.message || 'Failed to fetch team feedback';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
