@@ -306,18 +306,18 @@ const UserBulkOperations: React.FC<UserBulkOperationsProps> = ({ onClose }) => {
                     <div className="p-4 bg-green-50 border border-green-200 rounded-md">
                       <h4 className="font-medium text-green-800 mb-2">Import Results</h4>
                       <div className="text-sm text-green-700">
-                        <p>Total: {bulkImportResult.totalProcessed}</p>
-                        <p>Successful: {bulkImportResult.totalSuccess}</p>
-                        <p>Failed: {bulkImportResult.totalErrors}</p>
+                        <p>Total: {(bulkImportResult as any).results?.total ?? bulkImportResult.totalProcessed ?? 0}</p>
+                        <p>Successful: {(bulkImportResult as any).results?.successful ?? bulkImportResult.totalSuccess ?? 0}</p>
+                        <p>Failed: {(bulkImportResult as any).results?.failed ?? bulkImportResult.totalErrors ?? 0}</p>
                       </div>
                     </div>
 
-                    {bulkImportResult.errors && bulkImportResult.errors.length > 0 && (
+                    {(((bulkImportResult as any).results?.errors?.length > 0) || (bulkImportResult.errors && bulkImportResult.errors.length > 0)) && (
                       <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md">
                         <h4 className="font-medium text-yellow-800 mb-2">Errors</h4>
                         <div className="text-sm text-yellow-700 space-y-1">
-                          {bulkImportResult.errors.map((error, index) => (
-                            <p key={index}>Row {index + 1}: {error.error}</p>
+                          {((bulkImportResult as any).results?.errors || bulkImportResult.errors || []).map((error: any, index: number) => (
+                            <p key={index}>Row {error.row || index + 1}: {error.error}</p>
                           ))}
                         </div>
                       </div>
