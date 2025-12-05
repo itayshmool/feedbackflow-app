@@ -4101,10 +4101,32 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
       queryParams.push(reviewType);
     }
 
-    // Add visibility restrictions
-    // Givers can see all their feedback (including drafts)
-    // Receivers can only see non-draft feedback
-    whereConditions.push(`(fr.giver_id = $1 OR (fr.recipient_id = $1 AND frr.status != 'draft'))`);
+    // Add visibility and status filtering
+    // - Drafts tab: only show user's own drafts (status='draft')
+    // - Given tab: show feedback user gave, excluding drafts
+    // - Received tab: show feedback user received, excluding drafts
+    // - All tab: show all non-draft feedback user is involved in
+    if (status === 'draft') {
+      // Explicitly requesting drafts - only show user's own drafts
+      whereConditions.push(`fr.giver_id = $1`);
+      whereConditions.push(`frr.status = 'draft'`);
+    } else if (fromUserId) {
+      // Viewing "given" feedback - exclude drafts unless status explicitly set
+      whereConditions.push(`frr.status != 'draft'`);
+    } else if (toUserId) {
+      // Viewing "received" feedback - exclude drafts
+      whereConditions.push(`frr.status != 'draft'`);
+    } else {
+      // General view - show all non-draft feedback user is involved in
+      whereConditions.push(`(fr.giver_id = $1 OR fr.recipient_id = $1)`);
+      whereConditions.push(`frr.status != 'draft'`);
+    }
+    
+    // Add explicit status filter if provided (and not 'draft' which is handled above)
+    if (status && status !== 'draft') {
+      whereConditions.push(`frr.status = $${++paramCount}`);
+      queryParams.push(status);
+    }
 
     // Query feedback from database
     const feedbackQuery = `
