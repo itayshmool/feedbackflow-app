@@ -16,9 +16,20 @@ export const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    // Cookies are sent automatically with withCredentials: true
-    // No manual token management needed
-    console.log('[API] Request to', config.url, '- Cookie will be sent automatically')
+    // Get token from localStorage (persisted by zustand)
+    // This ensures token is included even on initial page load before store hydrates
+    const storedAuth = localStorage.getItem('auth-storage')
+    if (storedAuth) {
+      try {
+        const { state } = JSON.parse(storedAuth)
+        if (state?.token) {
+          config.headers.Authorization = `Bearer ${state.token}`
+        }
+      } catch (e) {
+        console.error('[API] Failed to parse auth token from storage')
+      }
+    }
+    console.log('[API] Request to', config.url)
     return config
   },
   (error) => {
