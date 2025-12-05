@@ -103,26 +103,9 @@ app.get('/api/v1/health', (req, res) => {
   });
 });
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(process.cwd(), 'uploads', 'templates');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Configure multer for file uploads
+// Configure multer for template file uploads - use memory storage to store in database
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => {
-      cb(null, uploadsDir);
-    },
-    filename: (req, file, cb) => {
-      // Generate unique filename: timestamp-random-originalname
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      const ext = path.extname(file.originalname);
-      const name = path.basename(file.originalname, ext);
-      cb(null, `${name}-${uniqueSuffix}${ext}`);
-    }
-  }),
+  storage: multer.memoryStorage(), // Store in memory, then save to database
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
@@ -238,28 +221,32 @@ app.post('/api/v1/templates', authenticateToken, (req, res, next) => {
 
     // Determine file format from extension
     const fileFormat = path.extname(file.originalname).toLowerCase();
+    
+    // Store file content as base64 in database (for persistence on Render)
+    const fileContentBase64 = file.buffer.toString('base64');
 
-    // Insert template into database
+    // Insert template into database with file content
     const result = await query(`
       INSERT INTO templates (
         name, description, template_type, file_name, file_path, 
         file_size, file_mime_type, file_format, is_default, 
-        tags, created_by, organization_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        tags, created_by, organization_id, file_content
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *
     `, [
       name,
       description || '',
       templateType || 'peer',
       file.originalname,
-      file.path,
+      '', // file_path no longer used, content stored in database
       file.size,
       file.mimetype,
       fileFormat,
       isDefault === 'true' || isDefault === true,
       parsedTags,
       dbUser.id,
-      dbUser.organization_id
+      dbUser.organization_id,
+      fileContentBase64
     ]);
 
     const newTemplate = result.rows[0];
@@ -314,9 +301,9 @@ app.get('/api/v1/templates/:id/download', authenticateToken, async (req, res) =>
     const { id } = req.params;
     const user = (req as any).user;
 
-    // Get template info from database
+    // Get template info and content from database
     const result = await query(`
-      SELECT file_path, file_name, file_mime_type, download_count
+      SELECT file_name, file_mime_type, file_content, download_count
       FROM templates 
       WHERE id = $1 AND is_active = true
     `, [id]);
@@ -325,11 +312,11 @@ app.get('/api/v1/templates/:id/download', authenticateToken, async (req, res) =>
       return res.status(404).json({ success: false, error: 'Template not found' });
     }
 
-    const { file_path, file_name, file_mime_type, download_count } = result.rows[0];
+    const { file_name, file_mime_type, file_content } = result.rows[0];
 
-    // Check if file exists
-    if (!fs.existsSync(file_path)) {
-      return res.status(404).json({ success: false, error: 'File not found on disk' });
+    // Check if file content exists in database
+    if (!file_content) {
+      return res.status(404).json({ success: false, error: 'File content not found. Template may need to be re-uploaded.' });
     }
 
     // Increment download count
@@ -339,12 +326,16 @@ app.get('/api/v1/templates/:id/download', authenticateToken, async (req, res) =>
       WHERE id = $1
     `, [id]);
 
+    // Decode base64 content
+    const fileBuffer = Buffer.from(file_content, 'base64');
+
     // Set headers for file download
     res.setHeader('Content-Type', file_mime_type);
     res.setHeader('Content-Disposition', `attachment; filename="${file_name}"`);
+    res.setHeader('Content-Length', fileBuffer.length);
     
-    // Send the actual file
-    res.sendFile(path.resolve(file_path));
+    // Send the file buffer
+    res.send(fileBuffer);
   } catch (error) {
     console.error('Error downloading template:', error);
     res.status(500).json({ success: false, error: 'Failed to download template' });
