@@ -201,7 +201,19 @@ app.post('/api/v1/templates', authenticateToken, upload.single('file'), async (r
     }
 
     const { name, description, templateType, isDefault, tags } = req.body;
-    const user = (req as any).user;
+    const authUser = (req as any).user;
+
+    // Fetch user's id and organizationId from database (JWT may not have organizationId)
+    const userResult = await query(
+      'SELECT id, organization_id FROM users WHERE email = $1',
+      [authUser.email]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.status(400).json({ success: false, error: 'User not found in database' });
+    }
+    
+    const dbUser = userResult.rows[0];
 
     // Parse tags if provided as JSON string
     let parsedTags = [];
@@ -235,8 +247,8 @@ app.post('/api/v1/templates', authenticateToken, upload.single('file'), async (r
       fileFormat,
       isDefault === 'true' || isDefault === true,
       parsedTags,
-      user.id,
-      user.organizationId
+      dbUser.id,
+      dbUser.organization_id
     ]);
 
     const newTemplate = result.rows[0];
