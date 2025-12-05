@@ -4835,6 +4835,16 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
       });
     }
     
+    // Build the structured content object for update
+    const structuredContent = typeof updates.content === 'object' ? {
+      overallComment: updates.content.overallComment || '',
+      strengths: updates.content.strengths || [],
+      areasForImprovement: updates.content.areasForImprovement || [],
+      specificExamples: updates.content.specificExamples || [],
+      recommendations: updates.content.recommendations || [],
+      confidential: updates.content.confidential || false
+    } : updates.content;
+    
     // Update the feedback in database
     const updateQuery = `
       UPDATE feedback_responses 
@@ -4844,7 +4854,7 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
     `;
     
     const updateResult = await query(updateQuery, [
-      updates.content?.overallComment || updates.content || '',
+      typeof structuredContent === 'object' ? JSON.stringify(structuredContent) : structuredContent,
       updates.rating || updates.ratings?.[0]?.score || null,
       id
     ]);
