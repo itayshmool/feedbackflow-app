@@ -4054,8 +4054,8 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
     
     // Build WHERE conditions for database query
     const whereConditions = ['fr.is_approved = true'];
-    const queryParams = [currentUserId];
-    let paramCount = 1;
+    const queryParams: any[] = [];
+    let paramCount = 0;
 
     // Add filters
     if (toUserId) {
@@ -4108,7 +4108,8 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
     // - All tab: show all non-draft feedback user is involved in
     if (status === 'draft') {
       // Explicitly requesting drafts - only show user's own drafts
-      whereConditions.push(`fr.giver_id = $1`);
+      whereConditions.push(`fr.giver_id = $${++paramCount}`);
+      queryParams.push(currentUserId);
       whereConditions.push(`frr.status = 'draft'`);
     } else if (fromUserId) {
       // Viewing "given" feedback - exclude drafts unless status explicitly set
@@ -4118,7 +4119,8 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
       whereConditions.push(`frr.status != 'draft'`);
     } else {
       // General view - show all non-draft feedback user is involved in
-      whereConditions.push(`(fr.giver_id = $1 OR fr.recipient_id = $1)`);
+      whereConditions.push(`(fr.giver_id = $${++paramCount} OR fr.recipient_id = $${paramCount})`);
+      queryParams.push(currentUserId);
       whereConditions.push(`frr.status != 'draft'`);
     }
     
