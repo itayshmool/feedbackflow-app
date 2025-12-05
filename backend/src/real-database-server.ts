@@ -5018,12 +5018,97 @@ app.post('/api/v1/feedback/:id/submit', authenticateToken, async (req, res) => {
       return res.status(404).json({ success: false, error: 'Feedback not found' });
     }
     
+    // Fetch the complete updated feedback with all related data
+    const fullFeedbackQuery = `
+      SELECT 
+        fr.id,
+        fr.request_id as "requestId",
+        fr.giver_id as "giverId",
+        fr.recipient_id as "recipientId",
+        fr.cycle_id as "cycleId",
+        fr.content,
+        fr.rating,
+        fr.is_anonymous as "isAnonymous",
+        fr.is_approved as "isApproved",
+        fr.created_at as "createdAt",
+        fr.updated_at as "updatedAt",
+        frr.feedback_type as "reviewType",
+        frr.status,
+        frr.message,
+        giver.name as "giverName",
+        giver.email as "giverEmail",
+        recipient.name as "recipientName",
+        recipient.email as "recipientEmail",
+        fc.name as "cycleName"
+      FROM feedback_responses fr
+      JOIN feedback_requests frr ON fr.request_id = frr.id
+      LEFT JOIN users giver ON fr.giver_id = giver.id
+      LEFT JOIN users recipient ON fr.recipient_id = recipient.id
+      LEFT JOIN feedback_cycles fc ON fr.cycle_id = fc.id
+      WHERE fr.id = $1
+    `;
+    
+    const fullResult = await query(fullFeedbackQuery, [id]);
+    const row = fullResult.rows[0];
+    
+    // Parse content
+    let parsedContent = {};
+    try {
+      parsedContent = typeof row.content === 'string' ? JSON.parse(row.content) : (row.content || {});
+    } catch (e) {
+      parsedContent = { overallComment: row.content || '' };
+    }
+    
     res.json({ 
       success: true, 
       data: {
-        id: id,
-        status: 'submitted',
-        updatedAt: updateResult.rows[0].updated_at
+        id: row.id,
+        requestId: row.requestId,
+        cycleId: row.cycleId,
+        cycleName: row.cycleName,
+        fromUserId: row.giverId,
+        fromUserEmail: row.giverEmail,
+        toUserId: row.recipientId,
+        toUserEmail: row.recipientEmail,
+        fromUser: {
+          id: row.giverId,
+          name: row.giverName,
+          email: row.giverEmail
+        },
+        toUser: {
+          id: row.recipientId,
+          name: row.recipientName,
+          email: row.recipientEmail
+        },
+        reviewType: row.reviewType,
+        status: row.status,
+        content: {
+          id: `content-${row.id}`,
+          feedbackId: row.id,
+          overallComment: parsedContent.overallComment || '',
+          strengths: parsedContent.strengths || [],
+          areasForImprovement: parsedContent.areasForImprovement || [],
+          specificExamples: parsedContent.specificExamples || [],
+          recommendations: parsedContent.recommendations || [],
+          confidential: parsedContent.confidential || false,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt
+        },
+        ratings: row.rating ? [{
+          id: `rating-${row.id}`,
+          feedbackId: row.id,
+          category: 'overall',
+          score: row.rating,
+          maxScore: 5,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt
+        }] : [],
+        comments: [],
+        goals: [],
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        isAnonymous: row.isAnonymous,
+        isApproved: row.isApproved
       }
     });
   } catch (error) {
@@ -5088,12 +5173,97 @@ app.post('/api/v1/feedback/:id/complete', authenticateToken, async (req, res) =>
       return res.status(404).json({ success: false, error: 'Feedback not found' });
     }
     
+    // Fetch the complete updated feedback with all related data
+    const fullFeedbackQuery = `
+      SELECT 
+        fr.id,
+        fr.request_id as "requestId",
+        fr.giver_id as "giverId",
+        fr.recipient_id as "recipientId",
+        fr.cycle_id as "cycleId",
+        fr.content,
+        fr.rating,
+        fr.is_anonymous as "isAnonymous",
+        fr.is_approved as "isApproved",
+        fr.created_at as "createdAt",
+        fr.updated_at as "updatedAt",
+        frr.feedback_type as "reviewType",
+        frr.status,
+        frr.message,
+        giver.name as "giverName",
+        giver.email as "giverEmail",
+        recipient.name as "recipientName",
+        recipient.email as "recipientEmail",
+        fc.name as "cycleName"
+      FROM feedback_responses fr
+      JOIN feedback_requests frr ON fr.request_id = frr.id
+      LEFT JOIN users giver ON fr.giver_id = giver.id
+      LEFT JOIN users recipient ON fr.recipient_id = recipient.id
+      LEFT JOIN feedback_cycles fc ON fr.cycle_id = fc.id
+      WHERE fr.id = $1
+    `;
+    
+    const fullResult = await query(fullFeedbackQuery, [id]);
+    const row = fullResult.rows[0];
+    
+    // Parse content
+    let parsedContent = {};
+    try {
+      parsedContent = typeof row.content === 'string' ? JSON.parse(row.content) : (row.content || {});
+    } catch (e) {
+      parsedContent = { overallComment: row.content || '' };
+    }
+    
     res.json({ 
       success: true, 
       data: {
-        id: id,
-        status: 'completed',
-        updatedAt: updateResult.rows[0].updated_at
+        id: row.id,
+        requestId: row.requestId,
+        cycleId: row.cycleId,
+        cycleName: row.cycleName,
+        fromUserId: row.giverId,
+        fromUserEmail: row.giverEmail,
+        toUserId: row.recipientId,
+        toUserEmail: row.recipientEmail,
+        fromUser: {
+          id: row.giverId,
+          name: row.giverName,
+          email: row.giverEmail
+        },
+        toUser: {
+          id: row.recipientId,
+          name: row.recipientName,
+          email: row.recipientEmail
+        },
+        reviewType: row.reviewType,
+        status: row.status,
+        content: {
+          id: `content-${row.id}`,
+          feedbackId: row.id,
+          overallComment: parsedContent.overallComment || '',
+          strengths: parsedContent.strengths || [],
+          areasForImprovement: parsedContent.areasForImprovement || [],
+          specificExamples: parsedContent.specificExamples || [],
+          recommendations: parsedContent.recommendations || [],
+          confidential: parsedContent.confidential || false,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt
+        },
+        ratings: row.rating ? [{
+          id: `rating-${row.id}`,
+          feedbackId: row.id,
+          category: 'overall',
+          score: row.rating,
+          maxScore: 5,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt
+        }] : [],
+        comments: [],
+        goals: [],
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        isAnonymous: row.isAnonymous,
+        isApproved: row.isApproved
       }
     });
   } catch (error) {
