@@ -8,7 +8,11 @@ import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 // import { cn } from '@/lib/utils'
 
-export default function Header() {
+interface HeaderProps {
+  onMenuToggle?: () => void
+}
+
+export default function Header({ onMenuToggle }: HeaderProps) {
   const { user, logout } = useAuthStore()
   const [showUserMenu, setShowUserMenu] = useState(false)
 
@@ -21,29 +25,36 @@ export default function Header() {
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Left side - Search */}
-          <div className="flex-1 max-w-lg">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
-              </div>
-              <Input
-                type="text"
-                placeholder="Search..."
-                className="pl-10 w-full"
-              />
-            </div>
-          </div>
-
-          {/* Right side - Actions */}
-          <div className="flex items-center space-x-4">
+          {/* Left side - Mobile menu button + Search */}
+          <div className="flex items-center gap-3 flex-1">
             {/* Mobile menu button */}
             <Button
               variant="ghost"
               size="sm"
-              className="md:hidden"
-              leftIcon={<Menu className="h-5 w-5" />}
-            />
+              className="md:hidden p-2 -ml-2"
+              onClick={onMenuToggle}
+              aria-label="Open menu"
+            >
+              <Menu className="h-6 w-6" />
+            </Button>
+            
+            {/* Search - hidden on small mobile, visible on larger screens */}
+            <div className="hidden sm:block flex-1 max-w-lg">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-5 w-5 text-gray-400" />
+                </div>
+                <Input
+                  type="text"
+                  placeholder="Search..."
+                  className="pl-10 w-full"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Right side - Actions */}
+          <div className="flex items-center space-x-2 sm:space-x-4">
 
             {/* Notifications */}
             <NotificationBell />
