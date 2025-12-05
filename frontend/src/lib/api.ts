@@ -18,18 +18,36 @@ api.interceptors.request.use(
   (config) => {
     // Get token from localStorage (persisted by zustand)
     // This ensures token is included even on initial page load before store hydrates
-    const storedAuth = localStorage.getItem('auth-storage')
-    if (storedAuth) {
-      try {
-        const { state } = JSON.parse(storedAuth)
-        if (state?.token) {
-          config.headers.Authorization = `Bearer ${state.token}`
+    let token: string | null = null
+    
+    // First check if token is already set in defaults (from authStore.setApiToken)
+    const existingAuth = api.defaults.headers.common['Authorization']
+    if (existingAuth && typeof existingAuth === 'string' && existingAuth.startsWith('Bearer ')) {
+      token = existingAuth.slice(7)
+    }
+    
+    // If no token in defaults, try localStorage
+    if (!token) {
+      const storedAuth = localStorage.getItem('auth-storage')
+      if (storedAuth) {
+        try {
+          const parsed = JSON.parse(storedAuth)
+          // Handle both zustand persist formats: { state: { token } } or direct { token }
+          token = parsed?.state?.token || parsed?.token || null
+        } catch (e) {
+          console.error('[API] Failed to parse auth token from storage:', e)
         }
-      } catch (e) {
-        console.error('[API] Failed to parse auth token from storage')
       }
     }
-    console.log('[API] Request to', config.url)
+    
+    // Set the Authorization header if we have a token
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    } else {
+      console.warn('[API] No auth token available for request to:', config.url)
+    }
+    
+    console.log('[API] Request to', config.url, '- Auth:', token ? 'present' : 'missing')
     return config
   },
   (error) => {
@@ -184,6 +202,22 @@ export const apiHelpers = {
     hasPrev: boolean
   }> =>
     api.get(endpoint, { params }).then(res => res.data),
+}
+
+// Initialize token from localStorage on module load
+// This ensures the token is set even before React components mount
+try {
+  const storedAuth = localStorage.getItem('auth-storage')
+  if (storedAuth) {
+    const parsed = JSON.parse(storedAuth)
+    const token = parsed?.state?.token || parsed?.token
+    if (token) {
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+      console.log('[API] Initialized auth token from localStorage')
+    }
+  }
+} catch (e) {
+  console.error('[API] Failed to initialize auth token:', e)
 }
 
 export default api
