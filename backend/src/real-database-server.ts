@@ -4296,10 +4296,11 @@ app.get('/api/v1/feedback/stats', authenticateToken, async (req, res) => {
     const currentUserId = userResult.rows[0].id;
     
     // Query feedback statistics from database
+    // Note: "given" excludes drafts to match the list view
     const statsQuery = `
       WITH feedback_stats AS (
         SELECT 
-          COUNT(CASE WHEN fr.giver_id = $1 THEN 1 END) as given,
+          COUNT(CASE WHEN fr.giver_id = $1 AND frr.status != 'draft' THEN 1 END) as given,
           COUNT(CASE WHEN fr.recipient_id = $1 AND frr.status != 'draft' THEN 1 END) as received,
           COUNT(CASE WHEN fr.recipient_id = $1 AND frr.status = 'submitted' THEN 1 END) as pending,
           COUNT(CASE WHEN fr.giver_id = $1 AND frr.status = 'draft' THEN 1 END) as drafts,
