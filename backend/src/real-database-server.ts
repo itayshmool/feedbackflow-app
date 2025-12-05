@@ -140,6 +140,28 @@ const upload = multer({
   }
 });
 
+// CSV upload configuration for bulk imports
+const csvUpload = multer({
+  storage: multer.memoryStorage(), // Store in memory for CSV parsing
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit for CSV
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'text/csv',
+      'application/vnd.ms-excel',
+      'text/plain', // CSV files sometimes detected as text/plain
+      'application/octet-stream' // Generic binary
+    ];
+    const isCsvExtension = file.originalname.toLowerCase().endsWith('.csv');
+    if (allowedTypes.includes(file.mimetype) || isCsvExtension) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only CSV files are allowed for bulk import'), false);
+    }
+  }
+});
+
 // Templates API endpoints
 app.get('/api/v1/templates', authenticateToken, async (req, res) => {
   try {
@@ -1366,7 +1388,7 @@ app.get('/api/v1/admin/bulk/template', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/v1/admin/bulk/upload', authenticateToken, upload.single('file'), async (req, res) => {
+app.post('/api/v1/admin/bulk/upload', authenticateToken, csvUpload.single('file'), async (req, res) => {
   try {
     const file = (req as any).file;
     
