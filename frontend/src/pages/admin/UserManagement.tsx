@@ -26,6 +26,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+import { ScrollableTable } from '@/components/ui/ScrollableTable';
 
 export const UserManagement: React.FC = () => {
   const {
@@ -212,60 +213,37 @@ export const UserManagement: React.FC = () => {
       <div className="mt-6">
         {activeTab === 'users' && (
           <div className="space-y-4">
-            {/* Search and Actions */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    placeholder="Search users..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-64"
-                  />
+            {/* Search and Actions - Responsive Layout */}
+            <div className="space-y-4">
+              {/* Action buttons - always on top on mobile */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={() => setShowBulkOperations(true)}
+                    variant="outline"
+                    className="flex items-center gap-2 flex-1 sm:flex-none justify-center"
+                  >
+                    <FileText className="h-4 w-4" />
+                    <span className="hidden sm:inline">Bulk Operations</span>
+                    <span className="sm:hidden">Bulk</span>
+                  </Button>
+                  
+                  <Button
+                    onClick={() => setShowCreateModal(true)}
+                    className="flex items-center gap-2 flex-1 sm:flex-none justify-center"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span className="hidden sm:inline">New User</span>
+                    <span className="sm:hidden">Add</span>
+                  </Button>
                 </div>
                 
-                <Select
-                  value={organizationFilter}
-                  onChange={(e) => setOrganizationFilter(e.target.value)}
-                  className="w-48"
-                >
-                  <option value="">All Organizations</option>
-                  {organizations.map((org) => (
-                    <option key={org.id} value={org.id}>
-                      {org.name} (@{org.slug})
-                    </option>
-                  ))}
-                </Select>
-
-                <Select
-                  value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value)}
-                  className="w-40"
-                >
-                  <option value="">All Roles</option>
-                  <option value="super_admin">Super Admin</option>
-                  <option value="admin">Admin</option>
-                  <option value="manager">Manager</option>
-                  <option value="employee">Employee</option>
-                </Select>
-
-                <Select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-40"
-                >
-                  <option value="active">Active Users</option>
-                  <option value="inactive">Inactive Users</option>
-                  <option value="">All Users</option>
-                </Select>
-
                 {(organizationFilter || searchTerm || roleFilter || (statusFilter && statusFilter !== 'active')) && (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleClearFilters}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 w-full sm:w-auto justify-center"
                   >
                     <X className="w-4 h-4" />
                     Clear Filters
@@ -273,30 +251,61 @@ export const UserManagement: React.FC = () => {
                 )}
               </div>
               
-              <div className="flex items-center space-x-2">
-                <Button
-                  onClick={() => setShowBulkOperations(true)}
-                  variant="outline"
-                  className="flex items-center space-x-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  <span>Bulk Operations</span>
-                </Button>
+              {/* Filters - stack on mobile, row on desktop */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1 sm:max-w-xs">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search users..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 w-full"
+                  />
+                </div>
                 
-                <Button
-                  onClick={() => setShowCreateModal(true)}
-                  className="flex items-center space-x-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>New User</span>
-                </Button>
+                <div className="grid grid-cols-2 sm:flex gap-3 sm:gap-2">
+                  <Select
+                    value={organizationFilter}
+                    onChange={(e) => setOrganizationFilter(e.target.value)}
+                    className="w-full sm:w-44"
+                  >
+                    <option value="">All Organizations</option>
+                    {organizations.map((org) => (
+                      <option key={org.id} value={org.id}>
+                        {org.name} (@{org.slug})
+                      </option>
+                    ))}
+                  </Select>
+
+                  <Select
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value)}
+                    className="w-full sm:w-36"
+                  >
+                    <option value="">All Roles</option>
+                    <option value="super_admin">Super Admin</option>
+                    <option value="admin">Admin</option>
+                    <option value="manager">Manager</option>
+                    <option value="employee">Employee</option>
+                  </Select>
+
+                  <Select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full sm:w-36 col-span-2 sm:col-span-1"
+                  >
+                    <option value="active">Active Users</option>
+                    <option value="inactive">Inactive Users</option>
+                    <option value="">All Users</option>
+                  </Select>
+                </div>
               </div>
             </div>
 
             {/* Users Table */}
             <Card>
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              <ScrollableTable>
+                <table className="w-full min-w-[800px]">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left">
@@ -443,87 +452,83 @@ export const UserManagement: React.FC = () => {
                     )}
                   </tbody>
                 </table>
-              </div>
+              </ScrollableTable>
             </Card>
 
             {/* Pagination Controls */}
             {pagination && pagination.total > 0 && (
-              <div className="flex items-center justify-between bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-700">
-                      Show{' '}
-                      <Select
-                        value={pageSize.toString()}
-                        onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                        className="inline-block w-16 mx-1"
-                      >
-                        <option value="5">5</option>
-                        <option value="10">10</option>
-                        <option value="25">25</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
-                      </Select>
-                      {' '}of {pagination.total} users
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-700">
-                      Page {currentPage} of {Math.ceil(pagination.total / pageSize)}
-                    </span>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white px-4 py-3 border-t border-gray-200">
+                <div className="flex items-center gap-2 text-sm text-gray-700">
+                  <span className="hidden sm:inline">Show</span>
+                  <Select
+                    value={pageSize.toString()}
+                    onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                    className="w-16"
+                  >
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                  </Select>
+                  <span>of {pagination.total} users</span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-700 hidden sm:inline">
+                    Page {currentPage} of {Math.ceil(pagination.total / pageSize)}
+                  </span>
                     
-                    <div className="flex items-center space-x-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage <= 1}
-                        className="p-1"
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage <= 1}
+                      className="p-2"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    
+                    {/* Page numbers - show fewer on mobile */}
+                    {(() => {
+                      const totalPages = Math.ceil(pagination.total / pageSize);
+                      const pages = [];
+                      const maxVisiblePages = window.innerWidth < 640 ? 3 : 5;
                       
-                      {/* Page numbers */}
-                      {(() => {
-                        const totalPages = Math.ceil(pagination.total / pageSize);
-                        const pages = [];
-                        const maxVisiblePages = 5;
-                        
-                        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-                        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-                        
-                        if (endPage - startPage + 1 < maxVisiblePages) {
-                          startPage = Math.max(1, endPage - maxVisiblePages + 1);
-                        }
-                        
-                        for (let i = startPage; i <= endPage; i++) {
-                          pages.push(
-                            <Button
-                              key={i}
-                              variant={i === currentPage ? "primary" : "outline"}
-                              size="sm"
-                              onClick={() => handlePageChange(i)}
-                              className="w-8 h-8 p-0"
-                            >
-                              {i}
-                            </Button>
-                          );
-                        }
-                        
-                        return pages;
-                      })()}
+                      let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+                      let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
                       
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage >= Math.ceil(pagination.total / pageSize)}
-                        className="p-1"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
+                      if (endPage - startPage + 1 < maxVisiblePages) {
+                        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                      }
+                      
+                      for (let i = startPage; i <= endPage; i++) {
+                        pages.push(
+                          <Button
+                            key={i}
+                            variant={i === currentPage ? "primary" : "outline"}
+                            size="sm"
+                            onClick={() => handlePageChange(i)}
+                            className="w-8 h-8 p-0 min-w-[2rem]"
+                          >
+                            {i}
+                          </Button>
+                        );
+                      }
+                      
+                      return pages;
+                    })()}
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage >= Math.ceil(pagination.total / pageSize)}
+                      className="p-2"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </div>

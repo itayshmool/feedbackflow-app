@@ -232,28 +232,33 @@ const HierarchyManagement: React.FC = () => {
 
   const renderHierarchyNode = (node: any, level: number = 0) => {
     const isExpanded = expandedNodeIds.has(node.id);
+    // Limit indentation on mobile to prevent overflow
+    const mobileLevel = Math.min(level, 3);
     return (
-      <div key={node.id} className="ml-4">
-        <div className="flex items-center space-x-3 p-3 bg-white border border-gray-200 rounded-lg mb-2">
-          <div className="flex items-center space-x-2">
-            {Array.from({ length: level }).map((_, i) => (
-              <div key={i} className="w-4 h-px bg-gray-300" />
-            ))}
+      <div key={node.id} style={{ marginLeft: `${mobileLevel * 12}px` }} className="sm:ml-4">
+        <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-white border border-gray-200 rounded-lg mb-2">
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+            {/* Hide level indicators on mobile */}
+            <div className="hidden sm:flex items-center gap-1">
+              {Array.from({ length: level }).map((_, i) => (
+                <div key={i} className="w-4 h-px bg-gray-300" />
+              ))}
+            </div>
             <button
               type="button"
               onClick={() => toggleNode(node.id)}
-              className="p-0.5 rounded hover:bg-gray-100 focus:outline-none"
+              className="p-1 rounded hover:bg-gray-100 focus:outline-none touch-manipulation"
               aria-label={isExpanded ? 'Collapse' : 'Expand'}
             >
               {isExpanded ? (
-                <ChevronDown className="h-4 w-4 text-gray-600" />
+                <ChevronDown className="h-5 w-5 sm:h-4 sm:w-4 text-gray-600" />
               ) : (
-                <ChevronRight className="h-4 w-4 text-gray-600" />
+                <ChevronRight className="h-5 w-5 sm:h-4 sm:w-4 text-gray-600" />
               )}
             </button>
-            <div className="w-2 h-2 bg-blue-500 rounded-full" />
+            <div className="w-2 h-2 bg-blue-500 rounded-full hidden sm:block" />
           </div>
-          <Avatar className="h-8 w-8">
+          <Avatar className="h-8 w-8 flex-shrink-0">
             <AvatarImage 
               src={node.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${node.name}`} 
               alt={node.name} 
@@ -262,18 +267,18 @@ const HierarchyManagement: React.FC = () => {
               {node.name ? node.name.charAt(0).toUpperCase() : '?'}
             </AvatarFallback>
           </Avatar>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-gray-900">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900 truncate">
               {node.name || 'Unknown'}
               {node.isManager && node.employeeCount !== undefined && node.employeeCount > 0 && (
                 <span className="text-gray-500 ml-1">({node.employeeCount})</span>
               )}
             </p>
-            <p className="text-xs text-gray-500">{node.position}</p>
+            <p className="text-xs text-gray-500 truncate">{node.position}</p>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center flex-shrink-0">
             {node.isManager && (
-              <Badge variant="success">Manager</Badge>
+              <Badge variant="success" className="text-xs">Manager</Badge>
             )}
           </div>
         </div>
@@ -293,28 +298,28 @@ const HierarchyManagement: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-          <TreePine className="h-6 w-6 mr-2" />
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center">
+          <TreePine className="h-5 w-5 sm:h-6 sm:w-6 mr-2 flex-shrink-0" />
           Organizational Hierarchy
         </h1>
-        <p className="text-gray-600 mt-1">
+        <p className="text-sm sm:text-base text-gray-600 mt-1">
           Manage the organizational structure and reporting relationships
         </p>
       </div>
 
       {/* Organization Selector */}
       <Card className="p-4 mb-6">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <Building className="h-5 w-5 text-gray-500" />
-            <label className="text-sm font-medium text-gray-700">Organization:</label>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-2">
+            <Building className="h-5 w-5 text-gray-500 flex-shrink-0" />
+            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Organization:</label>
           </div>
           <Select
             value={selectedOrganization}
             onChange={(e) => setSelectedOrganization(e.target.value)}
-            className="min-w-64"
+            className="w-full sm:min-w-64 sm:w-auto"
           >
             {organizations.map((org) => (
               <option key={org.id} value={org.id}>
@@ -345,55 +350,55 @@ const HierarchyManagement: React.FC = () => {
 
       {/* Statistics */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card className="p-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
+          <Card className="p-3 sm:p-4">
             <div className="flex items-center">
-              <Users className="h-8 w-8 text-blue-500 mr-3" />
-              <div>
-                <p className="text-sm font-medium text-gray-500">Total Employees</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalEmployees}</p>
+              <Users className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 mr-2 sm:mr-3 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-gray-500 truncate">Total Employees</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.totalEmployees}</p>
               </div>
             </div>
           </Card>
-          <Card className="p-4">
+          <Card className="p-3 sm:p-4">
             <div className="flex items-center">
-              <UserPlus className="h-8 w-8 text-green-500 mr-3" />
-              <div>
-                <p className="text-sm font-medium text-gray-500">Managers</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalManagers}</p>
+              <UserPlus className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 mr-2 sm:mr-3 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-gray-500">Managers</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.totalManagers}</p>
               </div>
             </div>
           </Card>
-          <Card className="p-4">
+          <Card className="p-3 sm:p-4">
             <div className="flex items-center">
-              <BarChart3 className="h-8 w-8 text-purple-500 mr-3" />
-              <div>
-                <p className="text-sm font-medium text-gray-500">Avg. Span</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.averageSpanOfControl ? stats.averageSpanOfControl.toFixed(1) : '0.0'}</p>
+              <BarChart3 className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 mr-2 sm:mr-3 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-gray-500">Avg. Span</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.averageSpanOfControl ? stats.averageSpanOfControl.toFixed(1) : '0.0'}</p>
               </div>
             </div>
           </Card>
-          <Card className="p-4">
+          <Card className="p-3 sm:p-4">
             <div className="flex items-center">
-              <TreePine className="h-8 w-8 text-orange-500 mr-3" />
-              <div>
-                <p className="text-sm font-medium text-gray-500">Max Depth</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.maxDepth}</p>
+              <TreePine className="h-6 w-6 sm:h-8 sm:w-8 text-orange-500 mr-2 sm:mr-3 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-gray-500">Max Depth</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.maxDepth}</p>
               </div>
             </div>
           </Card>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Hierarchy Tree */}
         <div className="lg:col-span-2">
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
+          <Card className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <h3 className="text-lg font-semibold">Organizational Tree</h3>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" onClick={expandAll}>Expand All</Button>
-                <Button size="sm" variant="outline" onClick={collapseAll}>Collapse All</Button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button size="sm" variant="outline" onClick={expandAll} className="flex-1 sm:flex-none">Expand All</Button>
+                <Button size="sm" variant="outline" onClick={collapseAll} className="flex-1 sm:flex-none">Collapse All</Button>
                 <Button
                   onClick={() => {
                     setShowAddForm(!showAddForm);

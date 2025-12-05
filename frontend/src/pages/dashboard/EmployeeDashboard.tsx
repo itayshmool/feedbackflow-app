@@ -42,21 +42,21 @@ const EmployeeDashboard: React.FC = () => {
   ];
 
   const renderOverview = () => (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-6 text-white shadow-lg transform transition-all duration-200 hover:shadow-xl">
-        <div className="flex justify-between items-start">
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-4 sm:p-6 text-white shadow-lg transform transition-all duration-200 hover:shadow-xl">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.name}!</h1>
-            <p className="text-indigo-100 text-lg">
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Welcome back, {user?.name}!</h1>
+            <p className="text-indigo-100 text-base sm:text-lg">
               Track your performance and growth
             </p>
           </div>
-          <Link to="/feedback/give">
+          <Link to="/feedback/give" className="w-full sm:w-auto">
             <Button
               variant="secondary"
               size="sm"
-              className="bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all duration-200"
+              className="bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all duration-200 w-full sm:w-auto justify-center"
             >
               <MessageSquare className="w-4 h-4 mr-2" />
               Give Feedback
@@ -66,16 +66,16 @@ const EmployeeDashboard: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         <Card className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center">
-              <div className="p-3 bg-blue-100 rounded-xl">
-                <MessageSquare className="h-6 w-6 text-blue-600" />
+              <div className="p-2 sm:p-3 bg-blue-100 rounded-xl flex-shrink-0">
+                <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Feedback Received</p>
-                <p className="text-2xl font-bold text-gray-900">
+              <div className="ml-3 sm:ml-4 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Feedback Received</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">
                   {isFeedbackLoading ? '...' : feedbackStats?.received || 0}
                 </p>
               </div>
