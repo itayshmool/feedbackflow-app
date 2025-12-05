@@ -193,7 +193,16 @@ app.get('/api/v1/templates', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/v1/templates', authenticateToken, upload.single('file'), async (req, res) => {
+app.post('/api/v1/templates', authenticateToken, (req, res, next) => {
+  // Wrap multer with error handling
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      console.error('Multer error:', err);
+      return res.status(400).json({ success: false, error: err.message || 'File upload error' });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     const file = req.file;
     if (!file) {
@@ -202,6 +211,8 @@ app.post('/api/v1/templates', authenticateToken, upload.single('file'), async (r
 
     const { name, description, templateType, isDefault, tags } = req.body;
     const authUser = (req as any).user;
+
+    console.log('Template upload - authUser:', authUser?.email);
 
     // Fetch user's id and organizationId from database (JWT may not have organizationId)
     const userResult = await query(
