@@ -5,6 +5,7 @@ import { useFeedbackStore } from '../../stores/feedbackStore';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { HierarchyNode } from '../../types/hierarchy.types';
 import { 
   Users, 
   TrendingUp, 
@@ -15,7 +16,11 @@ import {
   AlertCircle,
   UserPlus,
   Activity,
-  Target
+  Target,
+  X,
+  Mail,
+  Briefcase,
+  Building
 } from 'lucide-react';
 
 const ManagerDashboard: React.FC = () => {
@@ -28,6 +33,20 @@ const ManagerDashboard: React.FC = () => {
     fetchDirectReports,
     fetchHierarchyStats
   } = useHierarchyStore();
+  
+  // State for team member profile modal
+  const [selectedMember, setSelectedMember] = useState<HierarchyNode | null>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  
+  const openProfileModal = (member: HierarchyNode) => {
+    setSelectedMember(member);
+    setIsProfileModalOpen(true);
+  };
+  
+  const closeProfileModal = () => {
+    setIsProfileModalOpen(false);
+    setSelectedMember(null);
+  };
   const {
     feedbackStats,
     feedbackList: recentFeedback,
@@ -254,7 +273,12 @@ const ManagerDashboard: React.FC = () => {
                   </div>
                 </div>
                 <div className="mt-4 flex space-x-2">
-                  <Button size="sm" variant="outline" className="flex-1 hover:bg-blue-50 hover:border-blue-300 transition-colors duration-200">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="flex-1 hover:bg-blue-50 hover:border-blue-300 transition-colors duration-200"
+                    onClick={() => openProfileModal(member)}
+                  >
                     View Profile
                   </Button>
                   <Button size="sm" variant="outline" className="flex-1 hover:bg-green-50 hover:border-green-300 transition-colors duration-200">
@@ -350,6 +374,78 @@ const ManagerDashboard: React.FC = () => {
         {activeTab === 'team' && renderTeam()}
         {activeTab === 'analytics' && renderAnalytics()}
       </div>
+
+      {/* Team Member Profile Modal */}
+      {isProfileModalOpen && selectedMember && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+            onClick={closeProfileModal}
+          />
+          
+          {/* Modal */}
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full transform transition-all">
+              {/* Close button */}
+              <button
+                onClick={closeProfileModal}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Profile content */}
+              <div className="p-6">
+                {/* Avatar and name */}
+                <div className="text-center mb-6">
+                  <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <span className="text-3xl font-bold text-white">
+                      {selectedMember.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900">{selectedMember.name}</h2>
+                  {selectedMember.position && (
+                    <p className="text-gray-600">{selectedMember.position}</p>
+                  )}
+                </div>
+
+                {/* Info grid */}
+                <div className="space-y-4">
+                  <div className="flex items-center text-gray-600">
+                    <Mail className="w-5 h-5 mr-3 text-gray-400" />
+                    <span>{selectedMember.email}</span>
+                  </div>
+                  
+                  {selectedMember.department && (
+                    <div className="flex items-center text-gray-600">
+                      <Building className="w-5 h-5 mr-3 text-gray-400" />
+                      <span>{selectedMember.department}</span>
+                    </div>
+                  )}
+                  
+                  {selectedMember.position && (
+                    <div className="flex items-center text-gray-600">
+                      <Briefcase className="w-5 h-5 mr-3 text-gray-400" />
+                      <span>{selectedMember.position}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <Button 
+                    className="w-full"
+                    onClick={closeProfileModal}
+                  >
+                    Give Feedback
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
