@@ -2637,11 +2637,19 @@ app.get('/api/v1/profile', authenticateToken, async (req, res) => {
     }
     
     const user = result.rows[0];
+    
+    // Transform relative avatar URL to absolute URL
+    let avatarUrl = user.avatar_url;
+    if (avatarUrl && avatarUrl.startsWith('/api/')) {
+      const backendUrl = process.env.BACKEND_URL || 'https://feedbackflow-backend.onrender.com';
+      avatarUrl = `${backendUrl}${avatarUrl}`;
+    }
+    
     const profile = {
       id: user.id,
       email: user.email,
       name: user.name,
-      avatarUrl: user.avatar_url,
+      avatarUrl: avatarUrl,
       department: user.department,
       position: user.position,
       isActive: user.is_active,
@@ -2695,11 +2703,19 @@ app.put('/api/v1/profile', authenticateToken, async (req, res) => {
     }
     
     const user = result.rows[0];
+    
+    // Transform relative avatar URL to absolute URL
+    let avatarUrl = user.avatar_url;
+    if (avatarUrl && avatarUrl.startsWith('/api/')) {
+      const backendUrl = process.env.BACKEND_URL || 'https://feedbackflow-backend.onrender.com';
+      avatarUrl = `${backendUrl}${avatarUrl}`;
+    }
+    
     const profile = {
       id: user.id,
       email: user.email,
       name: user.name,
-      avatarUrl: user.avatar_url,
+      avatarUrl: avatarUrl,
       department: user.department,
       position: user.position,
       phone: user.phone,
