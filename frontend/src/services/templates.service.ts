@@ -33,9 +33,8 @@ export const templatesService = {
       formData.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
     });
     
-    const response = await api.post('/templates', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    // Don't set Content-Type manually - axios will set it with proper boundary for FormData
+    const response = await api.post('/templates', formData);
     return response.data;
   },
 

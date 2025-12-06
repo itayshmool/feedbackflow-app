@@ -71,7 +71,9 @@ app.use(cors({
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true // Enable cookies to be sent cross-origin
+  credentials: true, // Enable cookies to be sent cross-origin
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Disposition']
 }));
 app.use(express.json());
 app.use(cookieParser());
