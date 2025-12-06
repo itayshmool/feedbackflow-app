@@ -643,7 +643,7 @@ const ManagerDashboard: React.FC = () => {
         </div>
         <Button
           onClick={fetchTeamInsights}
-          disabled={isInsightsLoading || (directReports.length === 0) || ((feedbackStats?.given || 0) + (feedbackStats?.received || 0) < 1 && !teamInsights)}
+          disabled={isInsightsLoading || directReports.length === 0}
           variant="outline"
           className="flex items-center gap-2"
         >
@@ -696,24 +696,10 @@ const ManagerDashboard: React.FC = () => {
                     No Team Members
                   </Button>
                 </>
-              ) : (feedbackStats?.given || 0) + (feedbackStats?.received || 0) < 1 ? (
-                <>
-                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                    Your team needs at least one completed feedback before AI can generate insights.
-                    Encourage team members to participate in feedback cycles.
-                  </p>
-                  <Button
-                    disabled
-                    className="bg-gray-300 text-gray-500 cursor-not-allowed"
-                  >
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Need Team Feedback First
-                  </Button>
-                </>
               ) : (
                 <>
                   <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                    Click the button above to analyze your team's feedback and get actionable insights, 
+                    Click the button below to analyze your team's feedback and get actionable insights, 
                     patterns, and recommendations.
                   </p>
                   <Button
