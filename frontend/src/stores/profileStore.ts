@@ -78,8 +78,11 @@ export const useProfileStore = create<ProfileState>()(
           const response = await profileService.uploadAvatar(file);
           const currentProfile = get().profile;
           if (currentProfile) {
+            // Use avatarDataUrl (base64 data URL) for immediate display - no cross-origin issues
+            // Fall back to avatarUrl (API endpoint) if data URL not available
+            const newAvatarUrl = response.data.avatarDataUrl || response.data.avatarUrl;
             set({ 
-              profile: { ...currentProfile, avatarUrl: response.data.avatarUrl },
+              profile: { ...currentProfile, avatarUrl: newAvatarUrl },
               isUpdating: false 
             });
           }

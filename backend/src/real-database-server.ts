@@ -2802,10 +2802,12 @@ app.get('/api/v1/users/:id/avatar', async (req: any, res: any) => {
       return res.redirect(`https://ui-avatars.com/api/?name=${initials}&background=4F46E5&color=fff&size=200`);
     }
     
-    // Serve the image from database
+    // Serve the image from database with CORS headers for cross-origin access
     const imageBuffer = Buffer.from(avatar_data, 'base64');
     res.setHeader('Content-Type', avatar_mime_type || 'image/jpeg');
     res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+    res.setHeader('Access-Control-Allow-Origin', '*'); // Allow any origin to load this image
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin'); // Allow cross-origin embedding
     res.send(imageBuffer);
   } catch (error) {
     console.error('Error serving avatar:', error);
