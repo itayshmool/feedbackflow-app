@@ -7004,6 +7004,321 @@ Return ONLY a JSON object with this exact structure (no markdown, no explanation
   }
 });
 
+// ===========================================
+// AI TEAM INSIGHTS ENDPOINT
+// ===========================================
+app.post('/api/v1/ai/team-insights', authenticateToken, async (req: any, res: any) => {
+  try {
+    const userEmail = req.user?.email;
+    if (!userEmail) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+    if (!ANTHROPIC_API_KEY) {
+      return res.status(500).json({ 
+        success: false, 
+        error: 'AI service not configured. Please add ANTHROPIC_API_KEY to environment variables.' 
+      });
+    }
+
+    // Get the manager's user info
+    const managerResult = await query(
+      'SELECT id, name, organization_id FROM users WHERE email = $1',
+      [userEmail]
+    );
+    
+    if (managerResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    
+    const manager = managerResult.rows[0];
+    const managerId = manager.id;
+    const managerName = manager.name;
+    const organizationId = manager.organization_id;
+
+    console.log('🧠 Generating AI team insights for manager:', managerName);
+
+    // Fetch all team members (direct + indirect reports) using recursive CTE
+    const teamQuery = `
+      WITH RECURSIVE team_hierarchy AS (
+        -- Direct reports
+        SELECT 
+          u.id,
+          u.name,
+          u.email,
+          u.position,
+          u.department,
+          1 as level
+        FROM users u
+        INNER JOIN organizational_hierarchy oh ON u.id = oh.employee_id
+        WHERE oh.manager_id = $1 AND oh.organization_id = $2
+        
+        UNION ALL
+        
+        -- Indirect reports (recursive)
+        SELECT 
+          u.id,
+          u.name,
+          u.email,
+          u.position,
+          u.department,
+          th.level + 1
+        FROM users u
+        INNER JOIN organizational_hierarchy oh ON u.id = oh.employee_id
+        INNER JOIN team_hierarchy th ON oh.manager_id = th.id
+        WHERE oh.organization_id = $2 AND th.level < 5
+      )
+      SELECT DISTINCT id, name, email, position, department, level
+      FROM team_hierarchy
+      ORDER BY level, name
+    `;
+    
+    const teamResult = await query(teamQuery, [managerId, organizationId]);
+    const teamMembers = teamResult.rows;
+    
+    if (teamMembers.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          generatedAt: new Date().toISOString(),
+          summary: 'No team members found. Add direct reports to your hierarchy to get team insights.',
+          themes: [],
+          strengths: [],
+          areasForImprovement: [],
+          individualHighlights: [],
+          recommendations: [],
+          teamHealthScore: null,
+          confidenceLevel: 'low',
+          teamSize: 0,
+          feedbackCount: 0
+        }
+      });
+    }
+
+    const teamMemberIds = teamMembers.map((m: any) => m.id);
+    
+    // Fetch all feedback for team members (both received and given)
+    const feedbackQuery = `
+      SELECT 
+        fr.id,
+        fr.status,
+        fr.review_type,
+        fr.created_at,
+        fr.updated_at,
+        frr.rating,
+        frr.strengths,
+        frr.areas_for_improvement,
+        frr.overall_comment,
+        frr.recommendations,
+        giver.name as giver_name,
+        giver.position as giver_position,
+        recipient.name as recipient_name,
+        recipient.position as recipient_position,
+        recipient.department as recipient_department
+      FROM feedback_requests fr
+      LEFT JOIN feedback_responses frr ON fr.id = frr.request_id
+      LEFT JOIN users giver ON frr.giver_id = giver.id
+      LEFT JOIN users recipient ON fr.recipient_id = recipient.id
+      WHERE (fr.recipient_id = ANY($1) OR frr.giver_id = ANY($1))
+        AND fr.status IN ('completed', 'submitted', 'acknowledged')
+      ORDER BY fr.created_at DESC
+      LIMIT 100
+    `;
+    
+    const feedbackResult = await query(feedbackQuery, [teamMemberIds]);
+    const feedbackData = feedbackResult.rows;
+    
+    if (feedbackData.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          generatedAt: new Date().toISOString(),
+          summary: `Your team of ${teamMembers.length} members has no completed feedback yet. Encourage team members to participate in feedback cycles to get insights.`,
+          themes: [],
+          strengths: [],
+          areasForImprovement: [],
+          individualHighlights: [],
+          recommendations: [{
+            priority: 'high',
+            action: 'Start a feedback cycle to gather team insights',
+            reason: 'No feedback data available for analysis',
+            timeline: 'This week'
+          }],
+          teamHealthScore: null,
+          confidenceLevel: 'low',
+          teamSize: teamMembers.length,
+          feedbackCount: 0
+        }
+      });
+    }
+
+    // Prepare feedback data for AI analysis (anonymize if needed, summarize)
+    const feedbackSummary = feedbackData.map((f: any) => ({
+      recipientName: f.recipient_name,
+      recipientPosition: f.recipient_position,
+      recipientDepartment: f.recipient_department,
+      reviewType: f.review_type,
+      rating: f.rating,
+      strengths: f.strengths,
+      areasForImprovement: f.areas_for_improvement,
+      overallComment: f.overall_comment,
+      recommendations: f.recommendations,
+      giverPosition: f.giver_position, // Don't include giver name for privacy
+      date: f.created_at
+    }));
+
+    const teamSummary = teamMembers.map((m: any) => ({
+      name: m.name,
+      position: m.position,
+      department: m.department,
+      level: m.level === 1 ? 'Direct Report' : 'Indirect Report'
+    }));
+
+    // Build prompt for Claude
+    const prompt = `You are an expert HR analytics consultant analyzing team performance feedback for a manager.
+
+CONTEXT:
+Manager: ${managerName}
+Team Size: ${teamMembers.length} employees
+Feedback Records: ${feedbackData.length} feedback items
+
+TEAM MEMBERS:
+${JSON.stringify(teamSummary, null, 2)}
+
+FEEDBACK DATA:
+${JSON.stringify(feedbackSummary, null, 2)}
+
+TASK:
+Analyze this feedback data and provide actionable insights for the manager. Focus on patterns, themes, and actionable recommendations.
+
+Return ONLY a JSON object with this exact structure (no markdown, no explanation):
+{
+  "summary": "A 2-3 sentence executive summary of the team's feedback patterns and overall health",
+  
+  "themes": ["theme1", "theme2", "theme3"],
+  
+  "strengths": [
+    {
+      "title": "Strength title",
+      "description": "Detailed description with patterns observed in the feedback",
+      "employeesExcelling": ["Names of team members who exemplify this strength"]
+    }
+  ],
+  
+  "areasForImprovement": [
+    {
+      "title": "Area title",
+      "description": "What needs improvement based on feedback patterns",
+      "frequency": "How common this is (e.g., 'mentioned in 40% of feedback')",
+      "suggestedActions": ["Specific action 1", "Specific action 2"]
+    }
+  ],
+  
+  "individualHighlights": [
+    {
+      "employeeName": "Name from team",
+      "positiveHighlight": "What they're consistently praised for",
+      "growthOpportunity": "A constructive area for development"
+    }
+  ],
+  
+  "recommendations": [
+    {
+      "priority": "high",
+      "action": "Specific actionable recommendation for the manager",
+      "reason": "Why this matters based on the feedback analysis",
+      "timeline": "When to take action (e.g., 'This week', 'This month', 'This quarter')"
+    }
+  ],
+  
+  "teamHealthScore": 7.5,
+  "confidenceLevel": "high"
+}
+
+GUIDELINES:
+- Be specific and reference actual patterns from the feedback
+- Prioritize actionable insights over generic advice
+- Include 2-4 items per category
+- For individualHighlights, include highlights for team members with notable feedback (max 5)
+- Keep recommendations practical and time-bound
+- Score team health 1-10 based on overall feedback sentiment
+- Set confidenceLevel to "high" if >10 feedback items, "medium" if 5-10, "low" if <5`;
+
+    console.log('🤖 Calling Claude API for team insights...');
+    
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 2048,
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ]
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Claude API error:', errorText);
+      return res.status(500).json({ 
+        success: false, 
+        error: 'AI service error. Please try again.' 
+      });
+    }
+    
+    const data = await response.json();
+    const aiResponse = data.content[0]?.text;
+    
+    if (!aiResponse) {
+      return res.status(500).json({ 
+        success: false, 
+        error: 'No response from AI service' 
+      });
+    }
+    
+    // Parse the JSON response from Claude
+    let parsedInsights;
+    try {
+      const cleanedResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      parsedInsights = JSON.parse(cleanedResponse);
+    } catch (parseError) {
+      console.error('Failed to parse AI insights response:', aiResponse);
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Failed to parse AI response' 
+      });
+    }
+    
+    // Add metadata
+    parsedInsights.generatedAt = new Date().toISOString();
+    parsedInsights.teamSize = teamMembers.length;
+    parsedInsights.feedbackCount = feedbackData.length;
+    
+    console.log('✅ AI team insights generated successfully');
+    
+    res.json({
+      success: true,
+      data: parsedInsights
+    });
+    
+  } catch (error) {
+    console.error('AI team insights error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to generate team insights' 
+    });
+  }
+});
+
 // Error handling middleware
 app.use((error: any, req: any, res: any, next: any) => {
   console.error('Unhandled error:', error);

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Ca
 import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { HierarchyNode } from '../../types/hierarchy.types';
+import api from '../../lib/api';
 import { 
   Users, 
   TrendingUp, 
@@ -23,8 +24,47 @@ import {
   Building,
   ChevronRight,
   ChevronDown,
-  User
+  User,
+  Sparkles,
+  RefreshCw,
+  Lightbulb,
+  TrendingDown,
+  Award,
+  Zap
 } from 'lucide-react';
+
+// Types for AI Insights
+interface TeamInsight {
+  generatedAt: string;
+  summary: string;
+  themes: string[];
+  strengths: Array<{
+    title: string;
+    description: string;
+    employeesExcelling: string[];
+  }>;
+  areasForImprovement: Array<{
+    title: string;
+    description: string;
+    frequency: string;
+    suggestedActions: string[];
+  }>;
+  individualHighlights: Array<{
+    employeeName: string;
+    positiveHighlight: string;
+    growthOpportunity: string;
+  }>;
+  recommendations: Array<{
+    priority: 'high' | 'medium' | 'low';
+    action: string;
+    reason: string;
+    timeline: string;
+  }>;
+  teamHealthScore: number | null;
+  confidenceLevel: 'high' | 'medium' | 'low';
+  teamSize: number;
+  feedbackCount: number;
+}
 
 const ManagerDashboard: React.FC = () => {
   const { user } = useAuthStore();
@@ -75,7 +115,31 @@ const ManagerDashboard: React.FC = () => {
     fetchFeedbackList
   } = useFeedbackStore();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'analytics'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'analytics' | 'insights'>('overview');
+  
+  // State for AI Insights
+  const [teamInsights, setTeamInsights] = useState<TeamInsight | null>(null);
+  const [isInsightsLoading, setIsInsightsLoading] = useState(false);
+  const [insightsError, setInsightsError] = useState<string | null>(null);
+  
+  // Function to fetch AI team insights
+  const fetchTeamInsights = async () => {
+    setIsInsightsLoading(true);
+    setInsightsError(null);
+    try {
+      const response = await api.post('/ai/team-insights');
+      if (response.data.success) {
+        setTeamInsights(response.data.data);
+      } else {
+        setInsightsError(response.data.error || 'Failed to generate insights');
+      }
+    } catch (error: any) {
+      console.error('Error fetching team insights:', error);
+      setInsightsError(error.response?.data?.error || 'Failed to generate team insights');
+    } finally {
+      setIsInsightsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (user?.id) {
@@ -101,6 +165,7 @@ const ManagerDashboard: React.FC = () => {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'team', label: 'Team', icon: Users },
+    { id: 'insights', label: 'AI Insights', icon: Sparkles },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   ];
 
@@ -563,6 +628,297 @@ const ManagerDashboard: React.FC = () => {
     </div>
   );
 
+  const renderInsights = () => (
+    <div className="space-y-6">
+      {/* Header with Refresh Button */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+            <Sparkles className="h-6 w-6 text-purple-600" />
+            AI Team Insights
+          </h2>
+          <p className="text-gray-600 text-sm mt-1">
+            AI-powered analysis of your team's feedback patterns
+          </p>
+        </div>
+        <Button
+          onClick={fetchTeamInsights}
+          disabled={isInsightsLoading}
+          variant="outline"
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${isInsightsLoading ? 'animate-spin' : ''}`} />
+          {isInsightsLoading ? 'Generating...' : teamInsights ? 'Refresh Insights' : 'Generate Insights'}
+        </Button>
+      </div>
+
+      {/* Error State */}
+      {insightsError && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3 text-red-700">
+              <AlertCircle className="h-5 w-5 flex-shrink-0" />
+              <p>{insightsError}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Loading State */}
+      {isInsightsLoading && (
+        <div className="flex flex-col items-center justify-center py-16">
+          <LoadingSpinner size="lg" />
+          <p className="mt-4 text-gray-600">Analyzing team feedback with AI...</p>
+          <p className="text-sm text-gray-500 mt-1">This may take a few seconds</p>
+        </div>
+      )}
+
+      {/* Empty State - No insights yet */}
+      {!isInsightsLoading && !teamInsights && !insightsError && (
+        <Card className="border-dashed border-2 border-gray-300">
+          <CardContent className="p-12">
+            <div className="text-center">
+              <Sparkles className="h-16 w-16 mx-auto text-purple-400 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Get AI-Powered Insights
+              </h3>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                Click the button above to analyze your team's feedback and get actionable insights, 
+                patterns, and recommendations.
+              </p>
+              <Button
+                onClick={fetchTeamInsights}
+                className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                Generate Team Insights
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Insights Content */}
+      {!isInsightsLoading && teamInsights && (
+        <div className="space-y-6">
+          {/* Summary Card */}
+          <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
+            <CardContent className="p-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-white rounded-lg shadow-sm">
+                  <Lightbulb className="h-6 w-6 text-purple-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 mb-2">Executive Summary</h3>
+                  <p className="text-gray-700">{teamInsights.summary}</p>
+                  <div className="flex flex-wrap items-center gap-4 mt-4 text-sm text-gray-600">
+                    <span className="flex items-center gap-1">
+                      <Users className="h-4 w-4" />
+                      {teamInsights.teamSize} team members
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <MessageSquare className="h-4 w-4" />
+                      {teamInsights.feedbackCount} feedback items analyzed
+                    </span>
+                    {teamInsights.teamHealthScore && (
+                      <span className="flex items-center gap-1">
+                        <Activity className="h-4 w-4" />
+                        Health Score: {teamInsights.teamHealthScore}/10
+                      </span>
+                    )}
+                    <span className="px-2 py-1 bg-white rounded text-xs font-medium">
+                      Confidence: {teamInsights.confidenceLevel}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Key Themes */}
+          {teamInsights.themes.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-yellow-500" />
+                  Key Themes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {teamInsights.themes.map((theme, index) => (
+                    <span
+                      key={index}
+                      className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium"
+                    >
+                      {theme}
+                    </span>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Two Column Layout for Strengths and Improvements */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Strengths */}
+            <Card className="border-green-200">
+              <CardHeader className="bg-green-50 border-b border-green-200">
+                <CardTitle className="flex items-center gap-2 text-green-700">
+                  <Award className="h-5 w-5" />
+                  Team Strengths
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                {teamInsights.strengths.length > 0 ? (
+                  <div className="space-y-4">
+                    {teamInsights.strengths.map((strength, index) => (
+                      <div key={index} className="border-l-4 border-green-400 pl-4">
+                        <h4 className="font-semibold text-gray-900">{strength.title}</h4>
+                        <p className="text-sm text-gray-600 mt-1">{strength.description}</p>
+                        {strength.employeesExcelling.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {strength.employeesExcelling.map((emp, i) => (
+                              <span key={i} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                                {emp}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">No specific strengths identified yet.</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Areas for Improvement */}
+            <Card className="border-orange-200">
+              <CardHeader className="bg-orange-50 border-b border-orange-200">
+                <CardTitle className="flex items-center gap-2 text-orange-700">
+                  <TrendingDown className="h-5 w-5" />
+                  Areas for Growth
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                {teamInsights.areasForImprovement.length > 0 ? (
+                  <div className="space-y-4">
+                    {teamInsights.areasForImprovement.map((area, index) => (
+                      <div key={index} className="border-l-4 border-orange-400 pl-4">
+                        <h4 className="font-semibold text-gray-900">{area.title}</h4>
+                        <p className="text-sm text-gray-600 mt-1">{area.description}</p>
+                        {area.frequency && (
+                          <p className="text-xs text-orange-600 mt-1">{area.frequency}</p>
+                        )}
+                        {area.suggestedActions.length > 0 && (
+                          <ul className="mt-2 space-y-1">
+                            {area.suggestedActions.map((action, i) => (
+                              <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
+                                <CheckCircle className="h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                                {action}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">No specific areas identified yet.</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Individual Highlights */}
+          {teamInsights.individualHighlights.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-blue-500" />
+                  Individual Highlights
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {teamInsights.individualHighlights.map((highlight, index) => (
+                    <div key={index} className="p-4 bg-gray-50 rounded-lg">
+                      <h4 className="font-semibold text-gray-900 mb-2">{highlight.employeeName}</h4>
+                      <div className="space-y-2">
+                        <div>
+                          <span className="text-xs font-medium text-green-600 uppercase">Strength</span>
+                          <p className="text-sm text-gray-600">{highlight.positiveHighlight}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs font-medium text-orange-600 uppercase">Growth Area</span>
+                          <p className="text-sm text-gray-600">{highlight.growthOpportunity}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Recommendations */}
+          {teamInsights.recommendations.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5 text-indigo-500" />
+                  Recommended Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {teamInsights.recommendations.map((rec, index) => (
+                    <div 
+                      key={index} 
+                      className={`p-4 rounded-lg border-l-4 ${
+                        rec.priority === 'high' 
+                          ? 'bg-red-50 border-red-400' 
+                          : rec.priority === 'medium'
+                          ? 'bg-yellow-50 border-yellow-400'
+                          : 'bg-blue-50 border-blue-400'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded ${
+                              rec.priority === 'high'
+                                ? 'bg-red-200 text-red-700'
+                                : rec.priority === 'medium'
+                                ? 'bg-yellow-200 text-yellow-700'
+                                : 'bg-blue-200 text-blue-700'
+                            }`}>
+                              {rec.priority} priority
+                            </span>
+                            <span className="text-xs text-gray-500">{rec.timeline}</span>
+                          </div>
+                          <h4 className="font-semibold text-gray-900">{rec.action}</h4>
+                          <p className="text-sm text-gray-600 mt-1">{rec.reason}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Generated timestamp */}
+          <p className="text-xs text-gray-400 text-center">
+            Generated on {new Date(teamInsights.generatedAt).toLocaleString()}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -606,6 +962,7 @@ const ManagerDashboard: React.FC = () => {
       <div className="p-6">
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'team' && renderTeam()}
+        {activeTab === 'insights' && renderInsights()}
         {activeTab === 'analytics' && renderAnalytics()}
       </div>
 
