@@ -148,6 +148,28 @@ const csvUpload = multer({
   }
 });
 
+// Avatar upload configuration for profile images
+const avatarUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit for avatar images
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'image/webp'
+    ];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files (JPEG, PNG, GIF, WebP) are allowed'), false);
+    }
+  }
+});
+
 // Templates API endpoints
 app.get('/api/v1/templates', authenticateToken, async (req, res) => {
   try {
@@ -2702,36 +2724,92 @@ app.put('/api/v1/profile', authenticateToken, async (req, res) => {
 });
 
 // POST /api/v1/profile/avatar - Upload avatar
-app.post('/api/v1/profile/avatar', authenticateToken, async (req, res) => {
+app.post('/api/v1/profile/avatar', authenticateToken, avatarUpload.single('avatar'), async (req: any, res: any) => {
   try {
-    const userEmail = (req as any).user?.email;
+    const userEmail = req.user?.email;
     if (!userEmail) {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
     }
     
-    // For now, return a mock avatar URL
-    const mockAvatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${Date.now()}`;
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({ success: false, error: 'No image file uploaded' });
+    }
+
+    // Convert image to base64 and store in database
+    const base64Image = file.buffer.toString('base64');
+    const avatarDataUrl = `data:${file.mimetype};base64,${base64Image}`;
     
+    // Also create a URL that serves the avatar from our API
+    // Get user ID first
+    const userResult = await query('SELECT id FROM users WHERE email = $1', [userEmail]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    const userId = userResult.rows[0].id;
+    
+    // Update both avatar_url and avatar_data
     const updateQuery = `
       UPDATE users 
-      SET avatar_url = $1, updated_at = NOW()
-      WHERE email = $2
+      SET avatar_url = $1, avatar_data = $2, avatar_mime_type = $3, updated_at = NOW()
+      WHERE email = $4
       RETURNING avatar_url
     `;
     
-    const result = await query(updateQuery, [mockAvatarUrl, userEmail]);
+    const apiAvatarUrl = `/api/v1/users/${userId}/avatar`;
+    const result = await query(updateQuery, [apiAvatarUrl, base64Image, file.mimetype, userEmail]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Profile not found' });
     }
     
+    // Return full URL for immediate display
+    const baseUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
     res.json({ 
       success: true, 
-      data: { avatarUrl: result.rows[0].avatar_url } 
+      data: { 
+        avatarUrl: `${baseUrl}${apiAvatarUrl}`,
+        // Also return data URL for immediate preview
+        avatarDataUrl: avatarDataUrl
+      } 
     });
   } catch (error) {
     console.error('Error uploading avatar:', error);
     res.status(500).json({ success: false, error: 'Failed to upload avatar' });
+  }
+});
+
+// GET /api/v1/users/:id/avatar - Serve user avatar from database
+app.get('/api/v1/users/:id/avatar', async (req: any, res: any) => {
+  try {
+    const userId = req.params.id;
+    
+    const result = await query(
+      'SELECT avatar_data, avatar_mime_type, name FROM users WHERE id = $1',
+      [userId]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    
+    const { avatar_data, avatar_mime_type, name } = result.rows[0];
+    
+    // If no avatar data, return a default generated avatar
+    if (!avatar_data) {
+      // Redirect to a placeholder avatar service
+      const initials = encodeURIComponent(name || 'U');
+      return res.redirect(`https://ui-avatars.com/api/?name=${initials}&background=4F46E5&color=fff&size=200`);
+    }
+    
+    // Serve the image from database
+    const imageBuffer = Buffer.from(avatar_data, 'base64');
+    res.setHeader('Content-Type', avatar_mime_type || 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+    res.send(imageBuffer);
+  } catch (error) {
+    console.error('Error serving avatar:', error);
+    res.status(500).json({ success: false, error: 'Failed to load avatar' });
   }
 });
 
