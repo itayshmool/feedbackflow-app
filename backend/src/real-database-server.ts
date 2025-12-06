@@ -581,11 +581,12 @@ app.delete('/api/v1/admin/organizations/:id', authenticateToken, async (req, res
 // Authentication endpoints
 app.post('/api/v1/auth/login/mock', async (req, res) => {
   try {
-    // Disable mock login in production for security
-    if (process.env.NODE_ENV === 'production') {
+    // Check if mock login is enabled via environment variable
+    // Set ENABLE_MOCK_LOGIN=true in environment to allow mock login
+    if (process.env.ENABLE_MOCK_LOGIN !== 'true') {
       return res.status(403).json({
         success: false,
-        error: 'Demo login is disabled in production. Please use Google Sign-In.'
+        error: 'Demo login is disabled. Set ENABLE_MOCK_LOGIN=true to enable.'
       });
     }
 

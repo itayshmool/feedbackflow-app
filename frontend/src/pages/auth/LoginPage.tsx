@@ -31,8 +31,9 @@ export default function LoginPage() {
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
   const isGoogleOAuthEnabled = Boolean(googleClientId && googleClientId.trim() !== '')
   
-  // Check if we're in production (hide demo login in production)
-  const isProduction = import.meta.env.PROD
+  // Check if mock login is enabled via environment variable
+  // Set VITE_ENABLE_MOCK_LOGIN=true in environment to show mock login form
+  const isMockLoginEnabled = import.meta.env.VITE_ENABLE_MOCK_LOGIN === 'true'
 
   const from = location.state?.from?.pathname || '/dashboard'
 
@@ -102,7 +103,7 @@ export default function LoginPage() {
             Sign in to FeedbackFlow
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            {isProduction 
+            {!isMockLoginEnabled 
               ? 'Sign in with your Wix Google account'
               : 'Enter your credentials to access your account'
             }
@@ -112,12 +113,12 @@ export default function LoginPage() {
         <Card>
           <CardHeader>
             <h3 className="text-lg font-medium text-gray-900">
-              {isProduction ? 'Wix Organization Login' : 'Login'}
+              {!isMockLoginEnabled ? 'Wix Organization Login' : 'Login'}
             </h3>
           </CardHeader>
           <CardContent>
-            {/* Production: Google-only login */}
-            {isProduction ? (
+            {/* Google-only login when mock is disabled */}
+            {!isMockLoginEnabled ? (
               <div className="space-y-6">
                 {isGoogleOAuthEnabled ? (
                   <div>
