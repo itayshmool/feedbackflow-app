@@ -850,36 +850,7 @@ const ManagerDashboard: React.FC = () => {
             </Card>
           </div>
 
-          {/* Individual Highlights */}
-          {teamInsights.individualHighlights.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-blue-500" />
-                  Individual Highlights
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {teamInsights.individualHighlights.map((highlight, index) => (
-                    <div key={index} className="p-4 bg-gray-50 rounded-lg">
-                      <h4 className="font-semibold text-gray-900 mb-2">{highlight.employeeName}</h4>
-                      <div className="space-y-2">
-                        <div>
-                          <span className="text-xs font-medium text-green-600 uppercase">Strength</span>
-                          <p className="text-sm text-gray-600">{highlight.positiveHighlight}</p>
-                        </div>
-                        <div>
-                          <span className="text-xs font-medium text-orange-600 uppercase">Growth Area</span>
-                          <p className="text-sm text-gray-600">{highlight.growthOpportunity}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {/* Individual Highlights - Hidden for privacy (TODO: implement anonymization) */}
 
           {/* Recommendations */}
           {teamInsights.recommendations.length > 0 && (
