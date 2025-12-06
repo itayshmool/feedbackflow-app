@@ -165,7 +165,7 @@ const ManagerDashboard: React.FC = () => {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'team', label: 'Team', icon: Users },
-    { id: 'insights', label: 'AI Insights', icon: Sparkles },
+    // { id: 'insights', label: 'AI Insights', icon: Sparkles }, // Hidden until privacy concerns addressed
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   ];
 
@@ -951,7 +951,7 @@ const ManagerDashboard: React.FC = () => {
       <div className="p-6">
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'team' && renderTeam()}
-        {activeTab === 'insights' && renderInsights()}
+        {/* {activeTab === 'insights' && renderInsights()} */}
         {activeTab === 'analytics' && renderAnalytics()}
       </div>
 
