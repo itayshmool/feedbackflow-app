@@ -263,6 +263,20 @@ const ManagerDashboard: React.FC = () => {
     </div>
   );
 
+  // Avatar color gradients by level
+  const avatarGradients = [
+    'from-emerald-500 to-teal-600',      // Level 0 - Current user
+    'from-blue-500 to-indigo-600',        // Level 1
+    'from-purple-500 to-pink-600',        // Level 2
+    'from-orange-500 to-red-600',         // Level 3
+    'from-cyan-500 to-blue-600',          // Level 4+
+  ];
+  
+  const getAvatarGradient = (level: number, isCurrentUser: boolean) => {
+    if (isCurrentUser) return avatarGradients[0];
+    return avatarGradients[Math.min(level, avatarGradients.length - 1)];
+  };
+
   // Recursive function to render hierarchy tree nodes
   const renderHierarchyNode = (node: HierarchyNode, level: number = 0, isCurrentUser: boolean = false): React.ReactNode => {
     const isExpanded = expandedNodes.has(node.id);
@@ -270,92 +284,132 @@ const ManagerDashboard: React.FC = () => {
     
     // Limit indentation on mobile
     const mobileIndent = Math.min(level, 4);
+    const indentPx = mobileIndent * 24;
     
     return (
       <div key={node.id} className="select-none">
+        {/* Node card */}
         <div 
           className={`
-            flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg mb-1 transition-all duration-200
+            relative flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl mb-2 
+            transition-all duration-300 ease-out
             ${isCurrentUser 
-              ? 'bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200' 
-              : 'bg-white border border-gray-200 hover:border-gray-300 hover:shadow-sm'
+              ? 'bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 border-2 border-emerald-300 shadow-lg shadow-emerald-100' 
+              : 'bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:scale-[1.01]'
             }
           `}
-          style={{ marginLeft: `${mobileIndent * 16}px` }}
+          style={{ marginLeft: `${indentPx}px` }}
         >
+          {/* Connecting line to parent */}
+          {level > 0 && (
+            <div 
+              className="hidden sm:block absolute -left-3 top-1/2 w-3 h-px bg-gray-300"
+              style={{ marginLeft: `${-indentPx + 12}px` }}
+            />
+          )}
+          
           {/* Expand/collapse button */}
           <button
             onClick={() => hasChildren && toggleNode(node.id)}
-            className={`p-1 rounded transition-colors ${hasChildren ? 'hover:bg-gray-100 cursor-pointer' : 'cursor-default'}`}
+            className={`
+              p-1.5 rounded-lg transition-all duration-200
+              ${hasChildren 
+                ? 'hover:bg-gray-100 cursor-pointer active:scale-95' 
+                : 'opacity-0'
+              }
+            `}
             disabled={!hasChildren}
           >
-            {hasChildren ? (
-              isExpanded ? (
-                <ChevronDown className="w-4 h-4 text-gray-500" />
-              ) : (
+            {hasChildren && (
+              <div className={`transform transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>
                 <ChevronRight className="w-4 h-4 text-gray-500" />
-              )
-            ) : (
-              <div className="w-4 h-4" /> // Spacer for alignment
+              </div>
             )}
           </button>
           
           {/* Avatar */}
           <div className={`
-            w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0
-            ${isCurrentUser 
-              ? 'bg-gradient-to-br from-green-500 to-blue-600' 
-              : 'bg-gradient-to-br from-gray-400 to-gray-500'
-            }
+            relative w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0
+            bg-gradient-to-br ${getAvatarGradient(level, isCurrentUser)}
+            shadow-md ring-2 ring-white
           `}>
-            <span className="text-sm sm:text-base font-bold text-white">
+            <span className="text-base sm:text-lg font-bold text-white drop-shadow-sm">
               {node.name.charAt(0).toUpperCase()}
             </span>
+            {/* Manager badge */}
+            {hasChildren && (
+              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 sm:w-5 sm:h-5 bg-amber-400 rounded-full flex items-center justify-center ring-2 ring-white">
+                <Users className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
+              </div>
+            )}
           </div>
           
           {/* Info */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h4 className={`font-medium truncate ${isCurrentUser ? 'text-green-800' : 'text-gray-900'}`}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className={`font-semibold text-sm sm:text-base ${isCurrentUser ? 'text-emerald-800' : 'text-gray-900'}`}>
                 {node.name}
-                {isCurrentUser && <span className="text-xs ml-1 text-green-600">(You)</span>}
               </h4>
+              {isCurrentUser && (
+                <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">
+                  You
+                </span>
+              )}
+              {hasChildren && (
+                <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-medium hidden sm:inline-flex items-center gap-1">
+                  <Users className="w-3 h-3" />
+                  {node.directReports.length} {node.directReports.length === 1 ? 'report' : 'reports'}
+                </span>
+              )}
             </div>
-            <p className="text-xs sm:text-sm text-gray-500 truncate">
-              {node.position || 'No position'}
-              {node.department && <span className="hidden sm:inline"> • {node.department}</span>}
+            <p className="text-xs sm:text-sm text-gray-500 truncate mt-0.5">
+              {node.position || 'Team Member'}
+              {node.department && <span className="hidden sm:inline text-gray-400"> • {node.department}</span>}
             </p>
           </div>
           
-          {/* Actions - only for non-current user */}
+          {/* Actions */}
           {!isCurrentUser && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 openProfileModal(node);
               }}
-              className="px-2 sm:px-3 py-1 text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+              className="
+                px-3 sm:px-4 py-1.5 sm:py-2 
+                text-xs sm:text-sm font-medium
+                text-blue-600 hover:text-white
+                bg-blue-50 hover:bg-blue-600
+                border border-blue-200 hover:border-blue-600
+                rounded-lg transition-all duration-200
+                flex items-center gap-1.5
+              "
             >
-              <span className="hidden sm:inline">View Profile</span>
-              <User className="w-4 h-4 sm:hidden" />
+              <User className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Profile</span>
             </button>
           )}
           
-          {/* Team count badge */}
+          {/* Mobile team count */}
           {hasChildren && (
-            <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
+            <span className="sm:hidden text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded-full font-medium">
               {node.directReports.length}
             </span>
           )}
         </div>
         
-        {/* Children */}
-        {hasChildren && isExpanded && (
-          <div className="relative">
-            {/* Connecting line on larger screens */}
+        {/* Children with animation */}
+        {hasChildren && (
+          <div 
+            className={`
+              relative overflow-hidden transition-all duration-300 ease-out
+              ${isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}
+            `}
+          >
+            {/* Vertical connecting line */}
             <div 
-              className="hidden sm:block absolute left-0 top-0 bottom-0 w-px bg-gray-200"
-              style={{ marginLeft: `${(mobileIndent + 1) * 16 + 8}px` }}
+              className="hidden sm:block absolute top-0 bottom-4 w-0.5 bg-gradient-to-b from-gray-300 to-transparent rounded-full"
+              style={{ left: `${indentPx + 32}px` }}
             />
             {node.directReports.map((child) => renderHierarchyNode(child, level + 1, false))}
           </div>
@@ -379,46 +433,95 @@ const ManagerDashboard: React.FC = () => {
     // Find current user's position in the tree to show their subtree
     const userNode = user?.id ? findUserNode(hierarchyTree, user.id) : null;
     
+    // Count total team members (recursive)
+    const countTeamMembers = (node: HierarchyNode | null): number => {
+      if (!node) return 0;
+      let count = 0;
+      for (const child of node.directReports || []) {
+        count += 1 + countTeamMembers(child);
+      }
+      return count;
+    };
+    const totalTeamSize = userNode ? countTeamMembers(userNode) : directReports.length;
+    
     return (
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">Your Team</h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <h2 className="text-2xl font-bold text-gray-900">Team Hierarchy</h2>
+            <p className="text-sm text-gray-500 mt-1 flex items-center gap-2">
+              <Users className="w-4 h-4" />
               {directReports.length} direct report{directReports.length !== 1 ? 's' : ''}
+              {totalTeamSize > directReports.length && (
+                <span className="text-gray-400">• {totalTeamSize} total team members</span>
+              )}
             </p>
           </div>
+          
+          {/* Expand/Collapse all */}
+          {userNode && userNode.directReports?.length > 0 && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  // Expand all nodes
+                  const allIds = new Set<string>();
+                  const collectIds = (n: HierarchyNode) => {
+                    allIds.add(n.id);
+                    (n.directReports || []).forEach(collectIds);
+                  };
+                  collectIds(userNode);
+                  setExpandedNodes(allIds);
+                }}
+                className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Expand All
+              </button>
+              <button
+                onClick={() => setExpandedNodes(new Set([userNode.id]))}
+                className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Collapse
+              </button>
+            </div>
+          )}
         </div>
 
         {isLoading ? (
-          <div className="flex justify-center items-center py-12">
-            <LoadingSpinner size="lg" />
+          <div className="flex justify-center items-center py-16">
+            <div className="text-center">
+              <LoadingSpinner size="lg" />
+              <p className="text-gray-500 mt-4">Loading team hierarchy...</p>
+            </div>
           </div>
         ) : error ? (
-          <Card className="p-6">
+          <Card className="p-6 border-red-200 bg-red-50">
             <div className="flex items-center">
-              <AlertCircle className="h-5 w-5 text-red-400 mr-2" />
+              <AlertCircle className="h-5 w-5 text-red-500 mr-3" />
               <p className="text-red-800">{error}</p>
             </div>
           </Card>
         ) : userNode ? (
-          <Card className="p-3 sm:p-4">
-            <div className="space-y-1">
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-4 sm:p-6 border border-gray-200">
+            <div className="space-y-2">
               {renderHierarchyNode(userNode, 0, true)}
             </div>
-          </Card>
+          </div>
         ) : directReports.length > 0 ? (
           // Fallback to direct reports if no hierarchy tree
-          <Card className="p-3 sm:p-4">
-            <div className="space-y-1">
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-4 sm:p-6 border border-gray-200">
+            <div className="space-y-2">
               {directReports.map((member) => renderHierarchyNode(member, 0, false))}
             </div>
-          </Card>
+          </div>
         ) : (
-          <Card className="p-6 text-center">
-            <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">No team members found</p>
-          </Card>
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-12 border border-gray-200 text-center">
+            <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Users className="h-8 w-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-700 mb-2">No Team Members</h3>
+            <p className="text-gray-500">Your team hierarchy will appear here once team members are added.</p>
+          </div>
         )}
       </div>
     );
