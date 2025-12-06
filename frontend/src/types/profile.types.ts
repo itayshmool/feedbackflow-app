@@ -55,6 +55,7 @@ export interface UploadAvatarResponse {
   success: boolean;
   data: {
     avatarUrl: string;
+    avatarDataUrl?: string; // Base64 data URL for immediate display
   };
 }
 
