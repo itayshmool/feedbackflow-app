@@ -33,8 +33,10 @@ export const templatesService = {
       formData.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
     });
     
-    // Don't set Content-Type manually - axios will set it with proper boundary for FormData
-    const response = await api.post('/templates', formData);
+    // Explicitly unset Content-Type to let browser set it with proper boundary for FormData
+    const response = await api.post('/templates', formData, {
+      headers: { 'Content-Type': undefined },
+    });
     return response.data;
   },
 
