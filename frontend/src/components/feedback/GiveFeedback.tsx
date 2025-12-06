@@ -76,17 +76,19 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
 
   useEffect(() => {
     clearErrors();
-    fetchCycles(); // Fetch available cycles
+    // Fetch cycles filtered by user's organization (non-admins only see their org's cycles)
+    if (user?.organizationId) {
+      fetchCycles({ organizationId: user.organizationId });
+    } else {
+      fetchCycles(); // Admins or users without org see all
+    }
     if (user?.id) {
       fetchDirectReports(user.id); // Fetch direct reports for the current user
     }
-  }, [clearErrors, fetchCycles, user?.id, fetchDirectReports]);
+  }, [clearErrors, fetchCycles, user?.id, user?.organizationId, fetchDirectReports]);
 
-  // Get active cycles for selection - filtered by organization for managers
-  const activeCycles = (cycles || []).filter(cycle => 
-    cycle.status === 'active' && 
-    (user?.roles?.includes('admin') || cycle.organizationId === user?.organizationId)
-  );
+  // Get active cycles for selection (already filtered by organization from backend)
+  const activeCycles = (cycles || []).filter(cycle => cycle.status === 'active');
 
   // Determine if current review type requires direct reports only
   const requiresDirectReports = reviewType === ReviewType.MANAGER_REVIEW;
