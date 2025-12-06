@@ -7106,11 +7106,8 @@ app.post('/api/v1/ai/team-insights', authenticateToken, async (req: any, res: an
         fr.feedback_type,
         fr.created_at,
         fr.updated_at,
+        frr.content as feedback_content,
         frr.rating,
-        frr.strengths,
-        frr.areas_for_improvement,
-        frr.overall_comment,
-        frr.recommendations,
         giver.name as giver_name,
         giver.position as giver_position,
         recipient.name as recipient_name,
@@ -7157,13 +7154,11 @@ app.post('/api/v1/ai/team-insights', authenticateToken, async (req: any, res: an
       recipientName: f.recipient_name,
       recipientPosition: f.recipient_position,
       recipientDepartment: f.recipient_department,
-      reviewType: f.feedback_type,
+      feedbackType: f.feedback_type,
       rating: f.rating,
-      strengths: f.strengths,
-      areasForImprovement: f.areas_for_improvement,
-      overallComment: f.overall_comment,
-      recommendations: f.recommendations,
+      feedbackContent: f.feedback_content, // The actual feedback text
       giverPosition: f.giver_position, // Don't include giver name for privacy
+      status: f.status,
       date: f.created_at
     }));
 
