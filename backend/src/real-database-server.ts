@@ -1,4 +1,5 @@
 // @ts-nocheck
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -6776,6 +6777,132 @@ app.get('/api/v1/team/feedback', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error fetching team feedback:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch team feedback' });
+  }
+});
+
+// ===========================================
+// AI FEEDBACK GENERATION ENDPOINT
+// ===========================================
+app.post('/api/v1/ai/generate-feedback', authenticateToken, async (req: any, res: any) => {
+  try {
+    const { recipientName, recipientPosition, recipientDepartment, feedbackType } = req.body;
+    
+    if (!recipientPosition) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Recipient position is required for AI generation' 
+      });
+    }
+    
+    const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+    
+    if (!ANTHROPIC_API_KEY) {
+      return res.status(500).json({ 
+        success: false, 
+        error: 'AI service not configured. Please add ANTHROPIC_API_KEY to environment variables.' 
+      });
+    }
+    
+    // Build context for AI
+    const feedbackTypeContext = {
+      'constructive': 'balanced constructive feedback with specific actionable improvements',
+      'positive': 'positive recognition highlighting specific achievements and strengths',
+      'improvement': 'areas for improvement with specific suggestions and growth opportunities',
+      'general': 'general performance feedback covering strengths and development areas'
+    }[feedbackType] || 'balanced constructive feedback';
+    
+    const prompt = `You are a professional HR manager writing performance feedback for an employee.
+
+Generate ${feedbackTypeContext} for the following employee:
+- Name: ${recipientName || 'the employee'}
+- Position: ${recipientPosition}
+- Department: ${recipientDepartment || 'Not specified'}
+
+Write the feedback in a professional, supportive tone. The feedback should be:
+1. Specific and actionable
+2. Balanced (even positive feedback should mention growth opportunities)
+3. Professional but warm
+
+Return ONLY a JSON object with this exact structure (no markdown, no explanation):
+{
+  "strengths": ["First strength point", "Second strength point", "Third strength point"],
+  "areasForImprovement": ["First improvement area", "Second improvement area"],
+  "specificExamples": ["A specific example of good work or behavior", "Another concrete example"],
+  "recommendations": ["First actionable recommendation", "Second recommendation"],
+  "developmentGoals": ["SMART goal 1 for next quarter", "SMART goal 2 for next quarter"],
+  "overallComment": "A 2-3 sentence summary tying it all together"
+}`;
+
+    console.log('🤖 Calling Claude API for feedback generation...');
+    
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 1024,
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ]
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Claude API error:', errorText);
+      return res.status(500).json({ 
+        success: false, 
+        error: 'AI service error. Please try again.' 
+      });
+    }
+    
+    const data = await response.json();
+    const aiResponse = data.content[0]?.text;
+    
+    if (!aiResponse) {
+      return res.status(500).json({ 
+        success: false, 
+        error: 'No response from AI service' 
+      });
+    }
+    
+    // Parse the JSON response from Claude
+    let parsedFeedback;
+    try {
+      // Claude sometimes wraps JSON in markdown code blocks, so clean it
+      const cleanedResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      parsedFeedback = JSON.parse(cleanedResponse);
+    } catch (parseError) {
+      console.error('Failed to parse AI response:', aiResponse);
+      // If parsing fails, return raw text as overallComment
+      parsedFeedback = {
+        strengths: '',
+        areasForImprovement: '',
+        overallComment: aiResponse,
+        goals: ''
+      };
+    }
+    
+    console.log('✅ AI feedback generated successfully');
+    
+    res.json({
+      success: true,
+      data: parsedFeedback
+    });
+    
+  } catch (error) {
+    console.error('AI feedback generation error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to generate AI feedback' 
+    });
   }
 });
 
