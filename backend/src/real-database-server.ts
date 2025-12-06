@@ -7121,7 +7121,6 @@ app.post('/api/v1/ai/team-insights', authenticateToken, async (req: any, res: an
       LEFT JOIN users giver ON frr.giver_id = giver.id
       LEFT JOIN users recipient ON fr.recipient_id = recipient.id
       WHERE (fr.recipient_id = ANY($1) OR frr.giver_id = ANY($1))
-        AND fr.status IN ('completed', 'submitted', 'acknowledged')
       ORDER BY fr.created_at DESC
       LIMIT 100
     `;
