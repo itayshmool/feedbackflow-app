@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useHierarchyStore } from '../../stores/hierarchyStore';
 import { useFeedbackStore } from '../../stores/feedbackStore';
@@ -24,6 +25,7 @@ import {
 } from 'lucide-react';
 
 const ManagerDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const {
     directReports,
@@ -281,7 +283,12 @@ const ManagerDashboard: React.FC = () => {
                   >
                     View Profile
                   </Button>
-                  <Button size="sm" variant="outline" className="flex-1 hover:bg-green-50 hover:border-green-300 transition-colors duration-200">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="flex-1 hover:bg-green-50 hover:border-green-300 transition-colors duration-200"
+                    onClick={() => navigate(`/feedback/give?recipientId=${member.id}&recipientEmail=${encodeURIComponent(member.email)}`)}
+                  >
                     Give Feedback
                   </Button>
                 </div>
@@ -432,15 +439,6 @@ const ManagerDashboard: React.FC = () => {
                   )}
                 </div>
 
-                {/* Actions */}
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <Button 
-                    className="w-full"
-                    onClick={closeProfileModal}
-                  >
-                    Give Feedback
-                  </Button>
-                </div>
               </div>
             </div>
           </div>
