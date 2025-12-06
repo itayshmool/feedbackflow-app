@@ -7103,7 +7103,7 @@ app.post('/api/v1/ai/team-insights', authenticateToken, async (req: any, res: an
       SELECT 
         fr.id,
         fr.status,
-        fr.review_type,
+        fr.feedback_type,
         fr.created_at,
         fr.updated_at,
         frr.rating,
@@ -7157,7 +7157,7 @@ app.post('/api/v1/ai/team-insights', authenticateToken, async (req: any, res: an
       recipientName: f.recipient_name,
       recipientPosition: f.recipient_position,
       recipientDepartment: f.recipient_department,
-      reviewType: f.review_type,
+      reviewType: f.feedback_type,
       rating: f.rating,
       strengths: f.strengths,
       areasForImprovement: f.areas_for_improvement,
