@@ -67,7 +67,7 @@ const ManagerDashboard: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
         <Card className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center">
@@ -116,21 +116,6 @@ const ManagerDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-center">
-              <div className="p-2 sm:p-3 bg-purple-100 rounded-xl flex-shrink-0">
-                <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
-              </div>
-              <div className="ml-3 sm:ml-4 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Average Rating</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900">
-                  {isFeedbackLoading ? '...' : feedbackStats?.averageRating ? `${feedbackStats.averageRating.toFixed(1)}/5` : 'N/A'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Recent Activity */}
