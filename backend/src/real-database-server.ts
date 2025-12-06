@@ -4110,10 +4110,9 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
       // Viewing "received" feedback - exclude drafts
       whereConditions.push(`frr.status != 'draft'`);
     } else {
-      // General view - show all non-draft feedback user is involved in
-      whereConditions.push(`(fr.giver_id = $${++paramCount} OR fr.recipient_id = $${paramCount})`);
+      // "All" tab - show all feedback user is involved in (including drafts they created)
+      whereConditions.push(`(fr.giver_id = $${++paramCount} OR (fr.recipient_id = $${paramCount} AND frr.status != 'draft'))`);
       queryParams.push(currentUserId);
-      whereConditions.push(`frr.status != 'draft'`);
     }
     
     // Add explicit status filter if provided (and not 'draft' which is handled above)

@@ -39,7 +39,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
     deleteFeedback,
   } = useFeedbackStore();
 
-  const [activeTab, setActiveTab] = useState<'received' | 'given' | 'all' | 'drafts'>('received');
+  const [activeTab, setActiveTab] = useState<'received' | 'given' | 'all' | 'drafts'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<FeedbackStatus | ''>('');
   const [typeFilter, setTypeFilter] = useState<ReviewType | ''>('');
