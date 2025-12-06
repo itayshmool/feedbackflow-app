@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Search, Menu, User, LogOut, Settings } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
+import { useProfileStore } from '@/stores/profileStore'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
@@ -14,7 +15,11 @@ interface HeaderProps {
 
 export default function Header({ onMenuToggle }: HeaderProps) {
   const { user, logout } = useAuthStore()
+  const { profile } = useProfileStore()
   const [showUserMenu, setShowUserMenu] = useState(false)
+  
+  // Use avatar from profile store if available, fall back to auth store picture
+  const avatarUrl = profile?.avatarUrl || user?.picture
 
   const handleLogout = () => {
     logout()
@@ -67,11 +72,11 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center space-x-2"
               >
-                {user?.picture ? (
+                {avatarUrl ? (
                   <img
-                    className="h-8 w-8 rounded-full"
-                    src={user.picture}
-                    alt={user.name}
+                    className="h-8 w-8 rounded-full object-cover"
+                    src={avatarUrl}
+                    alt={user?.name || 'User'}
                   />
                 ) : (
                   <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
