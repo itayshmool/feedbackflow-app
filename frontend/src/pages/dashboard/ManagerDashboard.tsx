@@ -643,7 +643,7 @@ const ManagerDashboard: React.FC = () => {
         </div>
         <Button
           onClick={fetchTeamInsights}
-          disabled={isInsightsLoading}
+          disabled={isInsightsLoading || (directReports.length === 0) || ((feedbackStats?.given || 0) + (feedbackStats?.received || 0) < 1 && !teamInsights)}
           variant="outline"
           className="flex items-center gap-2"
         >
@@ -682,17 +682,49 @@ const ManagerDashboard: React.FC = () => {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 Get AI-Powered Insights
               </h3>
-              <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                Click the button above to analyze your team's feedback and get actionable insights, 
-                patterns, and recommendations.
-              </p>
-              <Button
-                onClick={fetchTeamInsights}
-                className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
-              >
-                <Sparkles className="h-4 w-4 mr-2" />
-                Generate Team Insights
-              </Button>
+              {directReports.length === 0 ? (
+                <>
+                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                    You need team members in your hierarchy before you can generate insights.
+                    Add direct reports to get started.
+                  </p>
+                  <Button
+                    disabled
+                    className="bg-gray-300 text-gray-500 cursor-not-allowed"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    No Team Members
+                  </Button>
+                </>
+              ) : (feedbackStats?.given || 0) + (feedbackStats?.received || 0) < 1 ? (
+                <>
+                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                    Your team needs at least one completed feedback before AI can generate insights.
+                    Encourage team members to participate in feedback cycles.
+                  </p>
+                  <Button
+                    disabled
+                    className="bg-gray-300 text-gray-500 cursor-not-allowed"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Need Team Feedback First
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                    Click the button above to analyze your team's feedback and get actionable insights, 
+                    patterns, and recommendations.
+                  </p>
+                  <Button
+                    onClick={fetchTeamInsights}
+                    className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Generate Team Insights
+                  </Button>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
