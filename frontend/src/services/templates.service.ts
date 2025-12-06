@@ -33,9 +33,10 @@ export const templatesService = {
       formData.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
     });
     
-    // Explicitly unset Content-Type to let browser set it with proper boundary for FormData
+    // Use transformRequest to properly handle FormData - prevent axios from setting wrong Content-Type
     const response = await api.post('/templates', formData, {
-      headers: { 'Content-Type': undefined },
+      headers: { 'Content-Type': 'multipart/form-data' },
+      transformRequest: [(data) => data], // Prevent axios from transforming FormData
     });
     return response.data;
   },
