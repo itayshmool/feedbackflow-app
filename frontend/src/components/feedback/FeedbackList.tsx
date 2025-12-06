@@ -239,7 +239,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
             }`}
             onClick={() => setActiveTab('all')}
           >
-            All ({visibleFeedbackList.length})
+            All ({(feedbackStats?.given || 0) + (feedbackStats?.received || 0) + (feedbackStats?.drafts || 0)})
           </button>
         </div>
       )}
