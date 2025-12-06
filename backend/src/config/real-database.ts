@@ -1,12 +1,13 @@
 import { Pool, PoolClient, QueryResult } from 'pg';
 
 // Database configuration
+const isProduction = process.env.NODE_ENV === 'production' || process.env.DATABASE_URL?.includes('render.com');
 const dbConfig = process.env.DATABASE_URL 
   ? {
       connectionString: process.env.DATABASE_URL,
-      ssl: {
+      ssl: isProduction ? {
         rejectUnauthorized: false // Required for Render/Heroku self-signed certs
-      },
+      } : false,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,

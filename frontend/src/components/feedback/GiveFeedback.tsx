@@ -14,7 +14,8 @@ import { Switch } from '../ui/Switch';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Autocomplete } from '../ui/Autocomplete';
 import { UserSearchResult } from '../../services/userSearch.service';
-import { Plus, Trash2, Save, Send, X, Calendar, Users, Target, HelpCircle } from 'lucide-react';
+import { Plus, Trash2, Save, Send, X, Calendar, Users, Target, HelpCircle, Sparkles, Loader2 } from 'lucide-react';
+import api from '../../lib/api';
 
 interface GiveFeedbackProps {
   cycleId?: string;
@@ -65,6 +66,13 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
   const [confidential, setConfidential] = useState(false);
   const [ratings, setRatings] = useState<RatingInput[]>([]);
   const [goals, setGoals] = useState<GoalInput[]>([]);
+  
+  // AI Generation state
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  
+  // Feature flag for AI generation
+  const isAIEnabled = import.meta.env.VITE_ENABLE_AI_FEEDBACK === 'true';
 
   useEffect(() => {
     clearErrors();
@@ -184,6 +192,72 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
     setGoals(updated);
   };
 
+  // AI Feedback Generation
+  const handleGenerateAI = async () => {
+    if (!selectedUser) {
+      setAiError('Please select a recipient first');
+      return;
+    }
+    
+    setIsGeneratingAI(true);
+    setAiError(null);
+    
+    try {
+      const response = await api.post('/ai/generate-feedback', {
+        recipientName: selectedUser.name,
+        recipientPosition: selectedUser.position || 'Employee',
+        recipientDepartment: selectedUser.department || '',
+        feedbackType: reviewType === ReviewType.MANAGER_REVIEW ? 'constructive' : 'general'
+      });
+      
+      if (response.data.success) {
+        const { 
+          strengths: aiStrengths, 
+          areasForImprovement: aiAreas, 
+          specificExamples: aiExamples,
+          recommendations: aiRecs,
+          developmentGoals: aiDevGoals,
+          overallComment: aiComment 
+        } = response.data.data;
+        
+        // Auto-fill form fields - handle both array and string formats
+        if (aiStrengths) {
+          setStrengths(Array.isArray(aiStrengths) ? aiStrengths : aiStrengths.split('. ').filter((s: string) => s.trim()));
+        }
+        if (aiAreas) {
+          setAreasForImprovement(Array.isArray(aiAreas) ? aiAreas : aiAreas.split('. ').filter((a: string) => a.trim()));
+        }
+        if (aiExamples) {
+          setSpecificExamples(Array.isArray(aiExamples) ? aiExamples : aiExamples.split('. ').filter((e: string) => e.trim()));
+        }
+        if (aiRecs) {
+          setRecommendations(Array.isArray(aiRecs) ? aiRecs : aiRecs.split('. ').filter((r: string) => r.trim()));
+        }
+        if (aiComment) {
+          setOverallComment(aiComment);
+        }
+        // Development goals - add as goals if manager review
+        if (aiDevGoals && reviewType === ReviewType.MANAGER_REVIEW) {
+          const newGoals = (Array.isArray(aiDevGoals) ? aiDevGoals : [aiDevGoals]).map((title: string) => ({
+            title,
+            description: '',
+            category: GoalCategory.PERFORMANCE,
+            priority: GoalPriority.MEDIUM,
+            targetDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 90 days from now
+          }));
+          setGoals(newGoals);
+        }
+      } else {
+        setAiError(response.data.error || 'Failed to generate feedback');
+      }
+    } catch (error: any) {
+      console.error('AI generation error:', error);
+      setAiError(error.response?.data?.error || 'Failed to generate AI feedback. Please try again.');
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
   const handleSaveAsDraft = async () => {
     if (!toUserEmail) {
       alert('Please enter a recipient email');
@@ -281,12 +355,42 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Give Feedback</h2>
-        {onClose && (
-          <Button variant="ghost" onClick={onClose} icon={X}>
-            Close
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {isAIEnabled && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleGenerateAI}
+              disabled={!selectedUser || isGeneratingAI}
+              className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white border-none hover:from-purple-600 hover:to-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isGeneratingAI ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Generate with AI
+                </>
+              )}
+            </Button>
+          )}
+          {onClose && (
+            <Button variant="ghost" onClick={onClose} icon={X}>
+              Close
+            </Button>
+          )}
+        </div>
       </div>
+
+      {aiError && (
+        <Card className="p-4 bg-red-50 border-red-200">
+          <p className="text-red-800">{aiError}</p>
+        </Card>
+      )}
 
       {createError && (
         <Card className="p-4 bg-red-50 border-red-200">
