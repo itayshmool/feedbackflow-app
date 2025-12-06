@@ -58,21 +58,11 @@ const ManagerDashboard: React.FC = () => {
     <div className="space-y-4 sm:space-y-6">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-green-600 to-blue-600 rounded-xl p-4 sm:p-6 text-white shadow-lg transform transition-all duration-200 hover:shadow-xl">
-        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Welcome back, {user?.name}!</h1>
-            <p className="text-green-100 text-base sm:text-lg">
-              Manage your team and track performance
-            </p>
-          </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all duration-200 w-full sm:w-auto justify-center"
-          >
-            <UserPlus className="w-4 h-4 mr-2" />
-            Add Team Member
-          </Button>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2">Welcome back, {user?.name}!</h1>
+          <p className="text-green-100 text-base sm:text-lg">
+            Manage your team and track performance
+          </p>
         </div>
       </div>
 
