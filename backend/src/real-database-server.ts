@@ -5213,7 +5213,6 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
       'Feedback Created',
       `${currentUserName || currentUserEmail} has started writing feedback for you.`,
       {
-        feedbackId: responseId,
         fromUserId: currentUserId,
         fromUserName: currentUserName,
         cycleId: cycleIdToUse,
@@ -5562,7 +5561,6 @@ app.post('/api/v1/feedback/:id/submit', authenticateToken, async (req, res) => {
       'Feedback Submitted',
       `Your feedback for ${row.recipientName || row.recipientEmail} has been successfully submitted.`,
       {
-        feedbackId: id,
         toUserId: row.recipientId,
         toUserName: row.recipientName,
         cycleId: row.cycleId,
@@ -5932,7 +5930,6 @@ app.post('/api/v1/feedback/:id/acknowledge', authenticateToken, async (req, res)
       'Feedback Acknowledged',
       `${row.recipientName || row.recipientEmail} has acknowledged your feedback.`,
       {
-        feedbackId: id,
         toUserId: row.recipientId,
         toUserName: row.recipientName,
         cycleId: row.cycleId,
