@@ -782,7 +782,8 @@ app.post('/api/v1/auth/login/google', async (req, res) => {
     // Find or create user with roles from user_roles table
     let user: any = null;
     try {
-      // Query user with roles from user_roles table (same as mock login)
+      // Query user with roles from user_roles table
+      // Also fetches admin organization assignment for org-scoped admins
       const userQuery = `
         SELECT 
           u.id, u.email, u.name, u.avatar_url, u.is_active, u.email_verified,
@@ -791,7 +792,27 @@ app.post('/api/v1/auth/login/google', async (req, res) => {
           COALESCE(
             json_agg(DISTINCT r.name) FILTER (WHERE r.name IS NOT NULL),
             '[]'
-          ) as roles
+          ) as roles,
+          -- Get admin organization assignment (for org-scoped admin role)
+          (
+            SELECT ur2.organization_id 
+            FROM user_roles ur2 
+            JOIN roles r2 ON ur2.role_id = r2.id 
+            WHERE ur2.user_id = u.id 
+              AND ur2.is_active = true 
+              AND r2.name = 'admin'
+            LIMIT 1
+          ) as admin_organization_id,
+          (
+            SELECT o2.slug 
+            FROM user_roles ur2 
+            JOIN roles r2 ON ur2.role_id = r2.id 
+            JOIN organizations o2 ON ur2.organization_id = o2.id
+            WHERE ur2.user_id = u.id 
+              AND ur2.is_active = true 
+              AND r2.name = 'admin'
+            LIMIT 1
+          ) as admin_organization_slug
         FROM users u
         LEFT JOIN user_roles ur ON u.id = ur.user_id AND ur.is_active = true
         LEFT JOIN roles r ON ur.role_id = r.id
@@ -854,6 +875,9 @@ app.post('/api/v1/auth/login/google', async (req, res) => {
     // Ensure roles is always an array
     const userRoles = Array.isArray(user.roles) ? user.roles : (user.roles ? [user.roles] : ['employee']);
 
+    // Check if user is super_admin (no org scope needed)
+    const isSuperAdmin = userRoles.includes('super_admin');
+    
     res.json({
       success: true,
       data: {
@@ -866,6 +890,10 @@ app.post('/api/v1/auth/login/google', async (req, res) => {
           organizationName: user.organization_name,
           department: user.department,
           position: user.position,
+          // Admin organization scope (null for super_admin, org ID for org-scoped admin)
+          adminOrganizationId: isSuperAdmin ? null : user.admin_organization_id,
+          adminOrganizationSlug: isSuperAdmin ? null : user.admin_organization_slug,
+          isSuperAdmin: isSuperAdmin,
         },
         token
       }
@@ -912,7 +940,7 @@ app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
       });
     }
 
-    // Get user from database
+    // Get user from database with admin organization info
     const userQuery = `
       SELECT 
         u.id,
@@ -931,12 +959,31 @@ app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
         COALESCE(
           JSON_AGG(r.name) FILTER (WHERE r.name IS NOT NULL),
           '[]'
-        ) as roles
+        ) as roles,
+        -- Get admin organization assignment (for org-scoped admin role)
+        (
+          SELECT ur2.organization_id 
+          FROM user_roles ur2 
+          JOIN roles r2 ON ur2.role_id = r2.id 
+          WHERE ur2.user_id = u.id 
+            AND ur2.is_active = true 
+            AND r2.name = 'admin'
+          LIMIT 1
+        ) as admin_organization_id,
+        (
+          SELECT o2.slug 
+          FROM user_roles ur2 
+          JOIN roles r2 ON ur2.role_id = r2.id 
+          JOIN organizations o2 ON ur2.organization_id = o2.id
+          WHERE ur2.user_id = u.id 
+            AND ur2.is_active = true 
+            AND r2.name = 'admin'
+          LIMIT 1
+        ) as admin_organization_slug
       FROM users u
       LEFT JOIN user_roles ur ON u.id = ur.user_id AND ur.is_active = true
       LEFT JOIN roles r ON ur.role_id = r.id
       LEFT JOIN organizations o ON u.organization_id = o.id
-      LEFT JOIN organizations o2 ON ur.organization_id = o2.id
       WHERE u.email = $1
       GROUP BY u.id, u.email, u.name, u.avatar_url, u.is_active, u.email_verified, 
                u.last_login_at, u.created_at, u.updated_at, u.organization_id, u.department, u.position, o.name
@@ -952,6 +999,9 @@ app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
     }
     
     const user = result.rows[0];
+    const userRoles = user.roles || [];
+    const isSuperAdmin = userRoles.includes('super_admin');
+    
     const userData = {
       id: user.id,
       email: user.email,
@@ -966,7 +1016,11 @@ app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
       organizationName: user.organization_name,
       department: user.department,
       position: user.position,
-      roles: user.roles || []
+      roles: userRoles,
+      // Admin organization scope (null for super_admin, org ID for org-scoped admin)
+      adminOrganizationId: isSuperAdmin ? null : user.admin_organization_id,
+      adminOrganizationSlug: isSuperAdmin ? null : user.admin_organization_slug,
+      isSuperAdmin: isSuperAdmin,
     };
     
     res.json({

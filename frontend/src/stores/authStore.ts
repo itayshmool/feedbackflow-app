@@ -18,6 +18,11 @@ export interface User {
   lastLoginAt?: string
   createdAt: string
   updatedAt: string
+  // Admin organization scope (null for super_admin, org ID for org-scoped admin)
+  adminOrganizationId?: string | null
+  adminOrganizationSlug?: string | null
+  // Convenience flag for checking super admin status
+  isSuperAdmin?: boolean
 }
 
 interface AuthState {

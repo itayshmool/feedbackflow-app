@@ -8,6 +8,10 @@ export interface JwtPayload {
   name?: string;
   picture?: string;
   roles?: string[];
+  // Organization ID for org-scoped admins (null for super_admin)
+  adminOrganizationId?: string | null;
+  // Organization slug for convenience
+  adminOrganizationSlug?: string | null;
 }
 
 export class JwtService {

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { AdminOrganizationController } from '../controllers/admin-organization.controller';
 import { validateRequest } from '../../../shared/middleware/validation.middleware';
 import { authenticateToken } from '../../../shared/middleware/auth.middleware';
-import { requireRole } from '../../../shared/middleware/rbac.middleware';
+import { requireRole, requireOrgScopedAdmin, requireOrgAccess } from '../../../shared/middleware/rbac.middleware';
 import { rateLimit } from '../../../shared/middleware/rate-limit.middleware';
 import { z } from 'zod';
 import multer from 'multer';
@@ -261,60 +261,80 @@ const slugAvailabilitySchema = z.object({
 export function createAdminOrganizationRoutes(controller: AdminOrganizationController): Router {
   const router = Router();
 
-  // Apply authentication and authorization middleware to all routes
+  // Apply authentication middleware to all routes
   router.use(authenticateToken);
-  router.use(requireRole(['admin', 'super_admin']));
 
   // Organization Management Routes
+  // Note: Different routes have different access levels:
+  // - Create/Delete organizations: super_admin only
+  // - List/View organizations: org-scoped (admin sees their org, super_admin sees all)
+  // - Update organization: org-scoped (admin can update their org, super_admin can update any)
+
+  // CREATE - Super admin only (can create any organization)
   router.post(
     '/organizations',
+    requireRole(['super_admin']),
     rateLimit({ windowMs: 15 * 60 * 1000, max: 10 }), // 10 requests per 15 minutes
     validateRequest(createOrganizationSchema),
     controller.createOrganization
   );
 
+  // LIST - Org-scoped (admin sees their org only, super_admin sees all)
   router.get(
     '/organizations',
+    requireOrgScopedAdmin(),
     rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }), // 100 requests per 15 minutes
     controller.getOrganizations
   );
 
+  // SEARCH - Super admin only (search across all organizations)
   router.get(
     '/organizations/search',
+    requireRole(['super_admin']),
     rateLimit({ windowMs: 15 * 60 * 1000, max: 50 }), // 50 requests per 15 minutes
     validateRequest(searchSchema),
     controller.searchOrganizations
   );
 
+  // STATS - Super admin only (aggregate stats across organizations)
   router.get(
     '/organizations/stats',
+    requireRole(['super_admin']),
     rateLimit({ windowMs: 15 * 60 * 1000, max: 20 }), // 20 requests per 15 minutes
     controller.getOrganizationStats
   );
 
+  // GET BY SLUG - Org-scoped (admin can only access their org's slug)
   router.get(
     '/organizations/slug/:slug',
+    requireOrgScopedAdmin(),
     rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }), // 100 requests per 15 minutes
     validateRequest(organizationSlugSchema),
     controller.getOrganizationBySlug
   );
 
+  // GET BY ID - Org-scoped (admin can only access their org)
   router.get(
     '/organizations/:id',
+    requireOrgScopedAdmin(),
     rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }), // 100 requests per 15 minutes
     validateRequest(organizationIdSchema),
     controller.getOrganizationById
   );
 
+  // UPDATE - Org-scoped (admin can only update their org)
   router.put(
     '/organizations/:id',
+    requireOrgScopedAdmin(),
     rateLimit({ windowMs: 15 * 60 * 1000, max: 20 }), // 20 requests per 15 minutes
     validateRequest(updateOrganizationSchema),
     controller.updateOrganization
   );
 
+  // DELETE - Super admin only (can delete any organization)
   router.delete(
     '/organizations/:id',
+    requireRole(['super_admin']),
     rateLimit({ windowMs: 15 * 60 * 1000, max: 5 }), // 5 requests per 15 minutes
     validateRequest(organizationIdSchema),
     controller.deleteOrganization

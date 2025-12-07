@@ -2,6 +2,7 @@ import React from 'react';
 import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdminRouteGuard from './components/auth/AdminRouteGuard';
+import SuperAdminRouteGuard from './components/auth/SuperAdminRouteGuard';
 import { useAuthStore } from './stores/authStore';
 
 // Pages
@@ -75,8 +76,13 @@ const AppRouter: React.FC = () => {
               element: <AdminDashboard />,
             },
             {
+              // Organizations management - super_admin only
               path: 'organizations',
-              element: <OrganizationManagement />,
+              element: (
+                <SuperAdminRouteGuard>
+                  <OrganizationManagement />
+                </SuperAdminRouteGuard>
+              ),
             },
             {
               path: 'users',
