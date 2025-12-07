@@ -52,14 +52,39 @@ export class AdminUserService {
       emailVerified: false
     });
 
+    // Get admin role ID for special handling
+    const adminRole = await this.roleModel.findByName('admin');
+    const adminRoleId = adminRole?.id;
+
     // Assign roles if provided
     if (userData.roles && userData.roles.length > 0) {
       for (const roleName of userData.roles) {
+        // Skip admin role here if we're handling it via adminOrganizationIds
+        if (roleName === 'admin' && userData.adminOrganizationIds !== undefined && adminRoleId) {
+          continue;
+        }
+        
         const role = await this.roleModel.findByName(roleName);
         if (role) {
           await this.userModel.assignRole(user.id, role.id, userData.organizationId);
         } else {
           console.warn(`Role '${roleName}' not found for user ${user.id}`);
+        }
+      }
+
+      // Handle admin role with multi-org support
+      if (userData.adminOrganizationIds !== undefined && adminRoleId) {
+        const orgIds = userData.adminOrganizationIds;
+        
+        if (userData.roles.includes('admin')) {
+          // Validate: admin role requires at least one organization
+          if (orgIds.length === 0) {
+            throw new Error('Admin role requires at least one organization');
+          }
+          
+          // Sync admin role across specified organizations
+          await this.userModel.syncAdminOrganizations(user.id, adminRoleId, orgIds);
+          console.log(`🔐 Multi-org admin created: userId=${user.id}, orgs=${orgIds.length}`);
         }
       }
     }
@@ -105,22 +130,57 @@ export class AdminUserService {
 
     // Update roles if provided
     if (userData.roles !== undefined) {
-      // Remove all existing roles
+      // Get admin role ID for special handling
+      const adminRole = await this.roleModel.findByName('admin');
+      const adminRoleId = adminRole?.id;
+
+      // Remove all existing roles (except admin if we're syncing it separately)
       const existingRoles = await this.userModel.getUserRoles(id);
       for (const role of existingRoles) {
         // Type system expects camelCase, but DB returns snake_case - handle both
         const roleId = (role as any).role_id || role.roleId;
         const organizationId = (role as any).organization_id || role.organizationId;
+        
+        // Skip admin role removal if we're handling it via adminOrganizationIds
+        if (roleId === adminRoleId && userData.adminOrganizationIds !== undefined) {
+          continue;
+        }
+        
         await this.userModel.removeRole(id, roleId, organizationId);
       }
 
-      // Assign new roles
+      // Assign new roles (except admin if we're handling it via adminOrganizationIds)
       for (const roleName of userData.roles) {
+        // Skip admin role here if we're handling it via adminOrganizationIds
+        if (roleName === 'admin' && userData.adminOrganizationIds !== undefined && adminRoleId) {
+          continue;
+        }
+        
         const role = await this.roleModel.findByName(roleName);
         if (role) {
           await this.userModel.assignRole(id, role.id, userData.organizationId);
         } else {
           console.warn(`Role '${roleName}' not found for user ${id}`);
+        }
+      }
+
+      // Handle admin role with multi-org support
+      if (userData.adminOrganizationIds !== undefined && adminRoleId) {
+        const orgIds = userData.adminOrganizationIds;
+        
+        if (userData.roles.includes('admin')) {
+          // Validate: admin role requires at least one organization
+          if (orgIds.length === 0) {
+            throw new Error('Admin role requires at least one organization');
+          }
+          
+          // Sync admin role across specified organizations
+          await this.userModel.syncAdminOrganizations(id, adminRoleId, orgIds);
+          console.log(`🔐 Multi-org admin sync: userId=${id}, orgs=${orgIds.length}`);
+        } else {
+          // Admin role is being removed - deactivate all admin org assignments
+          await this.userModel.syncAdminOrganizations(id, adminRoleId, []);
+          console.log(`🔐 Admin role removed: userId=${id}`);
         }
       }
     }

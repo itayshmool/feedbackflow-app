@@ -2044,9 +2044,11 @@ app.post('/api/v1/admin/users', authenticateToken, async (req, res) => {
       department, 
       position, 
       roles = [],
+      adminOrganizationIds, // NEW: Array of org IDs for admin role assignments
       isActive = true,
       emailVerified = false
     } = req.body;
+    const grantedBy = (req as any).user?.id;
 
     // Validate required fields
     if (!name || !email) {
@@ -2077,6 +2079,18 @@ app.post('/api/v1/admin/users', authenticateToken, async (req, res) => {
       });
     }
 
+    // Validate admin role requires organizations
+    if (roles.includes('admin') && adminOrganizationIds !== undefined) {
+      const orgIds = Array.isArray(adminOrganizationIds) ? adminOrganizationIds : [];
+      if (orgIds.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Admin role requires at least one organization',
+          message: 'Please select at least one organization for the admin role'
+        });
+      }
+    }
+
     // Create user
     const userQuery = `
       INSERT INTO users (name, email, organization_id, department, position, is_active, email_verified)
@@ -2090,9 +2104,18 @@ app.post('/api/v1/admin/users', authenticateToken, async (req, res) => {
     
     const newUser = userResult.rows[0];
 
+    // Get admin role ID for special handling
+    const adminRoleResult = await query("SELECT id FROM roles WHERE name = 'admin'");
+    const adminRoleId = adminRoleResult.rows[0]?.id;
+
     // Assign roles if provided
     if (roles.length > 0) {
       for (const roleName of roles) {
+        // Skip 'admin' role here if we're handling it via adminOrganizationIds
+        if (roleName === 'admin' && adminOrganizationIds !== undefined && adminRoleId) {
+          continue;
+        }
+        
         // Get role ID
         const roleResult = await query('SELECT id FROM roles WHERE name = $1', [roleName]);
         if (roleResult.rows.length > 0) {
@@ -2100,10 +2123,24 @@ app.post('/api/v1/admin/users', authenticateToken, async (req, res) => {
           
           // Assign role
           await query(`
-            INSERT INTO user_roles (user_id, role_id, organization_id, granted_at, is_active)
-            VALUES ($1, $2, $3, NOW(), true)
-          `, [newUser.id, roleId, organizationId]);
+            INSERT INTO user_roles (user_id, role_id, organization_id, granted_by, granted_at, is_active)
+            VALUES ($1, $2, $3, $4, NOW(), true)
+          `, [newUser.id, roleId, organizationId, grantedBy]);
         }
+      }
+      
+      // Handle admin role with multi-org support
+      if (roles.includes('admin') && adminOrganizationIds !== undefined && adminRoleId) {
+        const orgIds = Array.isArray(adminOrganizationIds) ? adminOrganizationIds : [];
+        
+        for (const orgId of orgIds) {
+          await query(`
+            INSERT INTO user_roles (user_id, role_id, organization_id, granted_by, granted_at, is_active)
+            VALUES ($1, $2, $3, $4, NOW(), true)
+          `, [newUser.id, adminRoleId, orgId, grantedBy]);
+        }
+        
+        console.log(`🔐 Multi-org admin created: userId=${newUser.id}, orgs=${orgIds.length}`);
       }
     }
 
@@ -2125,9 +2162,11 @@ app.put('/api/v1/admin/users/:id', authenticateToken, async (req, res) => {
       department, 
       position, 
       roles = [],
+      adminOrganizationIds, // NEW: Array of org IDs for admin role assignments
       isActive,
       emailVerified
     } = req.body;
+    const grantedBy = (req as any).user?.id;
 
     // Check if user exists
     const existingUser = await query('SELECT id FROM users WHERE id = $1', [id]);
@@ -2183,11 +2222,29 @@ app.put('/api/v1/admin/users/:id', authenticateToken, async (req, res) => {
 
     // Update roles if provided
     if (roles !== undefined) {
-      // Remove existing roles
-      await query('UPDATE user_roles SET is_active = false WHERE user_id = $1', [id]);
+      // Get admin role ID for special handling
+      const adminRoleResult = await query("SELECT id FROM roles WHERE name = 'admin'");
+      const adminRoleId = adminRoleResult.rows[0]?.id;
       
-      // Add new roles
+      // Deactivate ALL existing roles first (except admin roles if we're syncing them separately)
+      if (adminOrganizationIds !== undefined && adminRoleId) {
+        // If admin org sync is happening, don't touch admin role assignments here
+        await query(`
+          UPDATE user_roles SET is_active = false 
+          WHERE user_id = $1 AND role_id != $2
+        `, [id, adminRoleId]);
+      } else {
+        // Traditional behavior: deactivate all roles
+        await query('UPDATE user_roles SET is_active = false WHERE user_id = $1', [id]);
+      }
+      
+      // Add new roles (except 'admin' if adminOrganizationIds is provided)
       for (const roleName of roles) {
+        // Skip 'admin' role here if we're handling it via adminOrganizationIds
+        if (roleName === 'admin' && adminOrganizationIds !== undefined) {
+          continue;
+        }
+        
         const roleResult = await query('SELECT id FROM roles WHERE name = $1', [roleName]);
         if (roleResult.rows.length > 0) {
           const roleId = roleResult.rows[0].id;
@@ -2207,10 +2264,66 @@ app.put('/api/v1/admin/users/:id', authenticateToken, async (req, res) => {
           } else {
             // Create new role assignment
             await query(`
-              INSERT INTO user_roles (user_id, role_id, organization_id, granted_at, is_active)
-              VALUES ($1, $2, $3, NOW(), true)
-            `, [id, roleId, organizationId]);
+              INSERT INTO user_roles (user_id, role_id, organization_id, granted_by, granted_at, is_active)
+              VALUES ($1, $2, $3, $4, NOW(), true)
+            `, [id, roleId, organizationId, grantedBy]);
           }
+        }
+      }
+      
+      // Handle admin role with multi-org support
+      if (adminOrganizationIds !== undefined && adminRoleId) {
+        // Sync admin role across the specified organizations
+        const orgIds = Array.isArray(adminOrganizationIds) ? adminOrganizationIds : [];
+        
+        // If admin role is being assigned, sync the org assignments
+        if (roles.includes('admin')) {
+          // Validation: admin role requires at least one organization
+          if (orgIds.length === 0) {
+            return res.status(400).json({
+              success: false,
+              error: 'Admin role requires at least one organization',
+              message: 'Please select at least one organization for the admin role'
+            });
+          }
+          
+          // Deactivate admin roles for orgs NOT in the list
+          await query(`
+            UPDATE user_roles 
+            SET is_active = false 
+            WHERE user_id = $1 
+              AND role_id = $2 
+              AND organization_id IS NOT NULL
+              AND organization_id != ALL($3)
+              AND is_active = true
+          `, [id, adminRoleId, orgIds]);
+          
+          // Add/reactivate admin roles for orgs IN the list
+          for (const orgId of orgIds) {
+            await query(`
+              INSERT INTO user_roles (user_id, role_id, organization_id, granted_by, is_active)
+              VALUES ($1, $2, $3, $4, true)
+              ON CONFLICT (user_id, role_id, organization_id) 
+              DO UPDATE SET 
+                is_active = true,
+                granted_by = COALESCE($4, user_roles.granted_by),
+                granted_at = CASE 
+                  WHEN user_roles.is_active = false THEN NOW() 
+                  ELSE user_roles.granted_at 
+                END
+            `, [id, adminRoleId, orgId, grantedBy]);
+          }
+          
+          console.log(`🔐 Multi-org admin sync: userId=${id}, orgs=${orgIds.length}`);
+        } else {
+          // Admin role is being removed - deactivate all admin org assignments
+          await query(`
+            UPDATE user_roles 
+            SET is_active = false 
+            WHERE user_id = $1 AND role_id = $2 AND is_active = true
+          `, [id, adminRoleId]);
+          
+          console.log(`🔐 Admin role removed: userId=${id}`);
         }
       }
     }

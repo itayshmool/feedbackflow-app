@@ -440,4 +440,87 @@ export class UserModel {
     );
     return result.rows[0] || null;
   }
+
+  /**
+   * Sync admin role assignments across multiple organizations
+   * 
+   * This method:
+   * 1. Deactivates admin role for organizations NOT in the provided list
+   * 2. Creates/activates admin role for organizations IN the provided list
+   * 
+   * @param userId - The user to sync admin roles for
+   * @param adminRoleId - The UUID of the 'admin' role
+   * @param organizationIds - Array of organization IDs this user should have admin access to
+   * @param grantedBy - The user ID granting these roles
+   * @returns Object with added and removed organization counts
+   */
+  async syncAdminOrganizations(
+    userId: string,
+    adminRoleId: string,
+    organizationIds: string[],
+    grantedBy?: string
+  ): Promise<{ added: number; removed: number }> {
+    let added = 0;
+    let removed = 0;
+
+    // Step 1: Deactivate admin roles for organizations NOT in the new list
+    if (organizationIds.length === 0) {
+      // Remove all admin org assignments
+      const deactivateResult = await dbQuery(`
+        UPDATE user_roles 
+        SET is_active = false 
+        WHERE user_id = $1 
+          AND role_id = $2 
+          AND organization_id IS NOT NULL
+          AND is_active = true
+      `, [userId, adminRoleId]);
+      removed = deactivateResult.rowCount || 0;
+    } else {
+      // Remove admin roles for orgs NOT in the list
+      const deactivateResult = await dbQuery(`
+        UPDATE user_roles 
+        SET is_active = false 
+        WHERE user_id = $1 
+          AND role_id = $2 
+          AND organization_id IS NOT NULL
+          AND organization_id != ALL($3)
+          AND is_active = true
+      `, [userId, adminRoleId, organizationIds]);
+      removed = deactivateResult.rowCount || 0;
+    }
+
+    // Step 2: Add/reactivate admin roles for organizations IN the list
+    for (const orgId of organizationIds) {
+      const upsertResult = await dbQuery(`
+        INSERT INTO user_roles (user_id, role_id, organization_id, granted_by, is_active)
+        VALUES ($1, $2, $3, $4, true)
+        ON CONFLICT (user_id, role_id, organization_id) 
+        DO UPDATE SET 
+          is_active = true,
+          granted_by = COALESCE($4, user_roles.granted_by),
+          granted_at = CASE 
+            WHEN user_roles.is_active = false THEN NOW() 
+            ELSE user_roles.granted_at 
+          END
+        RETURNING 
+          (xmax = 0) as is_insert
+      `, [userId, adminRoleId, orgId, grantedBy]);
+      
+      // Count actual new additions (not reactivations of already active)
+      if (upsertResult.rows[0]?.is_insert) {
+        added++;
+      }
+    }
+
+    console.log(`🔐 syncAdminOrganizations: userId=${userId}, added=${added}, removed=${removed}, targetOrgs=${organizationIds.length}`);
+    return { added, removed };
+  }
+
+  /**
+   * Get the admin role ID
+   */
+  async getAdminRoleId(): Promise<string | null> {
+    const result = await dbQuery("SELECT id FROM roles WHERE name = 'admin'");
+    return result.rows[0]?.id || null;
+  }
 }
