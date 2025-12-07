@@ -372,6 +372,62 @@ const organizationService = new DatabaseOrganizationService();
 const departmentModel = new DepartmentModelClass(dbConfig.pool);
 const teamModel = new TeamModelClass(dbConfig.pool);
 
+// GET assignable organizations - MUST be registered BEFORE admin user routes
+// Returns orgs the current user can grant admin access to
+// Super admin: all orgs, Org-scoped admin: only their managed orgs, Others: empty
+app.get('/api/v1/admin/assignable-organizations', authenticateToken, async (req, res) => {
+  try {
+    const user = (req as any).user;
+    const userRoles = user?.roles || [];
+    const isSuperAdmin = userRoles.includes('super_admin');
+    const isAdmin = userRoles.includes('admin');
+    const adminOrganizations = user?.adminOrganizations || [];
+    
+    // Non-admin users cannot assign admin roles
+    if (!isSuperAdmin && !isAdmin) {
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+    
+    if (isSuperAdmin) {
+      // Super admin can assign any organization
+      const result = await query(`
+        SELECT id, name, slug
+        FROM organizations
+        WHERE is_active = true
+        ORDER BY name ASC
+      `);
+      
+      return res.json({
+        success: true,
+        data: result.rows.map((row: any) => ({
+          id: row.id,
+          name: row.name,
+          slug: row.slug
+        }))
+      });
+    }
+    
+    // Org-scoped admin can only assign their managed organizations
+    return res.json({
+      success: true,
+      data: adminOrganizations.map((org: any) => ({
+        id: org.id,
+        name: org.name,
+        slug: org.slug
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching assignable organizations:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch assignable organizations'
+    });
+  }
+});
+
 // Mount admin user routes
 app.use('/api/v1/admin', createAdminUserRoutes());
 
@@ -1029,13 +1085,11 @@ app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
     `;
     
     const adminOrgsResult = await query(adminOrgsQuery, [user.id]);
-    console.log('🔍 adminOrgsResult.rows:', adminOrgsResult.rows);
     const adminOrganizations = adminOrgsResult.rows.map((row: any) => ({
       id: row.id,
       slug: row.slug,
       name: row.name
     }));
-    console.log('🔍 adminOrganizations:', adminOrganizations);
     
     const userData = {
       id: user.id,
