@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useUserStore } from '@/stores/userStore';
 import { useOrganizationStore } from '@/stores/organizationStore';
+import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
@@ -48,6 +49,9 @@ export const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) 
     organizations,
     fetchOrganizations,
   } = useOrganizationStore();
+
+  const { user: currentUser } = useAuthStore();
+  const canAssignSuperAdmin = currentUser?.roles?.includes('super_admin');
 
   const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null);
   const [checkingEmail, setCheckingEmail] = useState(false);
@@ -308,18 +312,29 @@ export const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) 
           <div className="space-y-3">
             <Label>Assign Roles</Label>
             <div className="grid grid-cols-2 gap-3">
-              {roles.map((role) => (
-                <div key={role.id} className="flex items-center space-x-3">
-                  <Switch
-                    id={`role-${role.id}`}
-                    checked={watchedRoles?.includes(role.name) || false}
-                    onCheckedChange={() => handleRoleToggle(role.name)}
-                  />
-                  <Label htmlFor={`role-${role.id}`} className="text-sm">
-                    {role.name}
-                  </Label>
-                </div>
-              ))}
+              {roles.map((role) => {
+                const isDisabled = role.name === 'super_admin' && !canAssignSuperAdmin;
+                return (
+                  <div key={role.id} className="flex items-center space-x-3">
+                    <Switch
+                      id={`role-${role.id}`}
+                      checked={watchedRoles?.includes(role.name) || false}
+                      onCheckedChange={() => handleRoleToggle(role.name)}
+                      disabled={isDisabled}
+                    />
+                    <Label 
+                      htmlFor={`role-${role.id}`} 
+                      className={`text-sm ${isDisabled ? 'text-gray-400' : ''}`}
+                      title={isDisabled ? 'Only Super Admins can assign this role' : ''}
+                    >
+                      {role.name}
+                      {isDisabled && (
+                        <span className="ml-1 text-xs text-gray-400">(requires super_admin)</span>
+                      )}
+                    </Label>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
