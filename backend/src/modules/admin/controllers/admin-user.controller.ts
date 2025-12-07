@@ -9,6 +9,7 @@ import {
   BulkUserOperation,
   UserImportData
 } from '../types/user.types.js';
+import { OrgScopedRequest } from '../../../shared/middleware/rbac.middleware.js';
 
 export class AdminUserController {
   private userService: AdminUserService;
@@ -19,6 +20,11 @@ export class AdminUserController {
 
   async getUsers(req: Request, res: Response): Promise<void> {
     try {
+      // Get organization context from middleware
+      const orgScopedReq = req as OrgScopedRequest;
+      const effectiveOrgId = orgScopedReq.effectiveOrganizationId;
+      const isSuperAdmin = orgScopedReq.isSuperAdmin;
+
     const {
       page = 1,
       limit = 10,
@@ -72,11 +78,23 @@ export class AdminUserController {
         }
       }
 
+      // Determine organization filter:
+      // - For org-scoped admin: always filter by their assigned org
+      // - For super_admin: use requested organizationId filter, or null for all orgs
+      let orgFilter: string | undefined;
+      if (!isSuperAdmin && effectiveOrgId) {
+        // Org-scoped admin - enforce their org
+        orgFilter = effectiveOrgId;
+      } else if (organizationId) {
+        // Super admin with specific org filter requested
+        orgFilter = organizationId as string;
+      }
+
       const filters: UserFilters = {
         search: search as string,
         isActive: effectiveIsActive,
         emailVerified: effectiveEmailVerified,
-        organizationId: organizationId as string,
+        organizationId: orgFilter,
         roleId: effectiveRoleId,
         department: department as string,
         position: position as string,

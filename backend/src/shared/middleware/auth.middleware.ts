@@ -1,7 +1,43 @@
 import { Request, Response, NextFunction } from 'express';
 import { JwtService } from '../../modules/auth/services/jwt.service.js';
+import { query } from '../../config/real-database.js';
 
 const jwtService = new JwtService(process.env.JWT_SECRET || 'changeme');
+
+// Helper function to fetch admin organization from database
+async function fetchAdminOrganization(userId: string, email: string): Promise<{ adminOrganizationId: string | null; adminOrganizationSlug: string | null; roles: string[] }> {
+  try {
+    const result = await query(`
+      SELECT 
+        r.name as role_name,
+        ur.organization_id,
+        o.slug as organization_slug
+      FROM user_roles ur
+      JOIN roles r ON ur.role_id = r.id
+      LEFT JOIN organizations o ON ur.organization_id = o.id
+      WHERE ur.user_id = $1 AND ur.is_active = true
+    `, [userId]);
+
+    const roles = [...new Set(result.rows.map((r: any) => r.role_name))];
+    
+    // Find admin role assignment with organization
+    const adminAssignment = result.rows.find((r: any) => r.role_name === 'admin' && r.organization_id);
+    
+    // If super_admin, no org restriction
+    if (roles.includes('super_admin')) {
+      return { adminOrganizationId: null, adminOrganizationSlug: null, roles };
+    }
+    
+    return {
+      adminOrganizationId: adminAssignment?.organization_id || null,
+      adminOrganizationSlug: adminAssignment?.organization_slug || null,
+      roles
+    };
+  } catch (error) {
+    console.error('Error fetching admin organization:', error);
+    return { adminOrganizationId: null, adminOrganizationSlug: null, roles: [] };
+  }
+}
 
 async function authenticateTokenAsync(req: Request, res: Response, next: NextFunction) {
   // Check Authorization header first (for cross-domain requests)
@@ -33,17 +69,33 @@ async function authenticateTokenAsync(req: Request, res: Response, next: NextFun
         // Extract email from token (everything between 'mock-jwt-token-' and last '-TIMESTAMP')
         const email = parts.slice(3, -1).join('-');
         
-        // Assign mock user with admin + employee roles for testing
-        // Note: Using a mock organization ID - in production this should be fetched from database
+        // Fetch user from database to get proper roles and admin org
+        const userResult = await query(`
+          SELECT u.id, u.email, u.name
+          FROM users u
+          WHERE u.email = $1
+        `, [email]);
+
+        const userId = userResult.rows[0]?.id || '00000000-0000-0000-0000-000000000000';
+        const userName = userResult.rows[0]?.name || email.split('@')[0];
+        
+        // Fetch admin organization info
+        const { adminOrganizationId, adminOrganizationSlug, roles } = await fetchAdminOrganization(userId, email);
+        
+        // Fallback roles for mock user if no database roles found
+        const effectiveRoles = roles.length > 0 ? roles : ['admin', 'employee'];
+        
         (req as any).user = {
-          id: '00000000-0000-0000-0000-000000000000', // Valid UUID for DB compatibility
+          id: userId,
           email: email,
-          name: email.split('@')[0],
-          roles: ['admin', 'employee'], // Mock roles for all authenticated users
-          organizationId: '00000000-0000-0000-0000-000000000001' // Default Wix.com organization
+          name: userName,
+          roles: effectiveRoles,
+          organizationId: '00000000-0000-0000-0000-000000000001', // Default org
+          adminOrganizationId: adminOrganizationId,
+          adminOrganizationSlug: adminOrganizationSlug,
         };
         
-        console.log('🔍 Auth middleware - mock token authenticated:', email);
+        console.log('🔍 Auth middleware - mock token authenticated:', email, 'adminOrgId:', adminOrganizationId);
         return next();
       }
     }
@@ -51,14 +103,24 @@ async function authenticateTokenAsync(req: Request, res: Response, next: NextFun
     // Real JWT verification
     const payload = jwtService.verify(token);
 
-    // Fetch user data from database if needed
-    // For now, use JWT payload directly
+    // Always fetch roles from database for real JWT tokens to ensure they're up-to-date
+    // This is important for role-based access control (e.g., super_admin protection)
+    const { adminOrganizationId, adminOrganizationSlug, roles } = await fetchAdminOrganization(payload.sub, payload.email);
+    
+    // Use database roles if available, otherwise fall back to JWT payload roles
+    const effectiveRoles = roles.length > 0 ? roles : (payload.roles || []);
+
+    // Set user data from JWT payload including admin organization info from database
     (req as any).user = {
       id: payload.sub,
       email: payload.email,
       name: payload.name,
-      roles: payload.roles || []
+      roles: effectiveRoles,
+      adminOrganizationId: adminOrganizationId,
+      adminOrganizationSlug: adminOrganizationSlug,
     };
+    
+    console.log('🔍 Auth middleware - real JWT authenticated:', payload.email, 'roles:', effectiveRoles, 'adminOrgId:', adminOrganizationId);
 
     next();
   } catch (error) {

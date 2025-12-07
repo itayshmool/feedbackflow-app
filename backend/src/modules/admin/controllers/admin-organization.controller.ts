@@ -13,6 +13,7 @@ import {
 import { NotFoundError, ValidationError } from '../../../shared/utils/errors.js';
 import { Logger } from '../../../shared/utils/logger';
 import { CSVParser } from '../../../shared/utils/csv-parser.js';
+import { OrgScopedRequest } from '../../../shared/middleware/rbac.middleware.js';
 
 export class AdminOrganizationController {
   private organizationService: AdminOrganizationService;
@@ -36,6 +37,11 @@ export class AdminOrganizationController {
 
   getOrganizations = async (req: Request, res: Response, next: NextFunction) => {
     try {
+      // Get organization context from middleware
+      const orgScopedReq = req as OrgScopedRequest;
+      const effectiveOrgId = orgScopedReq.effectiveOrganizationId;
+      const isSuperAdmin = orgScopedReq.isSuperAdmin;
+
       const filters = {
         isActive: req.query.isActive ? req.query.isActive === 'true' : undefined,
         status: req.query.status as string,
@@ -44,6 +50,23 @@ export class AdminOrganizationController {
         offset: req.query.offset ? parseInt(req.query.offset as string) : undefined,
       };
 
+      // For org-scoped admin, only return their organization
+      if (!isSuperAdmin && effectiveOrgId) {
+        const organization = await this.organizationService.getOrganizationById(effectiveOrgId);
+        // Return in same format as getOrganizations for consistency
+        res.json({
+          data: organization ? [organization] : [],
+          pagination: {
+            total: organization ? 1 : 0,
+            limit: filters.limit || 10,
+            offset: filters.offset || 0,
+            hasMore: false
+          }
+        });
+        return;
+      }
+
+      // Super admin sees all organizations
       const organizations = await this.organizationService.getOrganizations(filters);
       res.json(organizations);
     } catch (err) {

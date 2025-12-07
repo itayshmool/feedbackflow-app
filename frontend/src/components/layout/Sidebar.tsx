@@ -31,12 +31,17 @@ const managerNavigation = [
   { name: 'Templates', href: '/templates', icon: FileText },
 ]
 
-const adminNavigation = [
+// Base admin navigation (visible to all admins)
+const baseAdminNavigation = [
   { name: 'Admin Dashboard', href: '/admin', icon: Settings },
-  { name: 'Organizations', href: '/admin/organizations', icon: Building },
   { name: 'Users', href: '/admin/users', icon: Users },
   { name: 'Hierarchy', href: '/admin/hierarchy', icon: TreePine },
   { name: 'Templates', href: '/admin/templates', icon: FileText },
+]
+
+// Super admin only navigation (cross-org features)
+const superAdminNavigation = [
+  { name: 'Organizations', href: '/admin/organizations', icon: Building },
 ]
 
 interface SidebarProps {
@@ -47,7 +52,14 @@ interface SidebarProps {
 export default function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
   const { user } = useAuthStore()
   const isAdmin = user?.roles?.includes('admin') || user?.roles?.includes('super_admin')
+  const isSuperAdmin = user?.roles?.includes('super_admin') || user?.isSuperAdmin
   const isManager = user?.roles?.includes('manager')
+  
+  // Build admin navigation based on role
+  // Super admin sees all items, org-scoped admin sees only their org's items
+  const adminNavigation = isSuperAdmin 
+    ? [baseAdminNavigation[0], ...superAdminNavigation, ...baseAdminNavigation.slice(1)]
+    : baseAdminNavigation
 
   // Handle nav link click - close mobile menu
   const handleNavClick = () => {

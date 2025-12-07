@@ -3,7 +3,7 @@
 import { Router } from 'express';
 import { AdminUserController } from '../controllers/admin-user.controller.js';
 import { authenticateToken } from '../../../shared/middleware/auth.middleware.js';
-import { requireRole } from '../../../shared/middleware/rbac.middleware.js';
+import { requireRole, requireOrgScopedAdmin } from '../../../shared/middleware/rbac.middleware.js';
 import { validateRequest } from '../../../shared/middleware/validation.middleware.js';
 import { z } from 'zod';
 
@@ -12,9 +12,12 @@ export function createAdminUserRoutes(controller?: AdminUserController): Router 
   const router = Router();
   const userController = controller || new AdminUserController();
 
-  // Apply authentication and admin role requirement to all routes
+  // Apply authentication and org-scoped admin middleware to all routes
+  // This ensures:
+  // - super_admin: can access all organizations (effectiveOrganizationId = null or requested org)
+  // - admin: can only access their assigned organization (effectiveOrganizationId = assigned org)
   router.use(authenticateToken);
-  router.use(requireRole(['admin', 'super_admin']));
+  router.use(requireOrgScopedAdmin());
 
   // User management routes
   router.get('/users', userController.getUsers.bind(userController));

@@ -378,6 +378,37 @@ app.use('/api/v1/admin', createAdminUserRoutes());
 // Organization API routes - specific routes first, then parameterized routes
 app.get('/api/v1/admin/organizations', authenticateToken, async (req, res) => {
   try {
+    // Check if user is super_admin (can see all orgs) or org-scoped admin (only their org)
+    const userRoles = (req as any).user?.roles || [];
+    const isSuperAdmin = userRoles.includes('super_admin');
+    const adminOrgId = (req as any).user?.adminOrganizationId;
+    
+    // If org-scoped admin (not super_admin), only return their organization
+    if (!isSuperAdmin && adminOrgId) {
+      const orgResult = await query(`
+        SELECT id, name, slug, description, contact_email, phone, address, city, state, 
+               zip_code, country, website, logo_url, is_active, status, subscription_plan,
+               max_users, max_cycles, storage_limit_gb, feature_flags, settings,
+               created_at, updated_at
+        FROM organizations WHERE id = $1
+      `, [adminOrgId]);
+      
+      if (orgResult.rows.length > 0) {
+        const org = orgResult.rows[0];
+        res.json({
+          data: [transformOrganizationForFrontend(org)],
+          pagination: { total: 1, limit: 10, offset: 0, hasMore: false }
+        });
+      } else {
+        res.json({
+          data: [],
+          pagination: { total: 0, limit: 10, offset: 0, hasMore: false }
+        });
+      }
+      return;
+    }
+    
+    // Super admin sees all organizations
     const { page = 1, limit = 10, search = '' } = req.query;
     const pageNum = Number(page);
     const limitNum = Number(limit);
@@ -782,7 +813,8 @@ app.post('/api/v1/auth/login/google', async (req, res) => {
     // Find or create user with roles from user_roles table
     let user: any = null;
     try {
-      // Query user with roles from user_roles table (same as mock login)
+      // Query user with roles from user_roles table
+      // Also fetches admin organization assignment for org-scoped admins
       const userQuery = `
         SELECT 
           u.id, u.email, u.name, u.avatar_url, u.is_active, u.email_verified,
@@ -791,7 +823,27 @@ app.post('/api/v1/auth/login/google', async (req, res) => {
           COALESCE(
             json_agg(DISTINCT r.name) FILTER (WHERE r.name IS NOT NULL),
             '[]'
-          ) as roles
+          ) as roles,
+          -- Get admin organization assignment (for org-scoped admin role)
+          (
+            SELECT ur2.organization_id 
+            FROM user_roles ur2 
+            JOIN roles r2 ON ur2.role_id = r2.id 
+            WHERE ur2.user_id = u.id 
+              AND ur2.is_active = true 
+              AND r2.name = 'admin'
+            LIMIT 1
+          ) as admin_organization_id,
+          (
+            SELECT o2.slug 
+            FROM user_roles ur2 
+            JOIN roles r2 ON ur2.role_id = r2.id 
+            JOIN organizations o2 ON ur2.organization_id = o2.id
+            WHERE ur2.user_id = u.id 
+              AND ur2.is_active = true 
+              AND r2.name = 'admin'
+            LIMIT 1
+          ) as admin_organization_slug
         FROM users u
         LEFT JOIN user_roles ur ON u.id = ur.user_id AND ur.is_active = true
         LEFT JOIN roles r ON ur.role_id = r.id
@@ -854,6 +906,9 @@ app.post('/api/v1/auth/login/google', async (req, res) => {
     // Ensure roles is always an array
     const userRoles = Array.isArray(user.roles) ? user.roles : (user.roles ? [user.roles] : ['employee']);
 
+    // Check if user is super_admin (no org scope needed)
+    const isSuperAdmin = userRoles.includes('super_admin');
+    
     res.json({
       success: true,
       data: {
@@ -866,6 +921,10 @@ app.post('/api/v1/auth/login/google', async (req, res) => {
           organizationName: user.organization_name,
           department: user.department,
           position: user.position,
+          // Admin organization scope (null for super_admin, org ID for org-scoped admin)
+          adminOrganizationId: isSuperAdmin ? null : user.admin_organization_id,
+          adminOrganizationSlug: isSuperAdmin ? null : user.admin_organization_slug,
+          isSuperAdmin: isSuperAdmin,
         },
         token
       }
@@ -912,7 +971,7 @@ app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
       });
     }
 
-    // Get user from database
+    // Get user from database with admin organization info
     const userQuery = `
       SELECT 
         u.id,
@@ -931,12 +990,31 @@ app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
         COALESCE(
           JSON_AGG(r.name) FILTER (WHERE r.name IS NOT NULL),
           '[]'
-        ) as roles
+        ) as roles,
+        -- Get admin organization assignment (for org-scoped admin role)
+        (
+          SELECT ur2.organization_id 
+          FROM user_roles ur2 
+          JOIN roles r2 ON ur2.role_id = r2.id 
+          WHERE ur2.user_id = u.id 
+            AND ur2.is_active = true 
+            AND r2.name = 'admin'
+          LIMIT 1
+        ) as admin_organization_id,
+        (
+          SELECT o2.slug 
+          FROM user_roles ur2 
+          JOIN roles r2 ON ur2.role_id = r2.id 
+          JOIN organizations o2 ON ur2.organization_id = o2.id
+          WHERE ur2.user_id = u.id 
+            AND ur2.is_active = true 
+            AND r2.name = 'admin'
+          LIMIT 1
+        ) as admin_organization_slug
       FROM users u
       LEFT JOIN user_roles ur ON u.id = ur.user_id AND ur.is_active = true
       LEFT JOIN roles r ON ur.role_id = r.id
       LEFT JOIN organizations o ON u.organization_id = o.id
-      LEFT JOIN organizations o2 ON ur.organization_id = o2.id
       WHERE u.email = $1
       GROUP BY u.id, u.email, u.name, u.avatar_url, u.is_active, u.email_verified, 
                u.last_login_at, u.created_at, u.updated_at, u.organization_id, u.department, u.position, o.name
@@ -952,6 +1030,9 @@ app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
     }
     
     const user = result.rows[0];
+    const userRoles = user.roles || [];
+    const isSuperAdmin = userRoles.includes('super_admin');
+    
     const userData = {
       id: user.id,
       email: user.email,
@@ -966,7 +1047,11 @@ app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
       organizationName: user.organization_name,
       department: user.department,
       position: user.position,
-      roles: user.roles || []
+      roles: userRoles,
+      // Admin organization scope (null for super_admin, org ID for org-scoped admin)
+      adminOrganizationId: isSuperAdmin ? null : user.admin_organization_id,
+      adminOrganizationSlug: isSuperAdmin ? null : user.admin_organization_slug,
+      isSuperAdmin: isSuperAdmin,
     };
     
     res.json({
@@ -1664,6 +1749,13 @@ app.get('/api/v1/admin/roles', authenticateToken, async (req, res) => {
 app.get('/api/v1/admin/users', authenticateToken, async (req, res) => {
   console.log('🚀 Admin users endpoint called with query:', req.query);
   try {
+    // Check if user is super_admin (can see all users) or org-scoped admin (only their org's users)
+    const userRoles = (req as any).user?.roles || [];
+    const isSuperAdmin = userRoles.includes('super_admin');
+    const adminOrgId = (req as any).user?.adminOrganizationId;
+    
+    console.log('🔐 Admin users access check:', { isSuperAdmin, adminOrgId, userRoles });
+
     const {
       page = 1,
       limit = 10,
@@ -1688,9 +1780,19 @@ app.get('/api/v1/admin/users', authenticateToken, async (req, res) => {
       paramIndex++;
     }
 
-    if (organizationId) {
+    // Determine organization filter:
+    // - For org-scoped admin: always filter by their assigned org (enforced)
+    // - For super_admin: use requested organizationId filter, or no filter for all orgs
+    let effectiveOrgId = organizationId as string | undefined;
+    if (!isSuperAdmin && adminOrgId) {
+      // Org-scoped admin - enforce their org regardless of query param
+      effectiveOrgId = adminOrgId;
+      console.log('🔐 Org-scoped admin: enforcing org filter:', effectiveOrgId);
+    }
+
+    if (effectiveOrgId) {
       whereClause += ` AND u.organization_id = $${paramIndex}`;
-      queryParams.push(organizationId);
+      queryParams.push(effectiveOrgId);
       paramIndex++;
     }
 
@@ -1903,6 +2005,18 @@ app.post('/api/v1/admin/users', authenticateToken, async (req, res) => {
       });
     }
 
+    // SUPER_ADMIN ROLE PROTECTION: Only super_admin can assign super_admin role
+    const currentUserRoles = (req as any).user?.roles || [];
+    const isCurrentUserSuperAdmin = currentUserRoles.includes('super_admin');
+    
+    if (!isCurrentUserSuperAdmin && roles.includes('super_admin')) {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Permission denied',
+        message: 'Only super administrators can assign the super_admin role'
+      });
+    }
+
     // Create user
     const userQuery = `
       INSERT INTO users (name, email, organization_id, department, position, is_active, email_verified)
@@ -1968,6 +2082,21 @@ app.put('/api/v1/admin/users/:id', authenticateToken, async (req, res) => {
         return res.status(400).json({ 
           success: false, 
           error: 'User with this email already exists' 
+        });
+      }
+    }
+
+    // SUPER_ADMIN ROLE PROTECTION: Only super_admin can assign super_admin role
+    // Check this BEFORE any updates to ensure atomicity
+    if (roles !== undefined && roles.includes('super_admin')) {
+      const currentUserRoles = (req as any).user?.roles || [];
+      const isCurrentUserSuperAdmin = currentUserRoles.includes('super_admin');
+      
+      if (!isCurrentUserSuperAdmin) {
+        return res.status(403).json({ 
+          success: false, 
+          error: 'Permission denied',
+          message: 'Only super administrators can assign the super_admin role'
         });
       }
     }
