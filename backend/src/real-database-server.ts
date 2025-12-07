@@ -1029,11 +1029,13 @@ app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
     `;
     
     const adminOrgsResult = await query(adminOrgsQuery, [user.id]);
+    console.log('🔍 adminOrgsResult.rows:', adminOrgsResult.rows);
     const adminOrganizations = adminOrgsResult.rows.map((row: any) => ({
       id: row.id,
       slug: row.slug,
       name: row.name
     }));
+    console.log('🔍 adminOrganizations:', adminOrganizations);
     
     const userData = {
       id: user.id,
