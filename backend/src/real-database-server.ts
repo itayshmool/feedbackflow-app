@@ -6083,12 +6083,26 @@ app.get('/api/v1/cycles', authenticateToken, async (req, res) => {
       search
     } = req.query;
 
+    // Get current user's organization (non-super-admins only see their org's cycles)
+    const currentUserEmail = (req as any).user?.email;
+    const userResult = await query(
+      'SELECT u.id, u.organization_id FROM users u WHERE u.email = $1',
+      [currentUserEmail]
+    );
+    const currentUserOrgId = userResult.rows[0]?.organization_id;
+    const isSuperAdmin = (req as any).user?.roles?.includes('super_admin');
+
     // Build WHERE conditions
     const whereConditions = [];
     const queryParams = [];
     let paramCount = 0;
 
-    if (organizationId) {
+    // Force organization filter for non-super-admins
+    if (!isSuperAdmin && currentUserOrgId) {
+      whereConditions.push(`fc.organization_id = $${++paramCount}`);
+      queryParams.push(currentUserOrgId);
+    } else if (organizationId) {
+      // Super admins can optionally filter by org
       whereConditions.push(`fc.organization_id = $${++paramCount}`);
       queryParams.push(organizationId);
     }
