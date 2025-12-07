@@ -5769,9 +5769,15 @@ app.delete('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
       });
     }
 
-    // Delete the feedback response and request
+    // Get the request_id BEFORE deleting anything
+    const requestIdResult = await query('SELECT request_id FROM feedback_responses WHERE id = $1', [id]);
+    const requestId = requestIdResult.rows[0]?.request_id;
+
+    // Delete in correct order: response first, then request
     await query('DELETE FROM feedback_responses WHERE id = $1', [id]);
-    await query('DELETE FROM feedback_requests WHERE id = (SELECT request_id FROM feedback_responses WHERE id = $1)', [id]);
+    if (requestId) {
+      await query('DELETE FROM feedback_requests WHERE id = $1', [requestId]);
+    }
     
     res.json({ success: true, message: 'Draft feedback deleted' });
   } catch (error) {
