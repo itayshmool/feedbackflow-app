@@ -68,6 +68,7 @@ export interface UserCreateData {
   department?: string;
   position?: string;
   roles?: string[];
+  adminOrganizationIds?: string[]; // Multi-org admin support
 }
 
 export interface UserUpdateData {
@@ -80,6 +81,16 @@ export interface UserUpdateData {
   department?: string;
   position?: string;
   roles?: string[];
+  adminOrganizationIds?: string[]; // Multi-org admin support
+}
+
+/**
+ * Organization that can be assigned for admin role
+ */
+export interface AssignableOrganization {
+  id: string;
+  name: string;
+  slug: string;
 }
 
 export interface BulkUserOperation {

@@ -47,7 +47,8 @@ export interface CreateUserData {
   organizationId?: string;
   department?: string;
   position?: string;
-  roles?: string[]; // Role IDs
+  roles?: string[]; // Role names
+  adminOrganizationIds?: string[]; // Organization IDs for admin role (multi-org admin support)
   sendWelcomeEmail?: boolean;
 }
 
@@ -60,7 +61,8 @@ export interface UpdateUserData {
   organizationId?: string;
   department?: string;
   position?: string;
-  roles?: string[]; // Role IDs
+  roles?: string[]; // Role names
+  adminOrganizationIds?: string[]; // Organization IDs for admin role (multi-org admin support)
 }
 
 export interface UserFilters {
@@ -124,4 +126,13 @@ export interface PaginationOptions {
   offset?: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+}
+
+/**
+ * Context of the user granting roles (used for privilege escalation checks)
+ */
+export interface GrantorContext {
+  id?: string;
+  isSuperAdmin: boolean;
+  adminOrganizationIds: string[]; // Organizations this user can grant admin access to
 }

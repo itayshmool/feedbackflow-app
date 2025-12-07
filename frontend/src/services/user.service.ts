@@ -15,6 +15,7 @@ import {
   UserStatsResponse,
   RoleListResponse,
   UserImportResponse,
+  AssignableOrganization,
 } from '@/types/user.types';
 
 export class UserService {
@@ -93,6 +94,14 @@ export class UserService {
   // Get all roles
   async getRoles(): Promise<RoleListResponse> {
     const response = await api.get('/admin/roles');
+    return response.data;
+  }
+
+  // Get assignable organizations (for multi-org admin assignment)
+  // Super admin: returns all orgs
+  // Org-scoped admin: returns only their managed orgs
+  async getAssignableOrganizations(): Promise<{ success: boolean; data: AssignableOrganization[] }> {
+    const response = await api.get('/admin/assignable-organizations');
     return response.data;
   }
 
