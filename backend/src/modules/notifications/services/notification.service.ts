@@ -425,13 +425,143 @@ export class NotificationService {
   }
 
   private async notifyFeedbackRequested(feedback: any, organizationId: string): Promise<void> {
-    // TODO: Send notification to feedback recipient
-    this.logger.info('Feedback requested notification triggered', { feedbackId: feedback.id });
+    try {
+      // Notify the receiver (toUserId) that feedback is being prepared for them
+      const toUserId = feedback.toUserId;
+      if (!toUserId) {
+        this.logger.warn('No toUserId in feedback, skipping notification', { feedbackId: feedback.id });
+        return;
+      }
+
+      // Get the giver's name for the notification
+      const giverResult = await this.db.query(
+        'SELECT name, email FROM users WHERE id = $1',
+        [feedback.fromUserId]
+      );
+      const giverName = giverResult.rows[0]?.name || giverResult.rows[0]?.email || 'Someone';
+
+      // Get receiver's organization if not provided
+      let orgId = organizationId;
+      if (!orgId) {
+        const receiverResult = await this.db.query(
+          'SELECT organization_id FROM users WHERE id = $1',
+          [toUserId]
+        );
+        orgId = receiverResult.rows[0]?.organization_id;
+      }
+
+      // Insert notification into database
+      const insertQuery = `
+        INSERT INTO user_notifications (
+          user_id, organization_id, type, category, title, message, data, priority, status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
+        RETURNING id
+      `;
+
+      const result = await this.db.query(insertQuery, [
+        toUserId,
+        orgId,
+        'in_app',
+        'feedback',
+        'Feedback Created',
+        `${giverName} has started writing feedback for you.`,
+        JSON.stringify({
+          feedbackId: feedback.id,
+          fromUserId: feedback.fromUserId,
+          cycleId: feedback.cycleId,
+          type: 'feedback_created'
+        }),
+        'normal'
+      ]);
+
+      this.logger.info('Feedback created notification sent', { 
+        feedbackId: feedback.id,
+        notificationId: result.rows[0]?.id,
+        toUserId
+      });
+
+      // Emit event for real-time updates
+      this.eventEmitter.emit('notification:created', {
+        userId: toUserId,
+        notificationId: result.rows[0]?.id
+      });
+
+    } catch (error) {
+      this.logger.error('Error sending feedback created notification', { 
+        feedbackId: feedback.id, 
+        error 
+      });
+    }
   }
 
   private async notifyFeedbackReceived(feedback: any, organizationId: string): Promise<void> {
-    // TODO: Send notification to feedback requester
-    this.logger.info('Feedback received notification triggered', { feedbackId: feedback.id });
+    try {
+      // Notify the requester (fromUserId) that their feedback was submitted
+      const fromUserId = feedback.fromUserId;
+      if (!fromUserId) {
+        this.logger.warn('No fromUserId in feedback, skipping notification', { feedbackId: feedback.id });
+        return;
+      }
+
+      // Get the receiver's name for the notification
+      const receiverResult = await this.db.query(
+        'SELECT name, email FROM users WHERE id = $1',
+        [feedback.toUserId]
+      );
+      const receiverName = receiverResult.rows[0]?.name || receiverResult.rows[0]?.email || 'the recipient';
+
+      // Get giver's organization if not provided
+      let orgId = organizationId;
+      if (!orgId) {
+        const giverResult = await this.db.query(
+          'SELECT organization_id FROM users WHERE id = $1',
+          [fromUserId]
+        );
+        orgId = giverResult.rows[0]?.organization_id;
+      }
+
+      // Insert notification into database
+      const insertQuery = `
+        INSERT INTO user_notifications (
+          user_id, organization_id, type, category, title, message, data, priority, status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
+        RETURNING id
+      `;
+
+      const result = await this.db.query(insertQuery, [
+        fromUserId,
+        orgId,
+        'in_app',
+        'feedback',
+        'Feedback Submitted',
+        `Your feedback for ${receiverName} has been successfully submitted.`,
+        JSON.stringify({
+          feedbackId: feedback.id,
+          toUserId: feedback.toUserId,
+          cycleId: feedback.cycleId,
+          type: 'feedback_submitted'
+        }),
+        'normal'
+      ]);
+
+      this.logger.info('Feedback submitted notification sent', { 
+        feedbackId: feedback.id,
+        notificationId: result.rows[0]?.id,
+        fromUserId
+      });
+
+      // Emit event for real-time updates
+      this.eventEmitter.emit('notification:created', {
+        userId: fromUserId,
+        notificationId: result.rows[0]?.id
+      });
+
+    } catch (error) {
+      this.logger.error('Error sending feedback submitted notification', { 
+        feedbackId: feedback.id, 
+        error 
+      });
+    }
   }
 
   private async notifyFeedbackAcknowledged(feedback: any, organizationId: string): Promise<void> {

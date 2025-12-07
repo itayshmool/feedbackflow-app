@@ -47,6 +47,38 @@ const transformOrganizationForFrontend = (dbOrg: any) => ({
   updatedAt: dbOrg.updated_at
 });
 
+// Helper function to create notifications for feedback events
+async function createFeedbackNotification(
+  userId: string,
+  organizationId: string | null,
+  title: string,
+  message: string,
+  data: Record<string, any>
+): Promise<void> {
+  try {
+    const insertQuery = `
+      INSERT INTO user_notifications (
+        user_id, organization_id, type, category, title, message, data, priority, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
+      RETURNING id
+    `;
+    const result = await query(insertQuery, [
+      userId,
+      organizationId,
+      'in_app',
+      'feedback',
+      title,
+      message,
+      JSON.stringify(data),
+      'normal'
+    ]);
+    console.log('📬 Notification created:', { notificationId: result.rows[0]?.id, userId, title });
+  } catch (error) {
+    console.error('❌ Error creating notification:', error);
+    // Don't throw - notification failure shouldn't break the main operation
+  }
+}
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -5173,6 +5205,21 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
       createdAt: responseResult.rows[0].created_at,
       updatedAt: responseResult.rows[0].updated_at
     };
+
+    // Create notification for the feedback receiver
+    await createFeedbackNotification(
+      targetUserId,
+      currentOrgId,
+      'Feedback Created',
+      `${currentUserName || currentUserEmail} has started writing feedback for you.`,
+      {
+        feedbackId: responseId,
+        fromUserId: currentUserId,
+        fromUserName: currentUserName,
+        cycleId: cycleIdToUse,
+        type: 'feedback_created'
+      }
+    );
     
     res.status(201).json({ success: true, data: newFeedback });
   } catch (error) {
@@ -5503,6 +5550,25 @@ app.post('/api/v1/feedback/:id/submit', authenticateToken, async (req, res) => {
         isApproved: row.isApproved
       }
     });
+
+    // Create notification for the feedback giver (confirming submission)
+    // Get giver's organization for notification
+    const giverOrgResult = await query('SELECT organization_id FROM users WHERE id = $1', [row.giverId]);
+    const giverOrgId = giverOrgResult.rows[0]?.organization_id;
+
+    await createFeedbackNotification(
+      row.giverId,
+      giverOrgId,
+      'Feedback Submitted',
+      `Your feedback for ${row.recipientName || row.recipientEmail} has been successfully submitted.`,
+      {
+        feedbackId: id,
+        toUserId: row.recipientId,
+        toUserName: row.recipientName,
+        cycleId: row.cycleId,
+        type: 'feedback_submitted'
+      }
+    );
   } catch (error) {
     console.error('Error submitting feedback:', error);
     res.status(500).json({ success: false, error: 'Failed to submit feedback' });
