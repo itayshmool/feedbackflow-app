@@ -8,7 +8,6 @@ import {
   Settings, 
   Users,
   Bell,
-  Zap,
   Building,
   TreePine,
   Users2,
@@ -23,7 +22,6 @@ const navigation = [
   { name: 'Cycles', href: '/cycles', icon: RotateCcw },
   { name: 'Feedback', href: '/feedback', icon: MessageSquare },
   { name: 'Notifications', href: '/notifications', icon: Bell },
-  { name: 'Integrations', href: '/integrations', icon: Zap },
 ]
 
 const managerNavigation = [

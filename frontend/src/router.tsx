@@ -14,7 +14,7 @@ import ManagerDashboard from './pages/dashboard/ManagerDashboard';
 import OrganizationManagement from './pages/admin/OrganizationManagement';
 import UserManagement from './pages/admin/UserManagement';
 import SystemSettings from './pages/admin/SystemSettings';
-import IntegrationSettings from './pages/admin/IntegrationSettings';
+// IntegrationSettings removed - will be added later
 import CyclesPage from './pages/cycles/CyclesPage';
 import CreateCycle from './pages/cycles/CreateCycle';
 import CycleDetailPage from './pages/cycles/CycleDetailPage';
@@ -91,10 +91,6 @@ const AppRouter: React.FC = () => {
             {
               path: 'settings',
               element: <SystemSettings />,
-            },
-            {
-              path: 'integrations',
-              element: <IntegrationSettings />,
             },
             {
               path: 'hierarchy',
