@@ -378,6 +378,37 @@ app.use('/api/v1/admin', createAdminUserRoutes());
 // Organization API routes - specific routes first, then parameterized routes
 app.get('/api/v1/admin/organizations', authenticateToken, async (req, res) => {
   try {
+    // Check if user is super_admin (can see all orgs) or org-scoped admin (only their org)
+    const userRoles = (req as any).user?.roles || [];
+    const isSuperAdmin = userRoles.includes('super_admin');
+    const adminOrgId = (req as any).user?.adminOrganizationId;
+    
+    // If org-scoped admin (not super_admin), only return their organization
+    if (!isSuperAdmin && adminOrgId) {
+      const orgResult = await query(`
+        SELECT id, name, slug, description, contact_email, phone, address, city, state, 
+               zip_code, country, website, logo_url, is_active, status, subscription_plan,
+               max_users, max_cycles, storage_limit_gb, feature_flags, settings,
+               created_at, updated_at
+        FROM organizations WHERE id = $1
+      `, [adminOrgId]);
+      
+      if (orgResult.rows.length > 0) {
+        const org = orgResult.rows[0];
+        res.json({
+          data: [transformOrganizationForFrontend(org)],
+          pagination: { total: 1, limit: 10, offset: 0, hasMore: false }
+        });
+      } else {
+        res.json({
+          data: [],
+          pagination: { total: 0, limit: 10, offset: 0, hasMore: false }
+        });
+      }
+      return;
+    }
+    
+    // Super admin sees all organizations
     const { page = 1, limit = 10, search = '' } = req.query;
     const pageNum = Number(page);
     const limitNum = Number(limit);
@@ -1718,6 +1749,13 @@ app.get('/api/v1/admin/roles', authenticateToken, async (req, res) => {
 app.get('/api/v1/admin/users', authenticateToken, async (req, res) => {
   console.log('🚀 Admin users endpoint called with query:', req.query);
   try {
+    // Check if user is super_admin (can see all users) or org-scoped admin (only their org's users)
+    const userRoles = (req as any).user?.roles || [];
+    const isSuperAdmin = userRoles.includes('super_admin');
+    const adminOrgId = (req as any).user?.adminOrganizationId;
+    
+    console.log('🔐 Admin users access check:', { isSuperAdmin, adminOrgId, userRoles });
+
     const {
       page = 1,
       limit = 10,
@@ -1742,9 +1780,19 @@ app.get('/api/v1/admin/users', authenticateToken, async (req, res) => {
       paramIndex++;
     }
 
-    if (organizationId) {
+    // Determine organization filter:
+    // - For org-scoped admin: always filter by their assigned org (enforced)
+    // - For super_admin: use requested organizationId filter, or no filter for all orgs
+    let effectiveOrgId = organizationId as string | undefined;
+    if (!isSuperAdmin && adminOrgId) {
+      // Org-scoped admin - enforce their org regardless of query param
+      effectiveOrgId = adminOrgId;
+      console.log('🔐 Org-scoped admin: enforcing org filter:', effectiveOrgId);
+    }
+
+    if (effectiveOrgId) {
       whereClause += ` AND u.organization_id = $${paramIndex}`;
-      queryParams.push(organizationId);
+      queryParams.push(effectiveOrgId);
       paramIndex++;
     }
 
