@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/Label';
 import { Select } from '@/components/ui/Select';
 import { Switch } from '@/components/ui/Switch';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { AdminRoleOrganizationSelector } from './AdminRoleOrganizationSelector';
 import { User, UserCreateData, UserUpdateData } from '@/types/user.types';
 import { X, Save, User as UserIcon } from 'lucide-react';
 
@@ -55,6 +56,9 @@ export const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) 
 
   const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null);
   const [checkingEmail, setCheckingEmail] = useState(false);
+  
+  // State for multi-org admin assignment
+  const [adminOrganizationIds, setAdminOrganizationIds] = useState<string[]>([]);
 
   const {
     register,
@@ -97,6 +101,14 @@ export const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) 
         isActive: user.isActive,
         emailVerified: user.emailVerified,
       });
+      
+      // Extract existing admin organization IDs from user roles
+      const existingAdminOrgIds = user.roles
+        ?.filter(r => r.roleName === 'admin' && r.organizationId)
+        .map(r => r.organizationId!)
+        .filter((id, index, self) => self.indexOf(id) === index) || [];
+      
+      setAdminOrganizationIds(existingAdminOrgIds);
     }
   }, [user, reset]);
 
@@ -124,6 +136,14 @@ export const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) 
 
   const onSubmit = async (data: UserFormData) => {
     console.log('Form submitted with data:', data);
+    
+    // Check if admin role is being assigned and requires org selection
+    const hasAdminRole = data.roles?.includes('admin');
+    if (hasAdminRole && adminOrganizationIds.length === 0) {
+      console.error('Admin role requires at least one organization');
+      return; // The UI should show a validation message
+    }
+    
     try {
       if (user) {
         // Update existing user
@@ -136,6 +156,8 @@ export const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) 
           roles: data.roles,
           isActive: data.isActive,
           emailVerified: data.emailVerified,
+          // Include admin org IDs if admin role is selected
+          adminOrganizationIds: hasAdminRole ? adminOrganizationIds : undefined,
         };
         
         console.log('Updating user with data:', updateData);
@@ -156,6 +178,8 @@ export const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) 
           department: data.department || undefined,
           position: data.position || undefined,
           roles: data.roles,
+          // Include admin org IDs if admin role is selected
+          adminOrganizationIds: hasAdminRole ? adminOrganizationIds : undefined,
         };
         
         console.log('Creating user with data:', createData);
@@ -337,6 +361,21 @@ export const UserForm: React.FC<UserFormProps> = ({ user, onClose, onSuccess }) 
               })}
             </div>
           </div>
+
+          {/* Admin Organization Selector - shown when admin role is selected */}
+          {watchedRoles?.includes('admin') && (
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <AdminRoleOrganizationSelector
+                selectedOrgIds={adminOrganizationIds}
+                onChange={setAdminOrganizationIds}
+                existingAdminOrgIds={
+                  user?.roles
+                    ?.filter(r => r.roleName === 'admin' && r.organizationId)
+                    .map(r => r.organizationId!) || []
+                }
+              />
+            </div>
+          )}
         </div>
 
         {/* Status */}
