@@ -13,7 +13,8 @@ import {
   BulkUserOperation,
   UserImportData,
   UserImportResult,
-  PaginationOptions
+  PaginationOptions,
+  GrantorContext
 } from '../types/user.types.js';
 
 export class AdminUserService {
@@ -33,11 +34,16 @@ export class AdminUserService {
     return this.userModel.findByIdWithRoles(id);
   }
 
-  async createUser(userData: CreateUserData): Promise<User> {
+  async createUser(userData: CreateUserData, grantorContext?: GrantorContext): Promise<User> {
     // Check if user already exists
     const existingUser = await this.userModel.findWhere({ email: userData.email });
     if (existingUser.data.length > 0) {
       throw new Error('User with this email already exists');
+    }
+
+    // PRIVILEGE ESCALATION CHECK: Validate admin org assignments
+    if (userData.adminOrganizationIds && userData.adminOrganizationIds.length > 0 && grantorContext) {
+      this.validatePrivilegeEscalation(userData.adminOrganizationIds, grantorContext);
     }
 
     // Create user
@@ -66,7 +72,7 @@ export class AdminUserService {
         
         const role = await this.roleModel.findByName(roleName);
         if (role) {
-          await this.userModel.assignRole(user.id, role.id, userData.organizationId);
+          await this.userModel.assignRole(user.id, role.id, userData.organizationId, grantorContext?.id);
         } else {
           console.warn(`Role '${roleName}' not found for user ${user.id}`);
         }
@@ -83,7 +89,7 @@ export class AdminUserService {
           }
           
           // Sync admin role across specified organizations
-          await this.userModel.syncAdminOrganizations(user.id, adminRoleId, orgIds);
+          await this.userModel.syncAdminOrganizations(user.id, adminRoleId, orgIds, grantorContext?.id);
           console.log(`🔐 Multi-org admin created: userId=${user.id}, orgs=${orgIds.length}`);
         }
       }
@@ -98,7 +104,28 @@ export class AdminUserService {
     return this.getUserById(user.id) as Promise<User>;
   }
 
-  async updateUser(id: string, userData: UpdateUserData): Promise<User | null> {
+  /**
+   * Validates that the grantor has permission to assign admin access to the specified organizations.
+   * Throws an error if privilege escalation is detected.
+   */
+  private validatePrivilegeEscalation(requestedOrgIds: string[], grantorContext: GrantorContext): void {
+    // Super admin can assign any organization
+    if (grantorContext.isSuperAdmin) {
+      return;
+    }
+
+    // Check if all requested orgs are in the grantor's managed orgs
+    const unauthorizedOrgs = requestedOrgIds.filter(
+      orgId => !grantorContext.adminOrganizationIds.includes(orgId)
+    );
+
+    if (unauthorizedOrgs.length > 0) {
+      console.warn(`🚫 Privilege escalation attempt: user tried to assign admin to orgs they don't manage: ${unauthorizedOrgs.join(', ')}`);
+      throw new Error(`Privilege escalation denied: You cannot grant admin access to organizations you do not manage`);
+    }
+  }
+
+  async updateUser(id: string, userData: UpdateUserData, grantorContext?: GrantorContext): Promise<User | null> {
     // Check if user exists
     const existingUser = await this.userModel.findById(id);
     if (!existingUser) {
@@ -111,6 +138,11 @@ export class AdminUserService {
       if (emailCheck.data.length > 0) {
         throw new Error('User with this email already exists');
       }
+    }
+
+    // PRIVILEGE ESCALATION CHECK: Validate admin org assignments
+    if (userData.adminOrganizationIds && userData.adminOrganizationIds.length > 0 && grantorContext) {
+      this.validatePrivilegeEscalation(userData.adminOrganizationIds, grantorContext);
     }
 
     // Update user
@@ -158,7 +190,7 @@ export class AdminUserService {
         
         const role = await this.roleModel.findByName(roleName);
         if (role) {
-          await this.userModel.assignRole(id, role.id, userData.organizationId);
+          await this.userModel.assignRole(id, role.id, userData.organizationId, grantorContext?.id);
         } else {
           console.warn(`Role '${roleName}' not found for user ${id}`);
         }
@@ -175,11 +207,11 @@ export class AdminUserService {
           }
           
           // Sync admin role across specified organizations
-          await this.userModel.syncAdminOrganizations(id, adminRoleId, orgIds);
+          await this.userModel.syncAdminOrganizations(id, adminRoleId, orgIds, grantorContext?.id);
           console.log(`🔐 Multi-org admin sync: userId=${id}, orgs=${orgIds.length}`);
         } else {
           // Admin role is being removed - deactivate all admin org assignments
-          await this.userModel.syncAdminOrganizations(id, adminRoleId, []);
+          await this.userModel.syncAdminOrganizations(id, adminRoleId, [], grantorContext?.id);
           console.log(`🔐 Admin role removed: userId=${id}`);
         }
       }

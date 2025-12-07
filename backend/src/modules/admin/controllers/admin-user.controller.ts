@@ -158,7 +158,17 @@ export class AdminUserController {
   async createUser(req: Request, res: Response): Promise<void> {
     try {
       const userData: CreateUserData = req.body;
-      const user = await this.userService.createUser(userData);
+      
+      // Get current user context for privilege escalation checks
+      const orgScopedReq = req as OrgScopedRequest;
+      const currentUser = (req as any).user;
+      const grantorContext = {
+        id: currentUser?.id,
+        isSuperAdmin: orgScopedReq.isSuperAdmin || currentUser?.roles?.includes('super_admin'),
+        adminOrganizationIds: currentUser?.adminOrganizations?.map((org: any) => org.id) || []
+      };
+      
+      const user = await this.userService.createUser(userData, grantorContext);
       
       res.status(201).json({
         success: true,
@@ -166,6 +176,17 @@ export class AdminUserController {
       });
     } catch (error) {
       console.error('Error creating user:', error);
+      
+      // Handle privilege escalation errors with 403
+      if (error instanceof Error && error.message.includes('privilege escalation')) {
+        res.status(403).json({
+          success: false,
+          error: 'Forbidden',
+          details: error.message
+        });
+        return;
+      }
+      
       res.status(400).json({
         success: false,
         error: 'Failed to create user',
@@ -178,7 +199,17 @@ export class AdminUserController {
     try {
       const { id } = req.params;
       const userData: UpdateUserData = req.body;
-      const user = await this.userService.updateUser(id, userData);
+      
+      // Get current user context for privilege escalation checks
+      const orgScopedReq = req as OrgScopedRequest;
+      const currentUser = (req as any).user;
+      const grantorContext = {
+        id: currentUser?.id,
+        isSuperAdmin: orgScopedReq.isSuperAdmin || currentUser?.roles?.includes('super_admin'),
+        adminOrganizationIds: currentUser?.adminOrganizations?.map((org: any) => org.id) || []
+      };
+      
+      const user = await this.userService.updateUser(id, userData, grantorContext);
       
       if (!user) {
         res.status(404).json({
@@ -194,6 +225,17 @@ export class AdminUserController {
       });
     } catch (error) {
       console.error('Error updating user:', error);
+      
+      // Handle privilege escalation errors with 403
+      if (error instanceof Error && error.message.includes('privilege escalation')) {
+        res.status(403).json({
+          success: false,
+          error: 'Forbidden',
+          details: error.message
+        });
+        return;
+      }
+      
       res.status(400).json({
         success: false,
         error: 'Failed to update user',

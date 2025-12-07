@@ -127,3 +127,12 @@ export interface PaginationOptions {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
+
+/**
+ * Context of the user granting roles (used for privilege escalation checks)
+ */
+export interface GrantorContext {
+  id?: string;
+  isSuperAdmin: boolean;
+  adminOrganizationIds: string[]; // Organizations this user can grant admin access to
+}
