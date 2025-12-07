@@ -971,7 +971,7 @@ app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
       });
     }
 
-    // Get user from database with admin organization info
+    // Get user from database with basic info and roles
     const userQuery = `
       SELECT 
         u.id,
@@ -988,29 +988,9 @@ app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
         u.position,
         o.name as organization_name,
         COALESCE(
-          JSON_AGG(r.name) FILTER (WHERE r.name IS NOT NULL),
+          JSON_AGG(DISTINCT r.name) FILTER (WHERE r.name IS NOT NULL),
           '[]'
-        ) as roles,
-        -- Get admin organization assignment (for org-scoped admin role)
-        (
-          SELECT ur2.organization_id 
-          FROM user_roles ur2 
-          JOIN roles r2 ON ur2.role_id = r2.id 
-          WHERE ur2.user_id = u.id 
-            AND ur2.is_active = true 
-            AND r2.name = 'admin'
-          LIMIT 1
-        ) as admin_organization_id,
-        (
-          SELECT o2.slug 
-          FROM user_roles ur2 
-          JOIN roles r2 ON ur2.role_id = r2.id 
-          JOIN organizations o2 ON ur2.organization_id = o2.id
-          WHERE ur2.user_id = u.id 
-            AND ur2.is_active = true 
-            AND r2.name = 'admin'
-          LIMIT 1
-        ) as admin_organization_slug
+        ) as roles
       FROM users u
       LEFT JOIN user_roles ur ON u.id = ur.user_id AND ur.is_active = true
       LEFT JOIN roles r ON ur.role_id = r.id
@@ -1033,6 +1013,28 @@ app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
     const userRoles = user.roles || [];
     const isSuperAdmin = userRoles.includes('super_admin');
     
+    // Fetch ALL admin organizations for multi-org admin support
+    const adminOrgsQuery = `
+      SELECT 
+        o.id,
+        o.slug,
+        o.name
+      FROM user_roles ur
+      JOIN roles r ON ur.role_id = r.id
+      JOIN organizations o ON ur.organization_id = o.id
+      WHERE ur.user_id = $1 
+        AND ur.is_active = true 
+        AND r.name = 'admin'
+      ORDER BY o.name
+    `;
+    
+    const adminOrgsResult = await query(adminOrgsQuery, [user.id]);
+    const adminOrganizations = adminOrgsResult.rows.map((row: any) => ({
+      id: row.id,
+      slug: row.slug,
+      name: row.name
+    }));
+    
     const userData = {
       id: user.id,
       email: user.email,
@@ -1048,10 +1050,12 @@ app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
       department: user.department,
       position: user.position,
       roles: userRoles,
-      // Admin organization scope (null for super_admin, org ID for org-scoped admin)
-      adminOrganizationId: isSuperAdmin ? null : user.admin_organization_id,
-      adminOrganizationSlug: isSuperAdmin ? null : user.admin_organization_slug,
+      // Multi-org admin support: array of all managed organizations
+      adminOrganizations: adminOrganizations,
       isSuperAdmin: isSuperAdmin,
+      // Backward compatibility: keep singular fields for first org
+      adminOrganizationId: isSuperAdmin ? null : (adminOrganizations[0]?.id || null),
+      adminOrganizationSlug: isSuperAdmin ? null : (adminOrganizations[0]?.slug || null),
     };
     
     res.json({

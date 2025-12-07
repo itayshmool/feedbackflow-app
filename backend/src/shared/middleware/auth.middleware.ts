@@ -4,14 +4,29 @@ import { query } from '../../config/real-database.js';
 
 const jwtService = new JwtService(process.env.JWT_SECRET || 'changeme');
 
-// Helper function to fetch admin organization from database
-async function fetchAdminOrganization(userId: string, email: string): Promise<{ adminOrganizationId: string | null; adminOrganizationSlug: string | null; roles: string[] }> {
+// Type for admin organization assignment
+interface AdminOrganization {
+  id: string;
+  slug: string;
+  name: string;
+}
+
+// Return type for fetchAdminOrganizations
+interface AdminOrganizationsResult {
+  adminOrganizations: AdminOrganization[];
+  isSuperAdmin: boolean;
+  roles: string[];
+}
+
+// Helper function to fetch ALL admin organizations from database
+async function fetchAdminOrganizations(userId: string): Promise<AdminOrganizationsResult> {
   try {
     const result = await query(`
       SELECT 
         r.name as role_name,
         ur.organization_id,
-        o.slug as organization_slug
+        o.slug as organization_slug,
+        o.name as organization_name
       FROM user_roles ur
       JOIN roles r ON ur.role_id = r.id
       LEFT JOIN organizations o ON ur.organization_id = o.id
@@ -19,23 +34,25 @@ async function fetchAdminOrganization(userId: string, email: string): Promise<{ 
     `, [userId]);
 
     const roles = [...new Set(result.rows.map((r: any) => r.role_name))];
+    const isSuperAdmin = roles.includes('super_admin');
     
-    // Find admin role assignment with organization
-    const adminAssignment = result.rows.find((r: any) => r.role_name === 'admin' && r.organization_id);
-    
-    // If super_admin, no org restriction
-    if (roles.includes('super_admin')) {
-      return { adminOrganizationId: null, adminOrganizationSlug: null, roles };
-    }
+    // Get ALL admin org assignments (not just the first one)
+    const adminOrganizations: AdminOrganization[] = result.rows
+      .filter((r: any) => r.role_name === 'admin' && r.organization_id)
+      .map((r: any) => ({
+        id: r.organization_id,
+        slug: r.organization_slug,
+        name: r.organization_name
+      }));
     
     return {
-      adminOrganizationId: adminAssignment?.organization_id || null,
-      adminOrganizationSlug: adminAssignment?.organization_slug || null,
+      adminOrganizations,
+      isSuperAdmin,
       roles
     };
   } catch (error) {
-    console.error('Error fetching admin organization:', error);
-    return { adminOrganizationId: null, adminOrganizationSlug: null, roles: [] };
+    console.error('Error fetching admin organizations:', error);
+    return { adminOrganizations: [], isSuperAdmin: false, roles: [] };
   }
 }
 
@@ -79,8 +96,8 @@ async function authenticateTokenAsync(req: Request, res: Response, next: NextFun
         const userId = userResult.rows[0]?.id || '00000000-0000-0000-0000-000000000000';
         const userName = userResult.rows[0]?.name || email.split('@')[0];
         
-        // Fetch admin organization info
-        const { adminOrganizationId, adminOrganizationSlug, roles } = await fetchAdminOrganization(userId, email);
+        // Fetch admin organizations info
+        const { adminOrganizations, isSuperAdmin, roles } = await fetchAdminOrganizations(userId);
         
         // Fallback roles for mock user if no database roles found
         const effectiveRoles = roles.length > 0 ? roles : ['admin', 'employee'];
@@ -91,11 +108,15 @@ async function authenticateTokenAsync(req: Request, res: Response, next: NextFun
           name: userName,
           roles: effectiveRoles,
           organizationId: '00000000-0000-0000-0000-000000000001', // Default org
-          adminOrganizationId: adminOrganizationId,
-          adminOrganizationSlug: adminOrganizationSlug,
+          // Multi-org admin support
+          adminOrganizations: adminOrganizations,
+          isSuperAdmin: isSuperAdmin,
+          // Backward compatibility: keep singular fields for first org
+          adminOrganizationId: adminOrganizations[0]?.id || null,
+          adminOrganizationSlug: adminOrganizations[0]?.slug || null,
         };
         
-        console.log('🔍 Auth middleware - mock token authenticated:', email, 'adminOrgId:', adminOrganizationId);
+        console.log('🔍 Auth middleware - mock token authenticated:', email, 'adminOrgs:', adminOrganizations.length, 'isSuperAdmin:', isSuperAdmin);
         return next();
       }
     }
@@ -105,7 +126,7 @@ async function authenticateTokenAsync(req: Request, res: Response, next: NextFun
 
     // Always fetch roles from database for real JWT tokens to ensure they're up-to-date
     // This is important for role-based access control (e.g., super_admin protection)
-    const { adminOrganizationId, adminOrganizationSlug, roles } = await fetchAdminOrganization(payload.sub, payload.email);
+    const { adminOrganizations, isSuperAdmin, roles } = await fetchAdminOrganizations(payload.sub);
     
     // Use database roles if available, otherwise fall back to JWT payload roles
     const effectiveRoles = roles.length > 0 ? roles : (payload.roles || []);
@@ -116,11 +137,15 @@ async function authenticateTokenAsync(req: Request, res: Response, next: NextFun
       email: payload.email,
       name: payload.name,
       roles: effectiveRoles,
-      adminOrganizationId: adminOrganizationId,
-      adminOrganizationSlug: adminOrganizationSlug,
+      // Multi-org admin support
+      adminOrganizations: adminOrganizations,
+      isSuperAdmin: isSuperAdmin,
+      // Backward compatibility: keep singular fields for first org
+      adminOrganizationId: adminOrganizations[0]?.id || null,
+      adminOrganizationSlug: adminOrganizations[0]?.slug || null,
     };
     
-    console.log('🔍 Auth middleware - real JWT authenticated:', payload.email, 'roles:', effectiveRoles, 'adminOrgId:', adminOrganizationId);
+    console.log('🔍 Auth middleware - real JWT authenticated:', payload.email, 'roles:', effectiveRoles, 'adminOrgs:', adminOrganizations.length, 'isSuperAdmin:', isSuperAdmin);
 
     next();
   } catch (error) {
