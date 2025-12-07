@@ -1,6 +1,13 @@
 // backend/tests/integration/admin/org-scoped-admin.integration.test.ts
 
 import { describe, it, expect, beforeAll, afterAll, jest } from '@jest/globals';
+import { Request, Response, NextFunction } from 'express';
+import { 
+  requireOrgScopedAdmin, 
+  requireOrgAccess, 
+  canAdminOrganization,
+  OrgScopedRequest 
+} from '../../../src/shared/middleware/rbac.middleware';
 
 /**
  * Integration tests for org-scoped admin feature
@@ -42,10 +49,7 @@ describe('Org-Scoped Admin Feature', () => {
   };
 
   describe('requireOrgScopedAdmin middleware', () => {
-    it('should allow super_admin to access without org restriction', async () => {
-      // Import the middleware
-      const { requireOrgScopedAdmin, OrgScopedRequest } = await import('../../../src/shared/middleware/rbac.middleware');
-      
+    it('should allow super_admin to access without org restriction', () => {
       const middleware = requireOrgScopedAdmin();
       
       // Create mock request/response
@@ -70,9 +74,7 @@ describe('Org-Scoped Admin Feature', () => {
       expect(mockReq.effectiveOrganizationId).toBeNull();
     });
 
-    it('should restrict org-scoped admin to their assigned organization', async () => {
-      const { requireOrgScopedAdmin, OrgScopedRequest } = await import('../../../src/shared/middleware/rbac.middleware');
-      
+    it('should restrict org-scoped admin to their assigned organization', () => {
       const middleware = requireOrgScopedAdmin();
       
       const mockReq = {
@@ -94,9 +96,7 @@ describe('Org-Scoped Admin Feature', () => {
       expect(mockReq.effectiveOrganizationId).toBe('acme-org-uuid');
     });
 
-    it('should block org-scoped admin from accessing different organization', async () => {
-      const { requireOrgScopedAdmin, OrgScopedRequest } = await import('../../../src/shared/middleware/rbac.middleware');
-      
+    it('should block org-scoped admin from accessing different organization', () => {
       const middleware = requireOrgScopedAdmin();
       
       const mockReq = {
@@ -124,9 +124,7 @@ describe('Org-Scoped Admin Feature', () => {
       expect(mockNext).not.toHaveBeenCalled();
     });
 
-    it('should block non-admin users from accessing admin routes', async () => {
-      const { requireOrgScopedAdmin, OrgScopedRequest } = await import('../../../src/shared/middleware/rbac.middleware');
-      
+    it('should block non-admin users from accessing admin routes', () => {
       const middleware = requireOrgScopedAdmin();
       
       const mockReq = {
@@ -154,9 +152,7 @@ describe('Org-Scoped Admin Feature', () => {
       expect(mockNext).not.toHaveBeenCalled();
     });
 
-    it('should block admin without org assignment', async () => {
-      const { requireOrgScopedAdmin, OrgScopedRequest } = await import('../../../src/shared/middleware/rbac.middleware');
-      
+    it('should block admin without org assignment', () => {
       const middleware = requireOrgScopedAdmin();
       
       const adminWithoutOrg = {
@@ -190,9 +186,7 @@ describe('Org-Scoped Admin Feature', () => {
   });
 
   describe('requireOrgAccess middleware', () => {
-    it('should allow super_admin to access any organization by ID', async () => {
-      const { requireOrgAccess, OrgScopedRequest } = await import('../../../src/shared/middleware/rbac.middleware');
-      
+    it('should allow super_admin to access any organization by ID', () => {
       const middleware = requireOrgAccess();
       
       const mockReq = {
@@ -215,9 +209,7 @@ describe('Org-Scoped Admin Feature', () => {
       expect(mockReq.effectiveOrganizationId).toBe('any-org-uuid');
     });
 
-    it('should allow org-scoped admin to access their assigned org', async () => {
-      const { requireOrgAccess, OrgScopedRequest } = await import('../../../src/shared/middleware/rbac.middleware');
-      
+    it('should allow org-scoped admin to access their assigned org', () => {
       const middleware = requireOrgAccess();
       
       const mockReq = {
@@ -240,9 +232,7 @@ describe('Org-Scoped Admin Feature', () => {
       expect(mockReq.effectiveOrganizationId).toBe('acme-org-uuid');
     });
 
-    it('should block org-scoped admin from accessing different org', async () => {
-      const { requireOrgAccess, OrgScopedRequest } = await import('../../../src/shared/middleware/rbac.middleware');
-      
+    it('should block org-scoped admin from accessing different org', () => {
       const middleware = requireOrgAccess();
       
       const mockReq = {
@@ -266,34 +256,24 @@ describe('Org-Scoped Admin Feature', () => {
   });
 
   describe('canAdminOrganization helper', () => {
-    it('should return true for super_admin on any organization', async () => {
-      const { canAdminOrganization } = await import('../../../src/shared/middleware/rbac.middleware');
-      
+    it('should return true for super_admin on any organization', () => {
       expect(canAdminOrganization(superAdminUser, 'any-org')).toBe(true);
       expect(canAdminOrganization(superAdminUser, 'another-org')).toBe(true);
     });
 
-    it('should return true for org-scoped admin on their assigned org', async () => {
-      const { canAdminOrganization } = await import('../../../src/shared/middleware/rbac.middleware');
-      
+    it('should return true for org-scoped admin on their assigned org', () => {
       expect(canAdminOrganization(orgScopedAdminUser, 'acme-org-uuid')).toBe(true);
     });
 
-    it('should return false for org-scoped admin on different org', async () => {
-      const { canAdminOrganization } = await import('../../../src/shared/middleware/rbac.middleware');
-      
+    it('should return false for org-scoped admin on different org', () => {
       expect(canAdminOrganization(orgScopedAdminUser, 'other-org-uuid')).toBe(false);
     });
 
-    it('should return false for non-admin users', async () => {
-      const { canAdminOrganization } = await import('../../../src/shared/middleware/rbac.middleware');
-      
+    it('should return false for non-admin users', () => {
       expect(canAdminOrganization(regularEmployeeUser, 'any-org')).toBe(false);
     });
 
-    it('should return false for null user', async () => {
-      const { canAdminOrganization } = await import('../../../src/shared/middleware/rbac.middleware');
-      
+    it('should return false for null user', () => {
       expect(canAdminOrganization(undefined, 'any-org')).toBe(false);
     });
   });
