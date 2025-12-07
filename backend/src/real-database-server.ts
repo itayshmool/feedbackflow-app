@@ -5915,6 +5915,24 @@ app.post('/api/v1/feedback/:id/acknowledge', authenticateToken, async (req, res)
       createdAt: row.createdAt,
       updatedAt: row.updatedAt
     };
+
+    // Create notification for the feedback giver that their feedback was acknowledged
+    const giverOrgResult = await query('SELECT organization_id FROM users WHERE id = $1', [row.giverId]);
+    const giverOrgId = giverOrgResult.rows[0]?.organization_id;
+
+    await createFeedbackNotification(
+      row.giverId,
+      giverOrgId,
+      'Feedback Acknowledged',
+      `${row.recipientName || row.recipientEmail} has acknowledged your feedback.`,
+      {
+        feedbackId: id,
+        toUserId: row.recipientId,
+        toUserName: row.recipientName,
+        cycleId: row.cycleId,
+        type: 'feedback_acknowledged'
+      }
+    );
     
     res.json({ 
       success: true,

@@ -565,7 +565,72 @@ export class NotificationService {
   }
 
   private async notifyFeedbackAcknowledged(feedback: any, organizationId: string): Promise<void> {
-    // TODO: Send notification to feedback giver
-    this.logger.info('Feedback acknowledged notification triggered', { feedbackId: feedback.id });
+    try {
+      // Notify the giver (fromUserId) that the receiver acknowledged their feedback
+      const fromUserId = feedback.fromUserId;
+      if (!fromUserId) {
+        this.logger.warn('No fromUserId in feedback, skipping notification', { feedbackId: feedback.id });
+        return;
+      }
+
+      // Get the receiver's name for the notification
+      const receiverResult = await this.db.query(
+        'SELECT name, email FROM users WHERE id = $1',
+        [feedback.toUserId]
+      );
+      const receiverName = receiverResult.rows[0]?.name || receiverResult.rows[0]?.email || 'the recipient';
+
+      // Get giver's organization if not provided
+      let orgId = organizationId;
+      if (!orgId) {
+        const giverResult = await this.db.query(
+          'SELECT organization_id FROM users WHERE id = $1',
+          [fromUserId]
+        );
+        orgId = giverResult.rows[0]?.organization_id;
+      }
+
+      // Insert notification into database
+      const insertQuery = `
+        INSERT INTO user_notifications (
+          user_id, organization_id, type, category, title, message, data, priority, status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
+        RETURNING id
+      `;
+
+      const result = await this.db.query(insertQuery, [
+        fromUserId,
+        orgId,
+        'in_app',
+        'feedback',
+        'Feedback Acknowledged',
+        `${receiverName} has acknowledged your feedback.`,
+        JSON.stringify({
+          feedbackId: feedback.id,
+          toUserId: feedback.toUserId,
+          cycleId: feedback.cycleId,
+          type: 'feedback_acknowledged'
+        }),
+        'normal'
+      ]);
+
+      this.logger.info('Feedback acknowledged notification sent', { 
+        feedbackId: feedback.id,
+        notificationId: result.rows[0]?.id,
+        fromUserId
+      });
+
+      // Emit event for real-time updates
+      this.eventEmitter.emit('notification:created', {
+        userId: fromUserId,
+        notificationId: result.rows[0]?.id
+      });
+
+    } catch (error) {
+      this.logger.error('Error sending feedback acknowledged notification', { 
+        feedbackId: feedback.id, 
+        error 
+      });
+    }
   }
 }
