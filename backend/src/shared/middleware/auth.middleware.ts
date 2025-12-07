@@ -103,15 +103,24 @@ async function authenticateTokenAsync(req: Request, res: Response, next: NextFun
     // Real JWT verification
     const payload = jwtService.verify(token);
 
-    // Set user data from JWT payload including admin organization info
+    // Always fetch roles from database for real JWT tokens to ensure they're up-to-date
+    // This is important for role-based access control (e.g., super_admin protection)
+    const { adminOrganizationId, adminOrganizationSlug, roles } = await fetchAdminOrganization(payload.sub, payload.email);
+    
+    // Use database roles if available, otherwise fall back to JWT payload roles
+    const effectiveRoles = roles.length > 0 ? roles : (payload.roles || []);
+
+    // Set user data from JWT payload including admin organization info from database
     (req as any).user = {
       id: payload.sub,
       email: payload.email,
       name: payload.name,
-      roles: payload.roles || [],
-      adminOrganizationId: payload.adminOrganizationId || null,
-      adminOrganizationSlug: payload.adminOrganizationSlug || null,
+      roles: effectiveRoles,
+      adminOrganizationId: adminOrganizationId,
+      adminOrganizationSlug: adminOrganizationSlug,
     };
+    
+    console.log('🔍 Auth middleware - real JWT authenticated:', payload.email, 'roles:', effectiveRoles, 'adminOrgId:', adminOrganizationId);
 
     next();
   } catch (error) {

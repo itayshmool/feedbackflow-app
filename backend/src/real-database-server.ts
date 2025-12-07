@@ -2086,6 +2086,21 @@ app.put('/api/v1/admin/users/:id', authenticateToken, async (req, res) => {
       }
     }
 
+    // SUPER_ADMIN ROLE PROTECTION: Only super_admin can assign super_admin role
+    // Check this BEFORE any updates to ensure atomicity
+    if (roles !== undefined && roles.includes('super_admin')) {
+      const currentUserRoles = (req as any).user?.roles || [];
+      const isCurrentUserSuperAdmin = currentUserRoles.includes('super_admin');
+      
+      if (!isCurrentUserSuperAdmin) {
+        return res.status(403).json({ 
+          success: false, 
+          error: 'Permission denied',
+          message: 'Only super administrators can assign the super_admin role'
+        });
+      }
+    }
+
     // Update user
     const updateQuery = `
       UPDATE users 
@@ -2108,18 +2123,6 @@ app.put('/api/v1/admin/users/:id', authenticateToken, async (req, res) => {
 
     // Update roles if provided
     if (roles !== undefined) {
-      // SUPER_ADMIN ROLE PROTECTION: Only super_admin can assign super_admin role
-      const currentUserRoles = (req as any).user?.roles || [];
-      const isCurrentUserSuperAdmin = currentUserRoles.includes('super_admin');
-      
-      if (!isCurrentUserSuperAdmin && roles.includes('super_admin')) {
-        return res.status(403).json({ 
-          success: false, 
-          error: 'Permission denied',
-          message: 'Only super administrators can assign the super_admin role'
-        });
-      }
-
       // Remove existing roles
       await query('UPDATE user_roles SET is_active = false WHERE user_id = $1', [id]);
       
