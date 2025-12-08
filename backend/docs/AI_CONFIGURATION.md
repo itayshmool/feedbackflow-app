@@ -7,7 +7,7 @@ FeedbackFlow supports multiple AI providers for generating feedback and team ins
 | Provider | Model | Speed | Cost |
 |----------|-------|-------|------|
 | **Claude** (Anthropic) | claude-3-haiku-20240307 | Fast | Low |
-| **Gemini** (Google) | gemini-1.5-flash | Fast | Low/Free tier |
+| **Gemini** (Google) | gemini-2.0-flash-exp | Fast | Low/Free tier |
 
 ## Environment Variables
 

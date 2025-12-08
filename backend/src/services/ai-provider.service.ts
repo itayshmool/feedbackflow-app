@@ -98,8 +98,8 @@ async function callGemini(
   
   console.log('🤖 Calling Gemini API...');
   
-  // Gemini API endpoint - using gemini-1.5-flash for speed and cost efficiency
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  // Gemini API endpoint - using gemini-2.0-flash-exp for speed and cost efficiency
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
   
   const response = await fetch(url, {
     method: 'POST',
