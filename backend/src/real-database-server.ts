@@ -4719,6 +4719,14 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
       }
     }
     
+    // PRIVACY: Hide colorClassification from receiver (only giver and managers can see it)
+    // For each feedback item, if current user is the recipient (not the giver), remove colorClassification
+    for (const feedback of paginatedData) {
+      if (feedback.toUserId === currentUserId && feedback.fromUserId !== currentUserId) {
+        delete feedback.colorClassification;
+      }
+    }
+    
     res.json({
       success: true,
       data: {
@@ -4989,6 +4997,12 @@ app.get('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
       createdAt: g.created_at,
       updatedAt: g.updated_at
     }));
+    
+    // PRIVACY: Hide colorClassification from receiver (only giver and managers can see it)
+    // If current user is the recipient and NOT the giver, remove colorClassification
+    if (currentUserId === row.recipientId && currentUserId !== row.giverId) {
+      delete (feedback as any).colorClassification;
+    }
     
     res.json({ success: true, data: feedback });
   } catch (error) {
@@ -6020,6 +6034,9 @@ app.post('/api/v1/feedback/:id/acknowledge', authenticateToken, async (req, res)
       createdAt: row.createdAt,
       updatedAt: row.updatedAt
     };
+
+    // PRIVACY: The acknowledge endpoint is called by the receiver, so always hide colorClassification
+    delete (feedback as any).colorClassification;
 
     // Create notification for the feedback giver that their feedback was acknowledged
     const giverOrgResult = await query('SELECT organization_id FROM users WHERE id = $1', [row.giverId]);
