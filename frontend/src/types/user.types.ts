@@ -22,6 +22,7 @@ export interface UserRole {
   roleName: string;
   organizationId?: string;
   organizationName?: string;
+  organizationSlug?: string;
   grantedBy?: string;
   grantedAt: string;
   expiresAt?: string;

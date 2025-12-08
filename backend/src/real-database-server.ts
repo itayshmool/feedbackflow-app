@@ -1970,6 +1970,7 @@ app.get('/api/v1/admin/users', authenticateToken, async (req, res) => {
               'roleName', r.name,
               'organizationId', ur.organization_id,
               'organizationName', o.name,
+              'organizationSlug', o.slug,
               'grantedAt', ur.granted_at,
               'expiresAt', ur.expires_at,
               'isActive', ur.is_active
