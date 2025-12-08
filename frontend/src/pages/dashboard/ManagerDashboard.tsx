@@ -30,8 +30,10 @@ import {
   Lightbulb,
   TrendingDown,
   Award,
-  Zap
+  Zap,
+  Download
 } from 'lucide-react';
+import { generateInsightsDocx } from '../../utils/generateInsightsDocx';
 
 // Types for AI Insights
 interface TeamInsight {
@@ -642,22 +644,36 @@ const ManagerDashboard: React.FC = () => {
             AI-powered analysis of your team's feedback patterns
           </p>
         </div>
-        <Button
-          onClick={fetchTeamInsights}
-          disabled={isInsightsLoading || directReports.length === 0}
-          className={`flex items-center gap-2 ${
-            isInsightsLoading || directReports.length === 0
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-md hover:shadow-lg transition-all'
-          }`}
-        >
-          {isInsightsLoading ? (
-            <RefreshCw className="h-4 w-4 animate-spin" />
-          ) : (
-            <Sparkles className="h-4 w-4" />
+        <div className="flex items-center gap-3">
+          {/* Download Button - only visible when insights exist */}
+          {teamInsights && !isInsightsLoading && (
+            <Button
+              onClick={() => generateInsightsDocx(teamInsights, user?.name)}
+              className="flex items-center gap-2 bg-white border border-purple-300 text-purple-700 hover:bg-purple-50 hover:border-purple-400 shadow-sm transition-all"
+            >
+              <Download className="h-4 w-4" />
+              Download
+            </Button>
           )}
-          {isInsightsLoading ? 'Generating...' : teamInsights ? 'Refresh Insights' : 'Generate Insights'}
-        </Button>
+          
+          {/* Generate/Refresh Button */}
+          <Button
+            onClick={fetchTeamInsights}
+            disabled={isInsightsLoading || directReports.length === 0}
+            className={`flex items-center gap-2 ${
+              isInsightsLoading || directReports.length === 0
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-md hover:shadow-lg transition-all'
+            }`}
+          >
+            {isInsightsLoading ? (
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            {isInsightsLoading ? 'Generating...' : teamInsights ? 'Refresh Insights' : 'Generate Insights'}
+          </Button>
+        </div>
       </div>
 
       {/* Error State */}
