@@ -30,8 +30,11 @@ import {
   Lightbulb,
   TrendingDown,
   Award,
-  Zap
+  Zap,
+  Download,
+  Loader2
 } from 'lucide-react';
+import { generateInsightsDocx } from '../../utils/generateInsightsDocx';
 
 // Types for AI Insights
 interface TeamInsight {
@@ -117,28 +120,95 @@ const ManagerDashboard: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'analytics' | 'insights'>('overview');
   
-  // State for AI Insights
+  // State for AI Insights (async with polling)
   const [teamInsights, setTeamInsights] = useState<TeamInsight | null>(null);
   const [isInsightsLoading, setIsInsightsLoading] = useState(false);
   const [insightsError, setInsightsError] = useState<string | null>(null);
+  const [insightsJobId, setInsightsJobId] = useState<string | null>(null);
+  const [insightsJobStatus, setInsightsJobStatus] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
   
-  // Function to fetch AI team insights
+  // Function to start AI team insights generation (async)
   const fetchTeamInsights = async () => {
     setIsInsightsLoading(true);
     setInsightsError(null);
+    setInsightsJobStatus('starting');
     try {
-      // AI insights can take 30-60+ seconds, use 2 minute timeout
-      const response = await api.post('/ai/team-insights', {}, { timeout: 120000 });
+      const response = await api.post('/ai/team-insights');
       if (response.data.success) {
-        setTeamInsights(response.data.data);
+        const { jobId, status } = response.data.data;
+        setInsightsJobId(jobId);
+        setInsightsJobStatus(status);
+        // Start polling for results
       } else {
-        setInsightsError(response.data.error || 'Failed to generate insights');
+        setInsightsError(response.data.error || 'Failed to start insights generation');
+        setIsInsightsLoading(false);
       }
     } catch (error: any) {
-      console.error('Error fetching team insights:', error);
-      setInsightsError(error.response?.data?.error || 'Failed to generate team insights');
-    } finally {
+      console.error('Error starting team insights:', error);
+      setInsightsError(error.response?.data?.error || 'Failed to start team insights');
       setIsInsightsLoading(false);
+    }
+  };
+
+  // Poll for job status
+  useEffect(() => {
+    if (!insightsJobId || !isInsightsLoading) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await api.get(`/ai/team-insights/${insightsJobId}`);
+        if (response.data.success) {
+          const { status, insights, error } = response.data.data;
+          setInsightsJobStatus(status);
+
+          if (status === 'completed' && insights) {
+            setTeamInsights(insights);
+            setIsInsightsLoading(false);
+            setInsightsJobId(null);
+            clearInterval(pollInterval);
+          } else if (status === 'failed') {
+            setInsightsError(error || 'AI insights generation failed');
+            setIsInsightsLoading(false);
+            setInsightsJobId(null);
+            clearInterval(pollInterval);
+          }
+          // If still pending/processing, continue polling
+        }
+      } catch (error: any) {
+        console.error('Error polling job status:', error);
+        // Don't stop polling on network errors, retry
+      }
+    }, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [insightsJobId, isInsightsLoading]);
+
+  // Load cached insights on mount
+  useEffect(() => {
+    const loadCachedInsights = async () => {
+      try {
+        const response = await api.get('/ai/team-insights-latest');
+        if (response.data.success && response.data.data?.insights) {
+          setTeamInsights(response.data.data.insights);
+        }
+      } catch (error) {
+        // Silently fail - no cached insights available
+      }
+    };
+    loadCachedInsights();
+  }, []);
+
+  // Download insights as DOCX
+  const handleDownloadInsights = async () => {
+    if (!teamInsights) return;
+    setIsDownloading(true);
+    try {
+      await generateInsightsDocx(teamInsights, user?.name || 'Manager');
+    } catch (error) {
+      console.error('Error downloading insights:', error);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -631,7 +701,7 @@ const ManagerDashboard: React.FC = () => {
 
   const renderInsights = () => (
     <div className="space-y-6">
-      {/* Header with Refresh Button */}
+      {/* Header with Refresh and Download Buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
@@ -642,15 +712,34 @@ const ManagerDashboard: React.FC = () => {
             AI-powered analysis of your team's feedback patterns
           </p>
         </div>
-        <Button
-          onClick={fetchTeamInsights}
-          disabled={isInsightsLoading || directReports.length === 0}
-          variant="outline"
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${isInsightsLoading ? 'animate-spin' : ''}`} />
-          {isInsightsLoading ? 'Generating...' : teamInsights ? 'Refresh Insights' : 'Generate Insights'}
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Download Button - only show when insights exist */}
+          {teamInsights && !isInsightsLoading && (
+            <Button
+              onClick={handleDownloadInsights}
+              disabled={isDownloading}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              {isDownloading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              {isDownloading ? 'Downloading...' : 'Download Report'}
+            </Button>
+          )}
+          {/* Generate/Refresh Button */}
+          <Button
+            onClick={fetchTeamInsights}
+            disabled={isInsightsLoading || directReports.length === 0}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isInsightsLoading ? 'animate-spin' : ''}`} />
+            {isInsightsLoading ? 'Generating...' : teamInsights ? 'Refresh Insights' : 'Generate Insights'}
+          </Button>
+        </div>
       </div>
 
       {/* Error State */}
@@ -665,13 +754,34 @@ const ManagerDashboard: React.FC = () => {
         </Card>
       )}
 
-      {/* Loading State */}
+      {/* Loading State - Enhanced with job status */}
       {isInsightsLoading && (
-        <div className="flex flex-col items-center justify-center py-16">
-          <LoadingSpinner size="lg" />
-          <p className="mt-4 text-gray-600">Analyzing team feedback with AI...</p>
-          <p className="text-sm text-gray-500 mt-1">This may take a few seconds</p>
-        </div>
+        <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+          <CardContent className="p-8">
+            <div className="flex flex-col items-center justify-center">
+              <div className="relative">
+                <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 text-purple-600 animate-spin" />
+                </div>
+                <Sparkles className="h-5 w-5 text-purple-500 absolute -top-1 -right-1" />
+              </div>
+              <h3 className="mt-4 text-lg font-semibold text-gray-900">
+                {insightsJobStatus === 'pending' && 'Starting AI Analysis...'}
+                {insightsJobStatus === 'processing' && 'AI is Analyzing Your Team...'}
+                {insightsJobStatus === 'starting' && 'Initializing...'}
+                {!insightsJobStatus && 'Generating Insights...'}
+              </h3>
+              <p className="text-gray-600 text-sm mt-2 text-center max-w-md">
+                Our AI is analyzing your team's feedback patterns to generate actionable insights.
+                This typically takes 30-60 seconds.
+              </p>
+              <div className="flex items-center gap-2 mt-4 text-xs text-gray-500">
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
+                <span>You can navigate away - we'll notify you when ready</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Empty State - No insights yet */}

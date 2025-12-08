@@ -7373,67 +7373,33 @@ Return ONLY a JSON object with this exact structure (no markdown, no explanation
 });
 
 // ===========================================
-// AI TEAM INSIGHTS ENDPOINT
+// AI TEAM INSIGHTS ENDPOINTS (Async Processing)
 // ===========================================
-app.post('/api/v1/ai/team-insights', authenticateToken, async (req: any, res: any) => {
+
+// Helper function to process AI insights in background
+async function processAIInsightsJob(jobId: string, managerId: string, managerName: string, organizationId: string) {
   try {
-    const userEmail = req.user?.email;
-    if (!userEmail) {
-      return res.status(401).json({ success: false, error: 'User not authenticated' });
-    }
-
-    // Validate AI configuration
-    try {
-      getAIConfig();
-    } catch (configError: any) {
-      return res.status(500).json({ 
-        success: false, 
-        error: configError.message 
-      });
-    }
-
-    // Get the manager's user info
-    const managerResult = await query(
-      'SELECT id, name, organization_id FROM users WHERE email = $1',
-      [userEmail]
+    // Update job status to processing
+    await query(
+      'UPDATE ai_insight_jobs SET status = $1, started_at = NOW() WHERE id = $2',
+      ['processing', jobId]
     );
-    
-    if (managerResult.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'User not found' });
-    }
-    
-    const manager = managerResult.rows[0];
-    const managerId = manager.id;
-    const managerName = manager.name;
-    const organizationId = manager.organization_id;
 
-    console.log('🧠 Generating AI team insights for manager:', managerName);
+    console.log(`🧠 [Job ${jobId}] Processing AI team insights for manager: ${managerName}`);
 
     // Fetch all team members (direct + indirect reports) using recursive CTE
     const teamQuery = `
       WITH RECURSIVE team_hierarchy AS (
-        -- Direct reports
         SELECT 
-          u.id,
-          u.name,
-          u.email,
-          u.position,
-          u.department,
-          1 as level
+          u.id, u.name, u.email, u.position, u.department, 1 as level
         FROM users u
         INNER JOIN organizational_hierarchy oh ON u.id = oh.employee_id
         WHERE oh.manager_id = $1 AND oh.organization_id = $2
         
         UNION ALL
         
-        -- Indirect reports (recursive)
         SELECT 
-          u.id,
-          u.name,
-          u.email,
-          u.position,
-          u.department,
-          th.level + 1
+          u.id, u.name, u.email, u.position, u.department, th.level + 1
         FROM users u
         INNER JOIN organizational_hierarchy oh ON u.id = oh.employee_id
         INNER JOIN team_hierarchy th ON oh.manager_id = th.id
@@ -7448,104 +7414,72 @@ app.post('/api/v1/ai/team-insights', authenticateToken, async (req: any, res: an
     const teamMembers = teamResult.rows;
     
     if (teamMembers.length === 0) {
-      return res.json({
-        success: true,
-        data: {
-          generatedAt: new Date().toISOString(),
-          summary: 'No team members found. Add direct reports to your hierarchy to get team insights.',
-          themes: [],
-          strengths: [],
-          areasForImprovement: [],
-          individualHighlights: [],
-          recommendations: [],
-          teamHealthScore: null,
-          confidenceLevel: 'low',
-          teamSize: 0,
-          feedbackCount: 0
-        }
-      });
+      const emptyInsights = {
+        generatedAt: new Date().toISOString(),
+        summary: 'No team members found. Add direct reports to your hierarchy to get team insights.',
+        themes: [], strengths: [], areasForImprovement: [], individualHighlights: [],
+        recommendations: [], teamHealthScore: null, confidenceLevel: 'low', teamSize: 0, feedbackCount: 0
+      };
+      await query(
+        'UPDATE ai_insight_jobs SET status = $1, insights_data = $2, completed_at = NOW(), team_size = 0, feedback_count = 0 WHERE id = $3',
+        ['completed', JSON.stringify(emptyInsights), jobId]
+      );
+      return;
     }
 
     const teamMemberIds = teamMembers.map((m: any) => m.id);
     
-    // Fetch all feedback for team members (both received and given)
+    // Fetch feedback
     const feedbackQuery = `
-      SELECT 
-        fr.id,
-        fr.status,
-        fr.feedback_type,
-        fr.created_at,
-        fr.updated_at,
-        frr.content as feedback_content,
-        frr.rating,
-        giver.name as giver_name,
-        giver.position as giver_position,
-        recipient.name as recipient_name,
-        recipient.position as recipient_position,
-        recipient.department as recipient_department
+      SELECT fr.id, fr.status, fr.feedback_type, fr.created_at, frr.content as feedback_content, frr.rating,
+        giver.position as giver_position, recipient.name as recipient_name,
+        recipient.position as recipient_position, recipient.department as recipient_department
       FROM feedback_requests fr
       LEFT JOIN feedback_responses frr ON fr.id = frr.request_id
       LEFT JOIN users giver ON frr.giver_id = giver.id
       LEFT JOIN users recipient ON fr.recipient_id = recipient.id
       WHERE (fr.recipient_id = ANY($1) OR frr.giver_id = ANY($1))
-      ORDER BY fr.created_at DESC
-      LIMIT 100
+      ORDER BY fr.created_at DESC LIMIT 100
     `;
     
     const feedbackResult = await query(feedbackQuery, [teamMemberIds]);
     const feedbackData = feedbackResult.rows;
     
     if (feedbackData.length === 0) {
-      return res.json({
-        success: true,
-        data: {
-          generatedAt: new Date().toISOString(),
-          summary: `Your team of ${teamMembers.length} members has no completed feedback yet. Encourage team members to participate in feedback cycles to get insights.`,
-          themes: [],
-          strengths: [],
-          areasForImprovement: [],
-          individualHighlights: [],
-          recommendations: [{
-            priority: 'high',
-            action: 'Start a feedback cycle to gather team insights',
-            reason: 'No feedback data available for analysis',
-            timeline: 'This week'
-          }],
-          teamHealthScore: null,
-          confidenceLevel: 'low',
-          teamSize: teamMembers.length,
-          feedbackCount: 0
-        }
-      });
+      const noFeedbackInsights = {
+        generatedAt: new Date().toISOString(),
+        summary: `Your team of ${teamMembers.length} members has no completed feedback yet.`,
+        themes: [], strengths: [], areasForImprovement: [], individualHighlights: [],
+        recommendations: [{ priority: 'high', action: 'Start a feedback cycle', reason: 'No feedback data', timeline: 'This week' }],
+        teamHealthScore: null, confidenceLevel: 'low', teamSize: teamMembers.length, feedbackCount: 0
+      };
+      await query(
+        'UPDATE ai_insight_jobs SET status = $1, insights_data = $2, completed_at = NOW(), team_size = $3, feedback_count = 0 WHERE id = $4',
+        ['completed', JSON.stringify(noFeedbackInsights), teamMembers.length, jobId]
+      );
+      return;
     }
 
-    // Prepare feedback data for AI analysis (anonymize if needed, summarize)
+    // Prepare data for AI
     const feedbackSummary = feedbackData.map((f: any) => ({
-      recipientName: f.recipient_name,
-      recipientPosition: f.recipient_position,
-      recipientDepartment: f.recipient_department,
-      feedbackType: f.feedback_type,
-      rating: f.rating,
-      feedbackContent: f.feedback_content, // The actual feedback text
-      giverPosition: f.giver_position, // Don't include giver name for privacy
-      status: f.status,
-      date: f.created_at
+      recipientName: f.recipient_name, recipientPosition: f.recipient_position,
+      recipientDepartment: f.recipient_department, feedbackType: f.feedback_type,
+      rating: f.rating, feedbackContent: f.feedback_content, giverPosition: f.giver_position,
+      status: f.status, date: f.created_at
     }));
 
     const teamSummary = teamMembers.map((m: any) => ({
-      name: m.name,
-      position: m.position,
-      department: m.department,
+      name: m.name, position: m.position, department: m.department,
       level: m.level === 1 ? 'Direct Report' : 'Indirect Report'
     }));
 
-    // Build prompt for Claude
-    const prompt = `You are an expert HR analytics consultant analyzing team performance feedback for a manager.
+    // Build AI prompt
+    const prompt = `You are an expert HR analytics consultant analyzing team performance feedback.
 
 CONTEXT:
 Manager: ${managerName}
 Team Size: ${teamMembers.length} employees
-Feedback Records: ${feedbackData.length} feedback items
+Feedback Records: ${feedbackData.length} items
 
 TEAM MEMBERS:
 ${JSON.stringify(teamSummary, null, 2)}
@@ -7553,76 +7487,35 @@ ${JSON.stringify(teamSummary, null, 2)}
 FEEDBACK DATA:
 ${JSON.stringify(feedbackSummary, null, 2)}
 
-TASK:
-Analyze this feedback data and provide actionable insights for the manager. Focus on patterns, themes, and actionable recommendations.
-
-Return ONLY a JSON object with this exact structure (no markdown, no explanation):
+Return ONLY a JSON object:
 {
-  "summary": "A 2-3 sentence executive summary of the team's feedback patterns and overall health",
-  
+  "summary": "2-3 sentence executive summary",
   "themes": ["theme1", "theme2", "theme3"],
-  
-  "strengths": [
-    {
-      "title": "Strength title",
-      "description": "Detailed description with patterns observed in the feedback",
-      "employeesExcelling": ["Names of team members who exemplify this strength"]
-    }
-  ],
-  
-  "areasForImprovement": [
-    {
-      "title": "Area title",
-      "description": "What needs improvement based on feedback patterns",
-      "frequency": "How common this is (e.g., 'mentioned in 40% of feedback')",
-      "suggestedActions": ["Specific action 1", "Specific action 2"]
-    }
-  ],
-  
-  "individualHighlights": [
-    {
-      "employeeName": "Name from team",
-      "positiveHighlight": "What they're consistently praised for",
-      "growthOpportunity": "A constructive area for development"
-    }
-  ],
-  
-  "recommendations": [
-    {
-      "priority": "high",
-      "action": "Specific actionable recommendation for the manager",
-      "reason": "Why this matters based on the feedback analysis",
-      "timeline": "When to take action (e.g., 'This week', 'This month', 'This quarter')"
-    }
-  ],
-  
+  "strengths": [{"title": "...", "description": "...", "employeesExcelling": ["..."]}],
+  "areasForImprovement": [{"title": "...", "description": "...", "frequency": "...", "suggestedActions": ["..."]}],
+  "individualHighlights": [{"employeeName": "...", "positiveHighlight": "...", "growthOpportunity": "..."}],
+  "recommendations": [{"priority": "high|medium|low", "action": "...", "reason": "...", "timeline": "..."}],
   "teamHealthScore": 7.5,
-  "confidenceLevel": "high"
+  "confidenceLevel": "high|medium|low"
 }
 
-GUIDELINES:
-- Be specific and reference actual patterns from the feedback
-- Prioritize actionable insights over generic advice
-- Include 2-4 items per category
-- For individualHighlights, include highlights for team members with notable feedback (max 5)
-- Keep recommendations practical and time-bound
-- Score team health 1-10 based on overall feedback sentiment
-- Set confidenceLevel to "high" if >10 feedback items, "medium" if 5-10, "low" if <5`;
+Be specific, include 2-4 items per category, max 5 individualHighlights. Set confidence based on feedback count.`;
 
-    console.log('🤖 Generating AI team insights...');
+    console.log(`🤖 [Job ${jobId}] Calling AI API...`);
     
+    const aiConfig = getAIConfig();
     const aiResponse = await generateAIContent(prompt, { maxTokens: 2048 });
     
-    // Parse the JSON response
     let parsedInsights;
     try {
       parsedInsights = parseAIJsonResponse(aiResponse.text);
     } catch (parseError) {
-      console.error('Failed to parse AI insights response:', aiResponse.text);
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Failed to parse AI response' 
-      });
+      console.error(`[Job ${jobId}] Failed to parse AI response:`, aiResponse.text);
+      await query(
+        'UPDATE ai_insight_jobs SET status = $1, error_message = $2, completed_at = NOW() WHERE id = $3',
+        ['failed', 'Failed to parse AI response', jobId]
+      );
+      return;
     }
     
     // Add metadata
@@ -7631,19 +7524,208 @@ GUIDELINES:
     parsedInsights.feedbackCount = feedbackData.length;
     parsedInsights.provider = aiResponse.provider;
     
-    console.log(`✅ AI team insights generated successfully (provider: ${aiResponse.provider})`);
+    // Update job with results
+    await query(
+      `UPDATE ai_insight_jobs 
+       SET status = $1, insights_data = $2, completed_at = NOW(), 
+           team_size = $3, feedback_count = $4, ai_provider = $5 
+       WHERE id = $6`,
+      ['completed', JSON.stringify(parsedInsights), teamMembers.length, feedbackData.length, aiResponse.provider, jobId]
+    );
+
+    // Create notification for user
+    const userResult = await query('SELECT id FROM users WHERE id = $1', [managerId]);
+    if (userResult.rows.length > 0) {
+      await query(
+        `INSERT INTO user_notifications (user_id, organization_id, type, category, title, message, data, priority, status)
+         VALUES ($1, $2, 'in_app', 'ai_insights', 'AI Insights Ready', 
+                 'Your team insights have been generated and are ready to view.', 
+                 $3, 'normal', 'pending')`,
+        [managerId, organizationId, JSON.stringify({ jobId, type: 'team_insights' })]
+      );
+    }
+
+    console.log(`✅ [Job ${jobId}] AI team insights completed (provider: ${aiResponse.provider})`);
+
+  } catch (error: any) {
+    console.error(`❌ [Job ${jobId}] AI insights processing failed:`, error);
+    await query(
+      'UPDATE ai_insight_jobs SET status = $1, error_message = $2, completed_at = NOW() WHERE id = $3',
+      ['failed', error.message || 'Unknown error', jobId]
+    );
+  }
+}
+
+// POST /api/v1/ai/team-insights - Start async insights generation
+app.post('/api/v1/ai/team-insights', authenticateToken, async (req: any, res: any) => {
+  try {
+    const userEmail = req.user?.email;
+    if (!userEmail) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    // Validate AI configuration
+    try {
+      getAIConfig();
+    } catch (configError: any) {
+      return res.status(500).json({ success: false, error: configError.message });
+    }
+
+    // Get manager info
+    const managerResult = await query(
+      'SELECT id, name, organization_id FROM users WHERE email = $1',
+      [userEmail]
+    );
     
+    if (managerResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    
+    const manager = managerResult.rows[0];
+
+    // Check for existing pending/processing job (prevent duplicates)
+    const existingJob = await query(
+      `SELECT id, status, created_at FROM ai_insight_jobs 
+       WHERE user_id = $1 AND status IN ('pending', 'processing') 
+       AND created_at > NOW() - INTERVAL '10 minutes'
+       ORDER BY created_at DESC LIMIT 1`,
+      [manager.id]
+    );
+
+    if (existingJob.rows.length > 0) {
+      return res.json({
+        success: true,
+        data: {
+          jobId: existingJob.rows[0].id,
+          status: existingJob.rows[0].status,
+          message: 'Job already in progress'
+        }
+      });
+    }
+
+    // Create new job
+    const jobResult = await query(
+      `INSERT INTO ai_insight_jobs (user_id, organization_id, job_type, status, expires_at)
+       VALUES ($1, $2, 'team_insights', 'pending', NOW() + INTERVAL '7 days')
+       RETURNING id`,
+      [manager.id, manager.organization_id]
+    );
+
+    const jobId = jobResult.rows[0].id;
+
+    console.log(`📋 [Job ${jobId}] Created async AI insights job for ${manager.name}`);
+
+    // Start background processing (non-blocking)
+    setImmediate(() => {
+      processAIInsightsJob(jobId, manager.id, manager.name, manager.organization_id);
+    });
+
+    // Return immediately with job ID
     res.json({
       success: true,
-      data: parsedInsights
+      data: {
+        jobId,
+        status: 'pending',
+        message: 'AI insights generation started. Poll for status or wait for notification.'
+      }
     });
-    
+
   } catch (error: any) {
     console.error('AI team insights error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message || 'Failed to generate team insights' 
+    res.status(500).json({ success: false, error: error.message || 'Failed to start AI insights' });
+  }
+});
+
+// GET /api/v1/ai/team-insights/:jobId - Get job status and results
+app.get('/api/v1/ai/team-insights/:jobId', authenticateToken, async (req: any, res: any) => {
+  try {
+    const { jobId } = req.params;
+    const userEmail = req.user?.email;
+
+    // Get user ID
+    const userResult = await query('SELECT id FROM users WHERE email = $1', [userEmail]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    const userId = userResult.rows[0].id;
+
+    // Get job (ensure it belongs to requesting user)
+    const jobResult = await query(
+      `SELECT id, status, insights_data, error_message, team_size, feedback_count, 
+              ai_provider, created_at, started_at, completed_at
+       FROM ai_insight_jobs 
+       WHERE id = $1 AND user_id = $2`,
+      [jobId, userId]
+    );
+
+    if (jobResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Job not found' });
+    }
+
+    const job = jobResult.rows[0];
+
+    res.json({
+      success: true,
+      data: {
+        jobId: job.id,
+        status: job.status,
+        insights: job.status === 'completed' ? job.insights_data : null,
+        error: job.status === 'failed' ? job.error_message : null,
+        teamSize: job.team_size,
+        feedbackCount: job.feedback_count,
+        provider: job.ai_provider,
+        createdAt: job.created_at,
+        startedAt: job.started_at,
+        completedAt: job.completed_at
+      }
     });
+
+  } catch (error: any) {
+    console.error('Get AI insights job error:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to get job status' });
+  }
+});
+
+// GET /api/v1/ai/team-insights/latest - Get most recent completed insights
+app.get('/api/v1/ai/team-insights-latest', authenticateToken, async (req: any, res: any) => {
+  try {
+    const userEmail = req.user?.email;
+
+    const userResult = await query('SELECT id FROM users WHERE email = $1', [userEmail]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    const userId = userResult.rows[0].id;
+
+    // Get most recent completed job
+    const jobResult = await query(
+      `SELECT id, insights_data, team_size, feedback_count, ai_provider, completed_at
+       FROM ai_insight_jobs 
+       WHERE user_id = $1 AND status = 'completed'
+       ORDER BY completed_at DESC LIMIT 1`,
+      [userId]
+    );
+
+    if (jobResult.rows.length === 0) {
+      return res.json({ success: true, data: null });
+    }
+
+    const job = jobResult.rows[0];
+    res.json({
+      success: true,
+      data: {
+        jobId: job.id,
+        insights: job.insights_data,
+        teamSize: job.team_size,
+        feedbackCount: job.feedback_count,
+        provider: job.ai_provider,
+        completedAt: job.completed_at
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Get latest AI insights error:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to get insights' });
   }
 });
 
