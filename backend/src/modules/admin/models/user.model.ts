@@ -13,91 +13,110 @@ export class UserModel {
   ): Promise<{ data: User[]; pagination: any }> {
     const { limit = 10, offset = 0, sortBy = 'created_at', sortOrder = 'desc' } = options;
     
-    // Build WHERE clause
-    const conditions: string[] = [];
+    // Build WHERE clause - separate user-level filters from role/org filters
+    // Role/org filters determine WHICH users to return, but we still want ALL roles for those users
+    const userConditions: string[] = [];
+    const roleFilterConditions: string[] = [];
     const values: any[] = [];
     let paramIndex = 1;
 
     if (filters.search) {
-      conditions.push(`(u.name ILIKE $${paramIndex} OR u.email ILIKE $${paramIndex})`);
+      userConditions.push(`(u.name ILIKE $${paramIndex} OR u.email ILIKE $${paramIndex})`);
       values.push(`%${filters.search}%`);
       paramIndex++;
     }
 
     if (filters.isActive !== undefined) {
-      conditions.push(`u.is_active = $${paramIndex}`);
+      userConditions.push(`u.is_active = $${paramIndex}`);
       values.push(filters.isActive);
       paramIndex++;
     }
 
     if (filters.emailVerified !== undefined) {
-      conditions.push(`u.email_verified = $${paramIndex}`);
+      userConditions.push(`u.email_verified = $${paramIndex}`);
       values.push(filters.emailVerified);
       paramIndex++;
     }
 
+    // Role and organization filters - use subquery to filter WHICH USERS to return
+    // This ensures we still get ALL roles for those users, not just the filtered role
     if (filters.organizationId) {
-      conditions.push(`ur.organization_id = $${paramIndex}`);
+      roleFilterConditions.push(`ur_filter.organization_id = $${paramIndex}`);
       values.push(filters.organizationId);
       paramIndex++;
     }
 
     if (filters.roleId) {
-      conditions.push(`ur.role_id = $${paramIndex}`);
+      roleFilterConditions.push(`ur_filter.role_id = $${paramIndex}`);
       values.push(filters.roleId);
       paramIndex++;
     }
 
     if (filters.department) {
-      conditions.push(`u.department = $${paramIndex}`);
+      userConditions.push(`u.department = $${paramIndex}`);
       values.push(filters.department);
       paramIndex++;
     }
 
     if (filters.position) {
-      conditions.push(`u.position = $${paramIndex}`);
+      userConditions.push(`u.position = $${paramIndex}`);
       values.push(filters.position);
       paramIndex++;
     }
 
     if (filters.lastLoginAfter) {
-      conditions.push(`u.last_login_at >= $${paramIndex}`);
+      userConditions.push(`u.last_login_at >= $${paramIndex}`);
       values.push(filters.lastLoginAfter);
       paramIndex++;
     }
 
     if (filters.lastLoginBefore) {
-      conditions.push(`u.last_login_at <= $${paramIndex}`);
+      userConditions.push(`u.last_login_at <= $${paramIndex}`);
       values.push(filters.lastLoginBefore);
       paramIndex++;
     }
 
     if (filters.createdAfter) {
-      conditions.push(`u.created_at >= $${paramIndex}`);
+      userConditions.push(`u.created_at >= $${paramIndex}`);
       values.push(filters.createdAfter);
       paramIndex++;
     }
 
     if (filters.createdBefore) {
-      conditions.push(`u.created_at <= $${paramIndex}`);
+      userConditions.push(`u.created_at <= $${paramIndex}`);
       values.push(filters.createdBefore);
       paramIndex++;
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    // Build the role filter subquery if needed
+    const hasRoleFilter = roleFilterConditions.length > 0;
+    const roleFilterSubquery = hasRoleFilter 
+      ? `u.id IN (
+          SELECT ur_filter.user_id 
+          FROM user_roles ur_filter 
+          WHERE ur_filter.is_active = true AND ${roleFilterConditions.join(' AND ')}
+        )`
+      : '';
+
+    // Combine user conditions with role filter subquery
+    const allConditions = [...userConditions];
+    if (hasRoleFilter) {
+      allConditions.push(roleFilterSubquery);
+    }
+    
+    const whereClause = allConditions.length > 0 ? `WHERE ${allConditions.join(' AND ')}` : '';
 
     // Get total count
     const countQuery = `
       SELECT COUNT(DISTINCT u.id) as count
       FROM users u
-      LEFT JOIN user_roles ur ON u.id = ur.user_id AND ur.is_active = true
       ${whereClause}
     `;
     
     const countResult = await dbQuery(countQuery, values);
     const total = parseInt(countResult.rows[0].count);
 
-    // Get paginated data with roles
+    // Get paginated data with ALL roles for matching users
     const dataQuery = `
       SELECT 
         u.id,
