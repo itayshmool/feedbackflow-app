@@ -163,6 +163,38 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
   // Note: Backend returns "manager", "peer", etc. (not "manager_review", "peer_review")
   const visibleFeedbackList = feedbackList;
 
+  // Handle pagination with correct filters
+  const handlePageChange = (newPage: number) => {
+    // Rebuild filters the same way loadFeedback does to ensure consistency
+    const currentFilters: FeedbackFilters = {};
+    
+    if (userId) {
+      if (activeTab === 'received') {
+        currentFilters.toUserId = userId;
+        currentFilters.toUserEmail = userId;
+      } else if (activeTab === 'given') {
+        currentFilters.fromUserId = userId;
+      } else if (activeTab === 'drafts') {
+        currentFilters.fromUserId = userId;
+        currentFilters.status = FeedbackStatus.DRAFT;
+      }
+    }
+    
+    if (statusFilter) {
+      currentFilters.status = statusFilter;
+    }
+    
+    if (typeFilter) {
+      currentFilters.reviewType = typeFilter;
+    }
+    
+    if (searchQuery) {
+      currentFilters.search = searchQuery;
+    }
+
+    fetchFeedbackList(currentFilters, newPage, pagination.limit);
+  };
+
   if (error) {
     return (
       <Card className="p-6">
@@ -432,14 +464,14 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={() => fetchFeedbackList(filters, pagination.page - 1)}
+              onClick={() => handlePageChange(pagination.page - 1)}
               disabled={pagination.page === 1}
             >
               Previous
             </Button>
             <Button
               variant="outline"
-              onClick={() => fetchFeedbackList(filters, pagination.page + 1)}
+              onClick={() => handlePageChange(pagination.page + 1)}
               disabled={pagination.page === pagination.totalPages}
             >
               Next
