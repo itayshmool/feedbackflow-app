@@ -155,7 +155,7 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
   return (
     <div className={`relative ${className}`}>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
@@ -173,7 +173,7 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
           placeholder={placeholder}
           required={required}
           disabled={disabled}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-50 dark:disabled:bg-gray-900 disabled:text-gray-500 dark:disabled:text-gray-400 placeholder:text-gray-500 dark:placeholder:text-gray-400 transition-colors"
         />
         
         {isLoading && (
@@ -184,16 +184,16 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
       </div>
 
       {error && (
-        <p className="mt-1 text-sm text-red-600">{error}</p>
+        <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>
       )}
 
       {isOpen && (
         <div
           ref={dropdownRef}
-          className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto"
+          className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-auto"
         >
           {searchResults.length === 0 && !isLoading ? (
-            <div className="px-3 py-2 text-sm text-gray-500">
+            <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
               {value.length < 3 ? 'Type at least 3 characters to search' : 'No users found'}
             </div>
           ) : (
@@ -201,8 +201,8 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
               <div
                 key={user.id}
                 onClick={() => handleSelect(user)}
-                className={`px-3 py-2 cursor-pointer border-b border-gray-100 last:border-b-0 hover:bg-gray-50 ${
-                  index === selectedIndex ? 'bg-blue-50' : ''
+                className={`px-3 py-2 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                  index === selectedIndex ? 'bg-purple-50 dark:bg-purple-900/30' : ''
                 }`}
               >
                 <div className="flex items-center space-x-3">
@@ -214,22 +214,22 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
                         className="w-8 h-8 rounded-full"
                       />
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
-                        <User className="w-4 h-4 text-gray-600" />
+                      <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                        <User className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                       </div>
                     )}
                   </div>
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2">
-                      <Mail className="w-3 h-3 text-gray-400" />
-                      <p className="text-sm font-medium text-gray-900 truncate">
+                      <Mail className="w-3 h-3 text-gray-400 dark:text-gray-500" />
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                         {user.email}
                       </p>
                     </div>
                     
                     {user.name && (
-                      <p className="text-sm text-gray-600 truncate">
+                      <p className="text-sm text-gray-600 dark:text-gray-300 truncate">
                         {user.name}
                       </p>
                     )}
@@ -237,15 +237,15 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
                     <div className="flex items-center space-x-4 mt-1">
                       {user.department && (
                         <div className="flex items-center space-x-1">
-                          <Building className="w-3 h-3 text-gray-400" />
-                          <span className="text-xs text-gray-500">{user.department}</span>
+                          <Building className="w-3 h-3 text-gray-400 dark:text-gray-500" />
+                          <span className="text-xs text-gray-500 dark:text-gray-400">{user.department}</span>
                         </div>
                       )}
                       
                       {user.position && (
                         <div className="flex items-center space-x-1">
-                          <Briefcase className="w-3 h-3 text-gray-400" />
-                          <span className="text-xs text-gray-500">{user.position}</span>
+                          <Briefcase className="w-3 h-3 text-gray-400 dark:text-gray-500" />
+                          <span className="text-xs text-gray-500 dark:text-gray-400">{user.position}</span>
                         </div>
                       )}
                     </div>

@@ -88,15 +88,15 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
   return (
     <div
       ref={dropdownRef}
-      className="absolute right-0 top-full mt-2 w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-hidden"
+      className="absolute right-0 top-full mt-2 w-96 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-hidden animate-fade-in-down"
     >
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 bg-gray-50">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Notifications
             {stats && (
-              <span className="ml-2 text-sm font-normal text-gray-500">
+              <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
                 ({stats.unread} unread)
               </span>
             )}
@@ -128,13 +128,13 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
 
       {/* Error Message */}
       {error && (
-        <div className="p-4 bg-red-50 border-b border-red-200">
-          <p className="text-red-800 text-sm">{error}</p>
+        <div className="p-4 bg-red-50 dark:bg-red-900/30 border-b border-red-200 dark:border-red-800">
+          <p className="text-red-800 dark:text-red-300 text-sm">{error}</p>
           <Button
             variant="ghost"
             size="sm"
             onClick={clearError}
-            className="mt-2 text-red-600 hover:text-red-800"
+            className="mt-2 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
           >
             Dismiss
           </Button>
@@ -148,18 +148,18 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
             <LoadingSpinner />
           </div>
         ) : notifications.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-8 text-center text-gray-500 dark:text-gray-400">
             <div className="text-4xl mb-2">🔔</div>
             <p>No notifications yet</p>
             <p className="text-sm">You'll see updates here when they arrive</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-gray-100 dark:divide-gray-700">
             {notifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`p-4 hover:bg-gray-50 transition-colors border-l-4 ${getPriorityColor(notification.priority)} ${
-                  !notification.isRead ? 'bg-blue-50' : ''
+                className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-l-4 ${getPriorityColor(notification.priority)} ${
+                  !notification.isRead ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                 }`}
               >
                 <NotificationItem
@@ -174,7 +174,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
 
       {/* Footer */}
       {notifications.length > 0 && (
-        <div className="p-4 border-t border-gray-200 bg-gray-50">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
           <Button
             variant="outline"
             size="sm"
