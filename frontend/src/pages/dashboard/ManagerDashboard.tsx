@@ -645,10 +645,17 @@ const ManagerDashboard: React.FC = () => {
         <Button
           onClick={fetchTeamInsights}
           disabled={isInsightsLoading || directReports.length === 0}
-          variant="outline"
-          className="flex items-center gap-2"
+          className={`flex items-center gap-2 ${
+            isInsightsLoading || directReports.length === 0
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-md hover:shadow-lg transition-all'
+          }`}
         >
-          <RefreshCw className={`h-4 w-4 ${isInsightsLoading ? 'animate-spin' : ''}`} />
+          {isInsightsLoading ? (
+            <RefreshCw className="h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="h-4 w-4" />
+          )}
           {isInsightsLoading ? 'Generating...' : teamInsights ? 'Refresh Insights' : 'Generate Insights'}
         </Button>
       </div>
@@ -683,35 +690,12 @@ const ManagerDashboard: React.FC = () => {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 Get AI-Powered Insights
               </h3>
-              {directReports.length === 0 ? (
-                <>
-                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                    You need team members in your hierarchy before you can generate insights.
-                    Add direct reports to get started.
-                  </p>
-                  <Button
-                    disabled
-                    className="bg-gray-300 text-gray-500 cursor-not-allowed"
-                  >
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    No Team Members
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                    Click the button below to analyze your team's feedback and get actionable insights, 
-                    patterns, and recommendations.
-                  </p>
-                  <Button
-                    onClick={fetchTeamInsights}
-                    className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
-                  >
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Generate Team Insights
-                  </Button>
-                </>
-              )}
+              <p className="text-gray-600 max-w-md mx-auto">
+                {directReports.length === 0 
+                  ? 'You need team members in your hierarchy before you can generate insights. Add direct reports to get started.'
+                  : 'Click the button above to analyze your team\'s feedback and get actionable insights, patterns, and recommendations.'
+                }
+              </p>
             </div>
           </CardContent>
         </Card>
