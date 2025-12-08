@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useFeedbackStore } from '../../stores/feedbackStore';
-import { Feedback, FeedbackStatus, Comment as FeedbackComment, GoalStatus } from '../../types/feedback.types';
+import { Feedback, FeedbackStatus, GoalStatus } from '../../types/feedback.types';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -11,14 +11,11 @@ import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
 import { FeedbackWorkflow } from './FeedbackWorkflow';
 import {
-  MessageSquare,
   Calendar,
   User,
   Target,
   CheckCircle,
   Clock,
-  Lock,
-  Send,
   Trash2,
   Edit,
   X,
@@ -45,13 +42,9 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
     isLoading,
     error,
     fetchFeedbackById,
-    addComment,
-    deleteComment,
     updateFeedback,
   } = useFeedbackStore();
 
-  const [newComment, setNewComment] = useState('');
-  const [isPrivateComment, setIsPrivateComment] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedContent, setEditedContent] = useState(currentFeedback?.content);
   const [isSaving, setIsSaving] = useState(false);
@@ -78,23 +71,6 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
       setIsEditMode(true);
     }
   }, [openInEditMode, currentFeedback?.status]);
-
-  const handleAddComment = async () => {
-    if (!newComment.trim()) return;
-
-    await addComment(feedbackId, {
-      content: newComment,
-      isPrivate: isPrivateComment,
-    });
-    setNewComment('');
-    setIsPrivateComment(false);
-  };
-
-  const handleDeleteComment = async (commentId: string) => {
-    if (window.confirm('Are you sure you want to delete this comment?')) {
-      await deleteComment(feedbackId, commentId);
-    }
-  };
 
   const handleSaveEdit = async () => {
     if (!editedContent) return;
@@ -160,50 +136,6 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
       default:
         return 'blue';
     }
-  };
-
-
-  const renderCommentTree = (comments: FeedbackComment[], parentId?: string): React.ReactNode => {
-    const filtered = comments.filter((c) => c.parentCommentId === parentId);
-    return filtered.map((comment) => (
-      <div key={comment.id} className={parentId ? 'ml-8 mt-4' : 'mt-4'}>
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-            <User className="w-4 h-4 text-blue-600" />
-          </div>
-          <div className="flex-1">
-            <div className="bg-gray-50 rounded-lg p-3">
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm">
-                    {comment.user?.name || 'Anonymous'}
-                  </span>
-                  {comment.isPrivate && (
-                    <Badge color="gray" size="sm">
-                      <Lock className="w-3 h-3" />
-                      Private
-                    </Badge>
-                  )}
-                </div>
-                {comment.userId === currentUserId && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteComment(comment.id)}
-                    icon={Trash2}
-                  />
-                )}
-              </div>
-              <p className="text-sm text-gray-700">{comment.content}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {new Date(comment.createdAt).toLocaleString()}
-              </p>
-            </div>
-            {comment.replies && renderCommentTree(comment.replies, comment.id)}
-          </div>
-        </div>
-      </div>
-    ));
   };
 
   if (isLoading) {
@@ -615,48 +547,6 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
           )}
         </Card>
       )}
-
-      {/* Comments */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <MessageSquare className="w-5 h-5" />
-          Comments ({currentFeedback.comments?.length || 0})
-        </h3>
-
-        {/* Add Comment */}
-        <div className="mb-6">
-          <textarea
-            className="w-full p-3 border rounded-md"
-            rows={3}
-            placeholder="Add a comment..."
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-          />
-          <div className="flex items-center justify-between mt-2">
-            <label className="flex items-center gap-2 text-sm text-gray-600">
-              <input
-                type="checkbox"
-                checked={isPrivateComment}
-                onChange={(e) => setIsPrivateComment(e.target.checked)}
-              />
-              <Lock className="w-4 h-4" />
-              Private (only visible to feedback author and recipient)
-            </label>
-            <Button onClick={handleAddComment} size="sm" icon={Send} disabled={!newComment.trim()}>
-              Post Comment
-            </Button>
-          </div>
-        </div>
-
-        {/* Comments List */}
-        <div className="space-y-4">
-          {currentFeedback.comments && currentFeedback.comments.length > 0 ? (
-            renderCommentTree(currentFeedback.comments)
-          ) : (
-            <p className="text-center text-gray-500 py-8">No comments yet</p>
-          )}
-        </div>
-      </Card>
     </div>
   );
 };
