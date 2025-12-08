@@ -4565,6 +4565,7 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
         fr.cycle_id as "cycleId",
         fr.content,
         fr.rating,
+        fr.color_classification as "colorClassification",
         fr.is_anonymous as "isAnonymous",
         fr.is_approved as "isApproved",
         fr.created_at as "createdAt",
@@ -4640,6 +4641,7 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
         },
         reviewType: row.reviewType,
         status: row.status,
+        colorClassification: row.colorClassification || null,
         content: {
           id: `content-${row.id}`,
           feedbackId: row.id,
@@ -4714,6 +4716,14 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
       // Assign goals to each feedback item
       for (const feedback of paginatedData) {
         feedback.goals = goalsByFeedback.get(feedback.id) || [];
+      }
+    }
+    
+    // PRIVACY: Hide colorClassification from receiver (only giver and managers can see it)
+    // For each feedback item, if current user is the recipient (not the giver), remove colorClassification
+    for (const feedback of paginatedData) {
+      if (feedback.toUserId === currentUserId && feedback.fromUserId !== currentUserId) {
+        delete feedback.colorClassification;
       }
     }
     
@@ -4852,6 +4862,7 @@ app.get('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
         fr.cycle_id as "cycleId",
         fr.content,
         fr.rating,
+        fr.color_classification as "colorClassification",
         fr.is_anonymous as "isAnonymous",
         fr.is_approved as "isApproved",
         fr.created_at as "createdAt",
@@ -4923,6 +4934,8 @@ app.get('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
       },
       reviewType: row.reviewType,
       status: row.status,
+      // Include colorClassification only for giver or manager (will be filtered in Step 5)
+      colorClassification: row.colorClassification || null,
       content: {
         id: `content-${row.id}`,
         feedbackId: row.id,
@@ -4985,6 +4998,12 @@ app.get('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
       updatedAt: g.updated_at
     }));
     
+    // PRIVACY: Hide colorClassification from receiver (only giver and managers can see it)
+    // If current user is the recipient and NOT the giver, remove colorClassification
+    if (currentUserId === row.recipientId && currentUserId !== row.giverId) {
+      delete (feedback as any).colorClassification;
+    }
+    
     res.json({ success: true, data: feedback });
   } catch (error) {
     console.error('Error fetching feedback:', error);
@@ -4996,7 +5015,7 @@ app.get('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
 app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
   try {
     console.log('🔍 Creating feedback with body:', JSON.stringify(req.body, null, 2));
-    const { cycleId, toUserEmail, recipientId, reviewType, content, ratings, rating, comment, categories, goals = [] } = req.body;
+    const { cycleId, toUserEmail, recipientId, reviewType, content, ratings, rating, comment, categories, goals = [], colorClassification } = req.body;
 
     // Get user context from authentication middleware
     const currentUserEmail = (req as any).user?.email;
@@ -5179,9 +5198,9 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
     // Create feedback response in database
     const responseResult = await query(
       `INSERT INTO feedback_responses 
-       (request_id, giver_id, recipient_id, cycle_id, content, rating, is_anonymous, is_approved, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-       RETURNING id, request_id, giver_id, recipient_id, cycle_id, content, rating, is_anonymous, is_approved, created_at, updated_at`,
+       (request_id, giver_id, recipient_id, cycle_id, content, rating, is_anonymous, is_approved, color_classification, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+       RETURNING id, request_id, giver_id, recipient_id, cycle_id, content, rating, is_anonymous, is_approved, color_classification, created_at, updated_at`,
       [
         requestId,
         currentUserId,
@@ -5190,7 +5209,8 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
         JSON.stringify(structuredContent), // Store structured content as JSON
         rating || (ratings && ratings.length > 0 ? ratings[0].score || ratings[0].rating : null),
         false, // is_anonymous
-        true   // is_approved (auto-approve for now)
+        true,  // is_approved (auto-approve for now)
+        colorClassification || null // Internal triage color (green/yellow/red)
       ]
     );
 
@@ -5250,6 +5270,7 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
       },
       reviewType,
       status: requestResult.rows[0].status, // Use actual status from database
+      colorClassification: colorClassification || null, // Internal triage color (green/yellow/red)
       content: {
         id: `content-${responseId}`,
         feedbackId: responseId,
@@ -5371,14 +5392,15 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
     // Update the feedback in database
     const updateQuery = `
       UPDATE feedback_responses 
-      SET content = $1, rating = $2, updated_at = NOW()
-      WHERE id = $3
-      RETURNING id, content, rating, updated_at
+      SET content = $1, rating = $2, color_classification = $3, updated_at = NOW()
+      WHERE id = $4
+      RETURNING id, content, rating, color_classification, updated_at
     `;
     
     const updateResult = await query(updateQuery, [
       typeof structuredContent === 'object' ? JSON.stringify(structuredContent) : structuredContent,
       updates.rating || updates.ratings?.[0]?.score || null,
+      updates.colorClassification || null, // Internal triage color (green/yellow/red)
       id
     ]);
     
@@ -5396,6 +5418,7 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
         fr.cycle_id as "cycleId",
         fr.content,
         fr.rating,
+        fr.color_classification as "colorClassification",
         fr.is_anonymous as "isAnonymous",
         fr.is_approved as "isApproved",
         fr.created_at as "createdAt",
@@ -5450,6 +5473,7 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
         },
         reviewType: row.reviewType,
         status: row.status,
+        colorClassification: row.colorClassification || null,
         content: {
           id: `content-${row.id}`,
           feedbackId: row.id,
@@ -5551,6 +5575,7 @@ app.post('/api/v1/feedback/:id/submit', authenticateToken, async (req, res) => {
         fr.cycle_id as "cycleId",
         fr.content,
         fr.rating,
+        fr.color_classification as "colorClassification",
         fr.is_anonymous as "isAnonymous",
         fr.is_approved as "isApproved",
         fr.created_at as "createdAt",
@@ -5605,6 +5630,7 @@ app.post('/api/v1/feedback/:id/submit', authenticateToken, async (req, res) => {
         },
         reviewType: row.reviewType,
         status: row.status,
+        colorClassification: row.colorClassification || null,
         content: {
           id: `content-${row.id}`,
           feedbackId: row.id,
@@ -5724,6 +5750,7 @@ app.post('/api/v1/feedback/:id/complete', authenticateToken, async (req, res) =>
         fr.cycle_id as "cycleId",
         fr.content,
         fr.rating,
+        fr.color_classification as "colorClassification",
         fr.is_anonymous as "isAnonymous",
         fr.is_approved as "isApproved",
         fr.created_at as "createdAt",
@@ -5778,6 +5805,7 @@ app.post('/api/v1/feedback/:id/complete', authenticateToken, async (req, res) =>
         },
         reviewType: row.reviewType,
         status: row.status,
+        colorClassification: row.colorClassification || null,
         content: {
           id: `content-${row.id}`,
           feedbackId: row.id,
@@ -5933,6 +5961,7 @@ app.post('/api/v1/feedback/:id/acknowledge', authenticateToken, async (req, res)
         fr.cycle_id as "cycleId",
         fr.content,
         fr.rating,
+        fr.color_classification as "colorClassification",
         fr.is_anonymous as "isAnonymous",
         fr.is_approved as "isApproved",
         fr.created_at as "createdAt",
@@ -5987,6 +6016,7 @@ app.post('/api/v1/feedback/:id/acknowledge', authenticateToken, async (req, res)
       },
       reviewType: row.reviewType,
       status: row.status,
+      colorClassification: row.colorClassification || null,
       content: parsedContent,
       ratings: [],
       comments: [],
@@ -6004,6 +6034,9 @@ app.post('/api/v1/feedback/:id/acknowledge', authenticateToken, async (req, res)
       createdAt: row.createdAt,
       updatedAt: row.updatedAt
     };
+
+    // PRIVACY: The acknowledge endpoint is called by the receiver, so always hide colorClassification
+    delete (feedback as any).colorClassification;
 
     // Create notification for the feedback giver that their feedback was acknowledged
     const giverOrgResult = await query('SELECT organization_id FROM users WHERE id = $1', [row.giverId]);
@@ -7336,6 +7369,7 @@ app.get('/api/v1/team/feedback', authenticateToken, async (req, res) => {
         fr.cycle_id as "cycleId",
         fr.content,
         fr.rating,
+        fr.color_classification as "colorClassification",
         fr.is_anonymous as "isAnonymous",
         fr.is_approved as "isApproved",
         fr.created_at as "createdAt",

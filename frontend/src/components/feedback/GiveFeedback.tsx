@@ -5,7 +5,7 @@ import { useFeedbackStore } from '../../stores/feedbackStore';
 import { useCyclesStore } from '../../stores/cyclesStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useHierarchyStore } from '../../stores/hierarchyStore';
-import { ReviewType, GoalCategory, GoalPriority, CreateFeedbackRequest } from '../../types/feedback.types';
+import { ReviewType, GoalCategory, GoalPriority, CreateFeedbackRequest, FeedbackColorClassification } from '../../types/feedback.types';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -64,6 +64,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
   const [specificExamples, setSpecificExamples] = useState<string[]>(['']);
   const [recommendations, setRecommendations] = useState<string[]>(['']);
   const [confidential, setConfidential] = useState(false);
+  const [colorClassification, setColorClassification] = useState<FeedbackColorClassification | ''>('');
   const [ratings, setRatings] = useState<RatingInput[]>([]);
   const [goals, setGoals] = useState<GoalInput[]>([]);
   
@@ -270,6 +271,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
       cycleId: selectedCycleId,
       toUserEmail,
       reviewType,
+      colorClassification: colorClassification || undefined, // Internal triage color
       content: {
         overallComment,
         strengths: strengths.filter((s) => s.trim()),
@@ -315,6 +317,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
       cycleId: selectedCycleId,
       toUserEmail,
       reviewType,
+      colorClassification: colorClassification || undefined, // Internal triage color
       content: {
         overallComment,
         strengths: strengths.filter((s) => s.trim()),
@@ -532,6 +535,42 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
             </div>
           )}
         </div>
+      </Card>
+
+      {/* Performance Classification - Internal Use Only */}
+      <Card className="p-6">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold">Performance Classification</h3>
+          <p className="text-sm text-gray-500 mt-1">
+            🔒 This classification is for internal use only and will <strong>not</strong> be visible to the recipient.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          {[
+            { value: FeedbackColorClassification.GREEN, label: 'Exceeds Expectations', bgColor: 'bg-green-500', hoverColor: 'hover:bg-green-600', ringColor: 'ring-green-500' },
+            { value: FeedbackColorClassification.YELLOW, label: 'Meets Expectations', bgColor: 'bg-yellow-500', hoverColor: 'hover:bg-yellow-600', ringColor: 'ring-yellow-500' },
+            { value: FeedbackColorClassification.RED, label: 'Needs Improvement', bgColor: 'bg-red-500', hoverColor: 'hover:bg-red-600', ringColor: 'ring-red-500' },
+          ].map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setColorClassification(colorClassification === option.value ? '' : option.value)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
+                colorClassification === option.value
+                  ? `${option.bgColor} text-white border-transparent ring-2 ${option.ringColor} ring-offset-2`
+                  : `bg-white border-gray-300 hover:border-gray-400 text-gray-700`
+              }`}
+            >
+              <div className={`w-3 h-3 rounded-full ${option.bgColor}`} />
+              <span className="font-medium">{option.label}</span>
+            </button>
+          ))}
+        </div>
+        {!colorClassification && (
+          <p className="text-sm text-gray-400 mt-3 italic">
+            Optional: Select a classification to help with internal feedback triage
+          </p>
+        )}
       </Card>
 
       {/* Overall Comment */}

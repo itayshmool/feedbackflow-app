@@ -19,6 +19,7 @@ interface TeamFeedback {
   reviewType: string;
   status: string;
   createdAt: string;
+  colorClassification?: 'green' | 'yellow' | 'red'; // Internal triage color
   content: {
     overallComment: string;
     strengths: string[];
@@ -260,14 +261,31 @@ export default function TeamFeedbackPage() {
                         {new Date(item.createdAt).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewFeedback(item.id)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
+                        <div className="flex items-center gap-3">
+                          {/* Color Classification Indicator */}
+                          {item.colorClassification && (
+                            <div
+                              className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                                item.colorClassification === 'green' ? 'bg-green-500' :
+                                item.colorClassification === 'yellow' ? 'bg-yellow-500' :
+                                item.colorClassification === 'red' ? 'bg-red-500' : ''
+                              }`}
+                              title={`${
+                                item.colorClassification === 'green' ? 'Exceeds Expectations' :
+                                item.colorClassification === 'yellow' ? 'Meets Expectations' :
+                                item.colorClassification === 'red' ? 'Needs Improvement' : ''
+                              }`}
+                            />
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewFeedback(item.id)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
