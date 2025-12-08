@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { Notification } from '../../types/notification.types';
 import { Button } from '../ui/Button';
-import { Trash2, Check, ExternalLink } from 'lucide-react';
+import { Trash2, Check } from 'lucide-react';
 
 interface NotificationItemProps {
   notification: Notification;
@@ -38,6 +38,9 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
     if (notification.data?.feedbackId) {
       onNavigate?.(); // Close dropdown if provided
       navigate(`/feedback/${notification.data.feedbackId}`);
+    } else {
+      // For non-feedback notifications, just close dropdown
+      onNavigate?.();
     }
   };
 
@@ -75,12 +78,10 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
     }
   };
 
-  const hasLink = !!notification.data?.feedbackId;
-
   return (
     <div 
-      className={`flex items-start space-x-3 ${hasLink ? 'cursor-pointer hover:bg-gray-50 -m-2 p-2 rounded-lg transition-colors' : ''}`}
-      onClick={hasLink ? handleClick : undefined}
+      className="flex items-start space-x-3 cursor-pointer hover:bg-gray-50 -m-2 p-2 rounded-lg transition-colors"
+      onClick={handleClick}
     >
       {/* Icon */}
       <div className="flex-shrink-0 text-2xl">
@@ -98,9 +99,6 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
               </h4>
               {!notification.isRead && (
                 <span className="ml-2 inline-block w-2 h-2 bg-blue-500 rounded-full"></span>
-              )}
-              {hasLink && (
-                <ExternalLink className="ml-2 w-3 h-3 text-gray-400" />
               )}
             </div>
             <p className={`text-sm mt-1 ${!notification.isRead ? 'text-gray-800' : 'text-gray-600'}`}>
@@ -134,15 +132,9 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
           </div>
         </div>
 
-        {/* Additional Data */}
-        {notification.data && Object.keys(notification.data).length > 0 && (
+        {/* Additional Data - show relevant context (not feedbackId) */}
+        {notification.data && (notification.data.cycleName || notification.data.fromUser || notification.data.dueDate) && (
           <div className="mt-2 p-2 bg-gray-100 rounded text-xs text-gray-600">
-            {notification.data.feedbackId && (
-              <div className="flex items-center gap-1">
-                <span>Feedback ID: {notification.data.feedbackId}</span>
-                {hasLink && <span className="text-blue-500">(click to view)</span>}
-              </div>
-            )}
             {notification.data.cycleName && (
               <div>Cycle: {notification.data.cycleName}</div>
             )}
