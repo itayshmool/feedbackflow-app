@@ -140,11 +140,19 @@ export const UserDetails: React.FC<UserDetailsProps> = ({ user, onClose, onEdit 
               Assigned Roles
             </label>
             {user.roles && user.roles.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
+              <div className="space-y-2">
                 {user.roles.map((role) => (
-                  <Badge key={role.id} variant="outline" className="text-sm">
+                  <div key={role.id} className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-sm">
                     {role.roleName}
                   </Badge>
+                    {role.organizationName && (
+                      <span className="text-sm text-gray-500 flex items-center gap-1">
+                        <Building className="h-3 w-3" />
+                        {role.organizationName}
+                      </span>
+                    )}
+                  </div>
                 ))}
               </div>
             ) : (
