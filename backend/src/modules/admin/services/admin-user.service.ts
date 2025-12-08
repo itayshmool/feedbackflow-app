@@ -166,12 +166,28 @@ export class AdminUserService {
       const adminRole = await this.roleModel.findByName('admin');
       const adminRoleId = adminRole?.id;
 
-      // Remove all existing roles (except admin if we're syncing it separately)
+      // Get existing roles and build a map of role names to their organization IDs
+      // This preserves the original organization scope for each role
       const existingRoles = await this.userModel.getUserRoles(id);
+      const existingRoleOrgMap = new Map<string, string | null>();
+      
+      for (const role of existingRoles) {
+        // Type system expects camelCase, but DB returns snake_case - handle both
+        const roleName = (role as any).role_name || role.roleName;
+        const organizationId = (role as any).organization_id ?? role.organizationId ?? null;
+        
+        // For non-admin roles, preserve the organization ID
+        // (admin role is handled separately via adminOrganizationIds)
+        if (roleName !== 'admin' && !existingRoleOrgMap.has(roleName)) {
+          existingRoleOrgMap.set(roleName, organizationId);
+        }
+      }
+
+      // Remove all existing roles (except admin if we're syncing it separately)
       for (const role of existingRoles) {
         // Type system expects camelCase, but DB returns snake_case - handle both
         const roleId = (role as any).role_id || role.roleId;
-        const organizationId = (role as any).organization_id || role.organizationId;
+        const organizationId = (role as any).organization_id ?? role.organizationId ?? null;
         
         // Skip admin role removal if we're handling it via adminOrganizationIds
         if (roleId === adminRoleId && userData.adminOrganizationIds !== undefined) {
@@ -190,7 +206,14 @@ export class AdminUserService {
         
         const role = await this.roleModel.findByName(roleName);
         if (role) {
-          await this.userModel.assignRole(id, role.id, userData.organizationId, grantorContext?.id);
+          // Use the original organization ID if this role existed before,
+          // otherwise use the user's current organization from the update request
+          const orgIdForRole = existingRoleOrgMap.has(roleName) 
+            ? existingRoleOrgMap.get(roleName) 
+            : userData.organizationId;
+          
+          // Convert null to undefined for the function signature (both become NULL in DB)
+          await this.userModel.assignRole(id, role.id, orgIdForRole ?? undefined, grantorContext?.id);
         } else {
           console.warn(`Role '${roleName}' not found for user ${id}`);
         }
