@@ -14,6 +14,7 @@ CREATE EXTENSION IF NOT EXISTS "btree_gin";
 \i sql/schema/05_organizational_hierarchy.sql
 \i sql/schema/05_notifications.sql
 \i sql/schema/06_analytics_and_audit.sql
+\i sql/schema/07_feedback_goals.sql
 
 -- Create views
 \i sql/views/cycle_completion_rates.sql

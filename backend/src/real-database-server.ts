@@ -4679,6 +4679,43 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
         updatedAt: row.updatedAt
       };
     });
+
+    // Fetch goals for all feedback items in one query
+    const feedbackIds = paginatedData.map(f => f.id);
+    if (feedbackIds.length > 0) {
+      const goalsResult = await query(
+        `SELECT id, feedback_response_id, title, description, category, priority, target_date, status, progress, created_at, updated_at
+         FROM feedback_goals
+         WHERE feedback_response_id = ANY($1)
+         ORDER BY created_at ASC`,
+        [feedbackIds]
+      );
+      
+      // Group goals by feedback_response_id
+      const goalsByFeedback = new Map<string, any[]>();
+      for (const g of goalsResult.rows) {
+        const goals = goalsByFeedback.get(g.feedback_response_id) || [];
+        goals.push({
+          id: g.id,
+          feedbackId: g.feedback_response_id,
+          title: g.title,
+          description: g.description,
+          category: g.category,
+          priority: g.priority,
+          targetDate: g.target_date,
+          status: g.status,
+          progress: g.progress,
+          createdAt: g.created_at,
+          updatedAt: g.updated_at
+        });
+        goalsByFeedback.set(g.feedback_response_id, goals);
+      }
+      
+      // Assign goals to each feedback item
+      for (const feedback of paginatedData) {
+        feedback.goals = goalsByFeedback.get(feedback.id) || [];
+      }
+    }
     
     res.json({
       success: true,
@@ -4910,7 +4947,7 @@ app.get('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
         createdAt: row.createdAt
       }] : [],
       comments: [],
-      goals: [],
+      goals: [], // Will be populated below
       // Include acknowledgment if the feedback has been completed and has a message
       ...((row.status === 'completed' || row.status === 'acknowledged') && row.message && {
         acknowledgment: {
@@ -4924,6 +4961,29 @@ app.get('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
       createdAt: row.createdAt,
       updatedAt: row.updatedAt
     };
+
+    // Fetch goals from database
+    const goalsResult = await query(
+      `SELECT id, feedback_response_id, title, description, category, priority, target_date, status, progress, created_at, updated_at
+       FROM feedback_goals
+       WHERE feedback_response_id = $1
+       ORDER BY created_at ASC`,
+      [row.id]
+    );
+    
+    feedback.goals = goalsResult.rows.map((g: any) => ({
+      id: g.id,
+      feedbackId: g.feedback_response_id,
+      title: g.title,
+      description: g.description,
+      category: g.category,
+      priority: g.priority,
+      targetDate: g.target_date,
+      status: g.status,
+      progress: g.progress,
+      createdAt: g.created_at,
+      updatedAt: g.updated_at
+    }));
     
     res.json({ success: true, data: feedback });
   } catch (error) {
@@ -5136,6 +5196,30 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
 
     const responseId = responseResult.rows[0].id;
 
+    // Save development goals to database
+    const savedGoals: any[] = [];
+    if (goals && goals.length > 0) {
+      console.log('💾 Saving', goals.length, 'development goals to database');
+      for (const goal of goals) {
+        const goalResult = await query(
+          `INSERT INTO feedback_goals 
+           (feedback_response_id, title, description, category, priority, target_date, status, progress)
+           VALUES ($1, $2, $3, $4, $5, $6, 'not_started', 0)
+           RETURNING id, feedback_response_id, title, description, category, priority, target_date, status, progress, created_at, updated_at`,
+          [
+            responseId,
+            goal.title,
+            goal.description || '',
+            goal.category || 'development',
+            goal.priority || 'medium',
+            goal.targetDate ? new Date(goal.targetDate) : null
+          ]
+        );
+        savedGoals.push(goalResult.rows[0]);
+      }
+      console.log('✅ Saved', savedGoals.length, 'development goals');
+    }
+
     // Fetch user names for both giver and recipient
     const [giverResult, recipientResult] = await Promise.all([
       query('SELECT name, email FROM users WHERE id = $1', [currentUserId]),
@@ -5190,18 +5274,18 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
         createdAt: responseResult.rows[0].created_at
       })),
       comments: [],
-      goals: goals.map((g: any, idx: number) => ({
-        id: `goal-${responseId}-${idx}`,
+      goals: savedGoals.map((g: any) => ({
+        id: g.id,
         feedbackId: responseId,
         title: g.title,
         description: g.description,
         category: g.category,
         priority: g.priority,
-        targetDate: g.targetDate,
-        status: 'not_started',
-        progress: 0,
-        createdAt: responseResult.rows[0].created_at,
-        updatedAt: responseResult.rows[0].updated_at
+        targetDate: g.target_date,
+        status: g.status,
+        progress: g.progress,
+        createdAt: g.created_at,
+        updatedAt: g.updated_at
       })),
       createdAt: responseResult.rows[0].created_at,
       updatedAt: responseResult.rows[0].updated_at
