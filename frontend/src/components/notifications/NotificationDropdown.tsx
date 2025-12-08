@@ -165,6 +165,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
                 <NotificationItem
                   notification={notification}
                   icon={getNotificationIcon(notification.type)}
+                  onNavigate={onClose}
                 />
               </div>
             ))}
