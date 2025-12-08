@@ -165,7 +165,7 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
       <div className="flex items-start justify-between">
         <div>
           <h2 className="text-2xl font-bold mb-2">Feedback Details</h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Badge color={getStatusColor(currentFeedback.status)}>
               {currentFeedback.status?.replace('_', ' ') || 'Unknown'}
             </Badge>
@@ -174,6 +174,26 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
                 <Lock className="w-3 h-3 mr-1" />
                 Confidential
               </Badge>
+            )}
+            {/* Show color classification to giver and managers, NOT to receiver (internal use only) */}
+            {currentFeedback.colorClassification && currentUserId !== currentFeedback.toUserId && (
+              <div 
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                  currentFeedback.colorClassification === 'green' 
+                    ? 'bg-green-100 text-green-800' 
+                    : currentFeedback.colorClassification === 'yellow'
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : 'bg-red-100 text-red-800'
+                }`}
+                title="Internal classification (not visible to recipient)"
+              >
+                <div className={`w-2 h-2 rounded-full ${
+                  currentFeedback.colorClassification === 'green' ? 'bg-green-500' :
+                  currentFeedback.colorClassification === 'yellow' ? 'bg-yellow-500' : 'bg-red-500'
+                }`} />
+                {currentFeedback.colorClassification === 'green' ? 'Exceeds Expectations' :
+                 currentFeedback.colorClassification === 'yellow' ? 'Meets Expectations' : 'Needs Improvement'}
+              </div>
             )}
           </div>
         </div>
