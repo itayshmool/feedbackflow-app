@@ -584,12 +584,7 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
           <ul className="space-y-4">
             {currentFeedback.goals.map((goal) => (
               <li key={goal.id} className="border-l-2 border-purple-200 pl-4">
-                <div className="flex items-start justify-between mb-1">
-                  <span className="font-medium text-gray-900">{goal.title}</span>
-                  <Badge color={getGoalStatusColor(goal.status)}>
-                    {goal.status?.replace('_', ' ') || 'Unknown'}
-                  </Badge>
-                </div>
+                <span className="font-medium text-gray-900">{goal.title}</span>
                 <p className="text-gray-700 mb-2">{goal.description}</p>
                 <div className="flex flex-wrap items-center gap-4 text-gray-600">
                   <span className="capitalize">Category: {goal.category?.replace('_', ' ') || 'Unknown'}</span>
@@ -599,20 +594,6 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
                     Target: {new Date(goal.targetDate).toLocaleDateString()}
                   </span>
                 </div>
-                {goal.progress > 0 && (
-                  <div className="mt-2">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-gray-600">Progress</span>
-                      <span className="font-medium text-gray-700">{goal.progress}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-purple-500 h-2 rounded-full transition-all"
-                        style={{ width: `${goal.progress}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
               </li>
             ))}
           </ul>
