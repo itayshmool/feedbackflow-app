@@ -36,22 +36,16 @@ export default function CyclesPage() {
     clearFilters,
   } = useCyclesStore()
 
-  // Check if user can create cycles (admin or manager only)
-  const canCreateCycles = user?.roles?.includes('admin') || user?.roles?.includes('manager')
+  // Check if user can create cycles (admin only)
+  const canCreateCycles = user?.roles?.includes('admin')
 
-  // Check if user can edit a specific cycle
-  // Note: Only Manager, HR, and Admin can create cycles (per backend RBAC)
-  // Therefore, only these same roles can edit cycles
+  // Check if user can edit a specific cycle (admin only)
   const canEditCycle = (cycle: Cycle) => {
     if (!user) return false
     
-    // Only Admin, HR, and Manager can edit cycles
-    // (These are the same roles that can create cycles)
+    // Only Admin can edit cycles
     if (user.roles?.includes('admin')) return true
-    if (user.roles?.includes('hr')) return true
-    if (user.roles?.includes('manager')) return true
     
-    // Employees cannot edit any cycles (they can't create them either)
     return false
   }
 
