@@ -7,6 +7,7 @@ export interface FeedbackBase {
     toUserId: string;
     reviewType: ReviewType;
     status: FeedbackStatus;
+    colorClassification?: FeedbackColorClassification; // Internal triage color (hidden from receiver)
     createdAt: Date;
     updatedAt: Date;
   }
@@ -139,12 +140,20 @@ export interface FeedbackBase {
     COMPLETED = 'completed',
     CANCELLED = 'cancelled'
   }
+
+  // Color classification for internal feedback triage (visible only to giver and managers)
+  export enum FeedbackColorClassification {
+    GREEN = 'green',   // Exceeds expectations
+    YELLOW = 'yellow', // Meets expectations
+    RED = 'red'        // Needs improvement
+  }
   
   // Request/Response DTOs
   export interface CreateFeedbackRequest {
     cycleId: string;
     toUserId: string;
     reviewType: ReviewType;
+    colorClassification?: FeedbackColorClassification; // Internal triage color (hidden from receiver)
     content: {
       overallComment: string;
       strengths: string[];
@@ -186,6 +195,7 @@ export interface FeedbackBase {
     ratings?: UpdateRatingRequest[];
     goals?: UpdateGoalRequest[];
     status?: FeedbackStatus;
+    colorClassification?: FeedbackColorClassification; // Internal triage color (hidden from receiver)
   }
   
   export interface UpdateRatingRequest {
@@ -262,6 +272,7 @@ export interface FeedbackBase {
     to_user_id: string;
     review_type: ReviewType;
     status: FeedbackStatus;
+    color_classification?: string; // Internal triage color (green/yellow/red)
     created_at: Date;
     updated_at: Date;
   }
