@@ -16,6 +16,7 @@ import {
   Target,
   CheckCircle,
   Clock,
+  Lock,
   Trash2,
   Edit,
   X,
