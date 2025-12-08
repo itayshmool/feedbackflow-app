@@ -67,23 +67,23 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
   }
 
   const sidebarContent = (
-    <div className="flex flex-col flex-grow pt-5 bg-white overflow-y-auto">
+    <div className="flex flex-col flex-grow pt-5 bg-white dark:bg-gray-900 overflow-y-auto transition-colors duration-200">
       <div className="flex items-center justify-between flex-shrink-0 px-4">
         <div className="flex items-center">
           <div className="flex-shrink-0">
-            <div className="h-8 w-8 bg-primary-600 rounded-lg flex items-center justify-center">
+            <div className="h-8 w-8 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-md">
               <span className="text-white font-bold text-sm">FF</span>
             </div>
           </div>
           <div className="ml-3">
-            <h1 className="text-lg font-semibold text-gray-900">FeedbackFlow</h1>
+            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">FeedbackFlow</h1>
           </div>
         </div>
         {/* Close button - mobile only */}
         {onMobileClose && (
           <button
             onClick={onMobileClose}
-            className="md:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="md:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
             aria-label="Close menu"
           >
             <X className="h-5 w-5" />
@@ -102,17 +102,17 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
                 onClick={handleNavClick}
                 className={({ isActive }) =>
                   cn(
-                    'group flex items-center px-3 py-3 text-sm font-medium rounded-md transition-colors',
+                    'group flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200',
                     isActive
-                      ? 'bg-primary-100 text-primary-900'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-900 dark:text-purple-200 shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
                   )
                 }
               >
                 <Icon
                   className={cn(
-                    'mr-3 flex-shrink-0 h-5 w-5',
-                    'text-gray-400 group-hover:text-gray-500'
+                    'mr-3 flex-shrink-0 h-5 w-5 transition-colors',
+                    'text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-300'
                   )}
                   aria-hidden="true"
                 />
@@ -123,9 +123,9 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
           
           {isManager && (
             <>
-              <div className="border-t border-gray-200 my-4"></div>
+              <div className="border-t border-gray-200 dark:border-gray-800 my-4"></div>
               <div className="px-2">
-                <h3 className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <h3 className="px-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Management
                 </h3>
               </div>
@@ -138,17 +138,17 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
                     onClick={handleNavClick}
                     className={({ isActive }) =>
                       cn(
-                        'group flex items-center px-3 py-3 text-sm font-medium rounded-md transition-colors',
+                        'group flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200',
                         isActive
-                          ? 'bg-primary-100 text-primary-900'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                          ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-900 dark:text-purple-200 shadow-sm'
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
                       )
                     }
                   >
                     <Icon
                       className={cn(
-                        'mr-3 flex-shrink-0 h-5 w-5',
-                        'text-gray-400 group-hover:text-gray-500'
+                        'mr-3 flex-shrink-0 h-5 w-5 transition-colors',
+                        'text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-300'
                       )}
                       aria-hidden="true"
                     />
@@ -161,9 +161,9 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
           
           {isAdmin && (
             <>
-              <div className="border-t border-gray-200 my-4"></div>
+              <div className="border-t border-gray-200 dark:border-gray-800 my-4"></div>
               <div className="px-2">
-                <h3 className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <h3 className="px-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Administration
                 </h3>
               </div>
@@ -176,17 +176,17 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
                     onClick={handleNavClick}
                     className={({ isActive }) =>
                       cn(
-                        'group flex items-center px-3 py-3 text-sm font-medium rounded-md transition-colors',
+                        'group flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200',
                         isActive
-                          ? 'bg-primary-100 text-primary-900'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                          ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-900 dark:text-purple-200 shadow-sm'
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
                       )
                     }
                   >
                     <Icon
                       className={cn(
-                        'mr-3 flex-shrink-0 h-5 w-5',
-                        'text-gray-400 group-hover:text-gray-500'
+                        'mr-3 flex-shrink-0 h-5 w-5 transition-colors',
+                        'text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-300'
                       )}
                       aria-hidden="true"
                     />
@@ -200,26 +200,26 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
       </div>
       
       {/* User info */}
-      <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
+      <div className="flex-shrink-0 flex border-t border-gray-200 dark:border-gray-800 p-4">
         <div className="flex items-center">
           <div className="flex-shrink-0">
             {user?.picture ? (
               <img
-                className="h-8 w-8 rounded-full"
+                className="h-8 w-8 rounded-full ring-2 ring-gray-200 dark:ring-gray-700"
                 src={user.picture}
                 alt={user.name}
               />
             ) : (
-              <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
-                <span className="text-sm font-medium text-gray-700">
+              <div className="h-8 w-8 rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   {user?.name?.charAt(0).toUpperCase()}
                 </span>
               </div>
             )}
           </div>
           <div className="ml-3 min-w-0 flex-1">
-            <p className="text-sm font-medium text-gray-700 truncate">{user?.name}</p>
-            <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">{user?.name}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
           </div>
         </div>
       </div>
@@ -229,7 +229,7 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
   return (
     <>
       {/* Desktop Sidebar - always visible on md+ */}
-      <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 border-r border-gray-200">
+      <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 border-r border-gray-200 dark:border-gray-800 transition-colors duration-200">
         {sidebarContent}
       </div>
       
@@ -241,13 +241,13 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
         <>
           {/* Backdrop */}
           <div 
-            className="fixed inset-0 bg-gray-600 bg-opacity-50 z-40 md:hidden transition-opacity"
+            className="fixed inset-0 bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm z-40 md:hidden transition-opacity animate-fade-in"
             onClick={onMobileClose}
             aria-hidden="true"
           />
           
           {/* Drawer */}
-          <div className="fixed inset-y-0 left-0 w-72 bg-white z-50 md:hidden shadow-xl transform transition-transform duration-300 ease-in-out">
+          <div className="fixed inset-y-0 left-0 w-72 bg-white dark:bg-gray-900 z-50 md:hidden shadow-xl transform transition-transform duration-300 ease-in-out animate-slide-in-right">
             {sidebarContent}
           </div>
         </>

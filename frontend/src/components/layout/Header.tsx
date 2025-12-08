@@ -5,6 +5,7 @@ import { Search, Menu, User, LogOut, Settings } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useProfileStore } from '@/stores/profileStore'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 // import { cn } from '@/lib/utils'
@@ -27,7 +28,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
   }
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
+    <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800 transition-colors duration-200">
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Left side - Mobile menu button + Search */}
@@ -61,6 +62,9 @@ export default function Header({ onMenuToggle }: HeaderProps) {
           {/* Right side - Actions */}
           <div className="flex items-center space-x-2 sm:space-x-4">
 
+            {/* Theme Toggle */}
+            <ThemeToggle size="sm" />
+
             {/* Notifications */}
             <NotificationBell />
 
@@ -74,32 +78,32 @@ export default function Header({ onMenuToggle }: HeaderProps) {
               >
                 {avatarUrl ? (
                   <img
-                    className="h-8 w-8 rounded-full object-cover"
+                    className="h-8 w-8 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700"
                     src={avatarUrl}
                     alt={user?.name || 'User'}
                   />
                 ) : (
-                  <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
-                    <User className="h-4 w-4 text-gray-600" />
+                  <div className="h-8 w-8 rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center">
+                    <User className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                   </div>
                 )}
-                <span className="hidden md:block text-sm font-medium text-gray-700">
+                <span className="hidden md:block text-sm font-medium text-gray-700 dark:text-gray-200">
                   {user?.name}
                 </span>
               </Button>
 
               {/* User dropdown */}
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 animate-fade-in-down">
                   <div className="py-1">
-                    <div className="px-4 py-2 border-b border-gray-100">
-                      <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                      <p className="text-xs text-gray-500">{user?.email}</p>
+                    <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
                     </div>
                     
                     <a
                       href="/profile"
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                       onClick={() => setShowUserMenu(false)}
                     >
                       <User className="mr-3 h-4 w-4" />
@@ -108,17 +112,17 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                     
                     <a
                       href="/settings"
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                       onClick={() => setShowUserMenu(false)}
                     >
                       <Settings className="mr-3 h-4 w-4" />
                       Settings
                     </a>
                     
-                    <div className="border-t border-gray-100">
+                    <div className="border-t border-gray-100 dark:border-gray-700">
                       <button
                         onClick={handleLogout}
-                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                       >
                         <LogOut className="mr-3 h-4 w-4" />
                         Sign out
