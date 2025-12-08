@@ -17,6 +17,7 @@ import { CSVParser } from './shared/utils/csv-parser.js';
 import { authenticateToken } from './shared/middleware/auth.middleware.js';
 import { getCookieOptions } from './shared/utils/cookie-helper.js';
 import dbConfig from './config/real-database.js';
+import { generateAIContent, parseAIJsonResponse, getAIConfig } from './services/ai-provider.service.js';
 
 // Transform database data to frontend format
 const transformOrganizationForFrontend = (dbOrg: any) => ({
@@ -7295,12 +7296,13 @@ app.post('/api/v1/ai/generate-feedback', authenticateToken, async (req: any, res
       });
     }
     
-    const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-    
-    if (!ANTHROPIC_API_KEY) {
+    // Validate AI configuration
+    try {
+      getAIConfig();
+    } catch (configError: any) {
       return res.status(500).json({ 
         success: false, 
-        error: 'AI service not configured. Please add ANTHROPIC_API_KEY to environment variables.' 
+        error: configError.message 
       });
     }
     
@@ -7334,75 +7336,38 @@ Return ONLY a JSON object with this exact structure (no markdown, no explanation
   "overallComment": "A 2-3 sentence summary tying it all together"
 }`;
 
-    console.log('🤖 Calling Claude API for feedback generation...');
+    console.log('🤖 Generating AI feedback...');
     
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-haiku-20240307',
-        max_tokens: 1024,
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ]
-      })
-    });
+    const aiResponse = await generateAIContent(prompt, { maxTokens: 1024 });
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Claude API error:', errorText);
-      return res.status(500).json({ 
-        success: false, 
-        error: 'AI service error. Please try again.' 
-      });
-    }
-    
-    const data = await response.json();
-    const aiResponse = data.content[0]?.text;
-    
-    if (!aiResponse) {
-      return res.status(500).json({ 
-        success: false, 
-        error: 'No response from AI service' 
-      });
-    }
-    
-    // Parse the JSON response from Claude
+    // Parse the JSON response
     let parsedFeedback;
     try {
-      // Claude sometimes wraps JSON in markdown code blocks, so clean it
-      const cleanedResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      parsedFeedback = JSON.parse(cleanedResponse);
+      parsedFeedback = parseAIJsonResponse(aiResponse.text);
     } catch (parseError) {
-      console.error('Failed to parse AI response:', aiResponse);
+      console.error('Failed to parse AI response:', aiResponse.text);
       // If parsing fails, return raw text as overallComment
       parsedFeedback = {
-        strengths: '',
-        areasForImprovement: '',
-        overallComment: aiResponse,
-        goals: ''
+        strengths: [],
+        areasForImprovement: [],
+        overallComment: aiResponse.text,
+        goals: []
       };
     }
     
-    console.log('✅ AI feedback generated successfully');
+    console.log(`✅ AI feedback generated successfully (provider: ${aiResponse.provider})`);
     
     res.json({
       success: true,
-      data: parsedFeedback
+      data: parsedFeedback,
+      provider: aiResponse.provider
     });
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('AI feedback generation error:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Failed to generate AI feedback' 
+      error: error.message || 'Failed to generate AI feedback' 
     });
   }
 });
@@ -7417,11 +7382,13 @@ app.post('/api/v1/ai/team-insights', authenticateToken, async (req: any, res: an
       return res.status(401).json({ success: false, error: 'User not authenticated' });
     }
 
-    const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-    if (!ANTHROPIC_API_KEY) {
+    // Validate AI configuration
+    try {
+      getAIConfig();
+    } catch (configError: any) {
       return res.status(500).json({ 
         success: false, 
-        error: 'AI service not configured. Please add ANTHROPIC_API_KEY to environment variables.' 
+        error: configError.message 
       });
     }
 
@@ -7642,53 +7609,16 @@ GUIDELINES:
 - Score team health 1-10 based on overall feedback sentiment
 - Set confidenceLevel to "high" if >10 feedback items, "medium" if 5-10, "low" if <5`;
 
-    console.log('🤖 Calling Claude API for team insights...');
+    console.log('🤖 Generating AI team insights...');
     
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-haiku-20240307',
-        max_tokens: 2048,
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ]
-      })
-    });
+    const aiResponse = await generateAIContent(prompt, { maxTokens: 2048 });
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Claude API error:', errorText);
-      return res.status(500).json({ 
-        success: false, 
-        error: 'AI service error. Please try again.' 
-      });
-    }
-    
-    const data = await response.json();
-    const aiResponse = data.content[0]?.text;
-    
-    if (!aiResponse) {
-      return res.status(500).json({ 
-        success: false, 
-        error: 'No response from AI service' 
-      });
-    }
-    
-    // Parse the JSON response from Claude
+    // Parse the JSON response
     let parsedInsights;
     try {
-      const cleanedResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      parsedInsights = JSON.parse(cleanedResponse);
+      parsedInsights = parseAIJsonResponse(aiResponse.text);
     } catch (parseError) {
-      console.error('Failed to parse AI insights response:', aiResponse);
+      console.error('Failed to parse AI insights response:', aiResponse.text);
       return res.status(500).json({ 
         success: false, 
         error: 'Failed to parse AI response' 
@@ -7699,19 +7629,20 @@ GUIDELINES:
     parsedInsights.generatedAt = new Date().toISOString();
     parsedInsights.teamSize = teamMembers.length;
     parsedInsights.feedbackCount = feedbackData.length;
+    parsedInsights.provider = aiResponse.provider;
     
-    console.log('✅ AI team insights generated successfully');
+    console.log(`✅ AI team insights generated successfully (provider: ${aiResponse.provider})`);
     
     res.json({
       success: true,
       data: parsedInsights
     });
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('AI team insights error:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Failed to generate team insights' 
+      error: error.message || 'Failed to generate team insights' 
     });
   }
 });

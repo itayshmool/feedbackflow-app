@@ -127,7 +127,8 @@ const ManagerDashboard: React.FC = () => {
     setIsInsightsLoading(true);
     setInsightsError(null);
     try {
-      const response = await api.post('/ai/team-insights');
+      // AI insights can take 30-60+ seconds, use 2 minute timeout
+      const response = await api.post('/ai/team-insights', {}, { timeout: 120000 });
       if (response.data.success) {
         setTeamInsights(response.data.data);
       } else {
@@ -165,7 +166,7 @@ const ManagerDashboard: React.FC = () => {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'team', label: 'Team', icon: Users },
-    // { id: 'insights', label: 'AI Insights', icon: Sparkles }, // Hidden until privacy concerns addressed
+    { id: 'insights', label: 'AI Insights', icon: Sparkles },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   ];
 
@@ -951,7 +952,7 @@ const ManagerDashboard: React.FC = () => {
       <div className="p-6">
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'team' && renderTeam()}
-        {/* {activeTab === 'insights' && renderInsights()} */}
+        {activeTab === 'insights' && renderInsights()}
         {activeTab === 'analytics' && renderAnalytics()}
       </div>
 

@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { feedbackService } from '../services/feedback.service';
+import { extractErrorMessage } from '../lib/errorUtils';
 import {
   Feedback,
   FeedbackFilters,
@@ -111,7 +112,7 @@ export const useFeedbackStore = create<FeedbackState>()(
         } catch (error) {
           set({
             feedbackList: [],
-            error: error instanceof Error ? error.message : 'Failed to fetch feedback',
+            error: extractErrorMessage(error, 'Failed to fetch feedback'),
             isLoading: false,
           });
         }
@@ -268,7 +269,7 @@ export const useFeedbackStore = create<FeedbackState>()(
           }
         } catch (error) {
           set({
-            error: error instanceof Error ? error.message : 'Failed to add comment',
+            error: extractErrorMessage(error, 'Failed to add comment'),
           });
         }
       },
@@ -282,7 +283,7 @@ export const useFeedbackStore = create<FeedbackState>()(
           }
         } catch (error) {
           set({
-            error: error instanceof Error ? error.message : 'Failed to delete comment',
+            error: extractErrorMessage(error, 'Failed to delete comment'),
           });
         }
       },

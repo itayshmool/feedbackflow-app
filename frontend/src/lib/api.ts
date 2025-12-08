@@ -77,21 +77,23 @@ api.interceptors.response.use(
           break
           
         case 403:
-          toast.error('You do not have permission to perform this action.')
+          // Extract specific permission error from backend (e.g., privilege escalation, role restrictions)
+          toast.error(data.error || data.message || 'You do not have permission to perform this action.')
           break
           
         case 404:
-          toast.error('Resource not found.')
+          // Extract specific not found message from backend (e.g., "User not found", "Cycle not found")
+          toast.error(data.error || data.message || 'Resource not found.')
           break
           
         case 422:
-          // Validation errors
+          // Validation errors - check multiple formats
           if (data.errors) {
             Object.values(data.errors).forEach((error: any) => {
               toast.error(error[0] || 'Validation error')
             })
           } else {
-            toast.error(data.message || 'Validation error')
+            toast.error(data.error || data.message || 'Validation error')
           }
           break
           
