@@ -577,45 +577,45 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
       {/* Goals */}
       {currentFeedback.goals && currentFeedback.goals.length > 0 && (
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
             <Target className="w-5 h-5 text-purple-500" />
             Development Goals
           </h3>
-          <div className="space-y-4">
+          <ul className="space-y-4">
             {currentFeedback.goals.map((goal) => (
-              <div key={goal.id} className="border rounded-lg p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <h4 className="font-medium text-gray-900">{goal.title}</h4>
+              <li key={goal.id} className="border-l-2 border-purple-200 pl-4">
+                <div className="flex items-start justify-between mb-1">
+                  <span className="font-medium text-gray-900">{goal.title}</span>
                   <Badge color={getGoalStatusColor(goal.status)}>
                     {goal.status?.replace('_', ' ') || 'Unknown'}
                   </Badge>
                 </div>
-                <p className="text-sm text-gray-600 mb-3">{goal.description}</p>
-                <div className="flex items-center gap-4 text-sm text-gray-500">
-                  <span>Category: {goal.category?.replace('_', ' ') || 'Unknown'}</span>
-                  <span>Priority: {goal.priority}</span>
+                <p className="text-gray-700 mb-2">{goal.description}</p>
+                <div className="flex flex-wrap items-center gap-4 text-gray-600">
+                  <span className="capitalize">Category: {goal.category?.replace('_', ' ') || 'Unknown'}</span>
+                  <span className="capitalize">Priority: {goal.priority}</span>
                   <span className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
-                    {new Date(goal.targetDate).toLocaleDateString()}
+                    Target: {new Date(goal.targetDate).toLocaleDateString()}
                   </span>
                 </div>
                 {goal.progress > 0 && (
-                  <div className="mt-3">
-                    <div className="flex items-center justify-between text-sm mb-1">
+                  <div className="mt-2">
+                    <div className="flex items-center justify-between mb-1">
                       <span className="text-gray-600">Progress</span>
-                      <span className="font-medium">{goal.progress}%</span>
+                      <span className="font-medium text-gray-700">{goal.progress}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
-                        className="bg-blue-500 h-2 rounded-full transition-all"
+                        className="bg-purple-500 h-2 rounded-full transition-all"
                         style={{ width: `${goal.progress}%` }}
                       />
                     </div>
                   </div>
                 )}
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </Card>
       )}
 
