@@ -43,6 +43,13 @@ export enum GoalStatus {
   CANCELLED = 'cancelled'
 }
 
+// Color classification for internal feedback triage (visible only to giver and managers)
+export enum FeedbackColorClassification {
+  GREEN = 'green',   // Exceeds expectations
+  YELLOW = 'yellow', // Meets expectations
+  RED = 'red'        // Needs improvement
+}
+
 // Core Interfaces
 export interface Feedback {
   id: string;
@@ -53,6 +60,7 @@ export interface Feedback {
   toUserEmail?: string;
   reviewType: ReviewType;
   status: FeedbackStatus;
+  colorClassification?: FeedbackColorClassification; // Internal triage color (hidden from receiver)
   content: FeedbackContent;
   ratings: Rating[];
   comments: Comment[];
@@ -170,6 +178,7 @@ export interface CreateFeedbackRequest {
   cycleId: string;
   toUserEmail: string;
   reviewType: ReviewType;
+  colorClassification?: FeedbackColorClassification; // Internal triage color (hidden from receiver)
   content: {
     overallComment: string;
     strengths: string[];
@@ -211,6 +220,7 @@ export interface UpdateFeedbackRequest {
   ratings?: UpdateRatingRequest[];
   goals?: UpdateGoalRequest[];
   status?: FeedbackStatus;
+  colorClassification?: FeedbackColorClassification; // Internal triage color (hidden from receiver)
   comments?: Comment[];
 }
 
