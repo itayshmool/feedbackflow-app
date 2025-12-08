@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { analyticsService } from '../services/analytics.service';
 import { api } from '../lib/api';
+import { extractErrorMessage } from '../lib/errorUtils';
 import { AnalyticsOverview, TrendData, CategoryData, Insight, AnalyticsPeriod } from '../types/analytics.types';
 
 interface AnalyticsState {
@@ -68,7 +69,7 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
       set({ overview, isLoadingOverview: false });
     } catch (error) {
       set({ 
-        overviewError: error instanceof Error ? error.message : 'Failed to fetch overview',
+        overviewError: extractErrorMessage(error, 'Failed to fetch overview'),
         isLoadingOverview: false 
       });
     }
@@ -82,7 +83,7 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
       set({ trends, isLoadingTrends: false });
     } catch (error) {
       set({ 
-        trendsError: error instanceof Error ? error.message : 'Failed to fetch trends',
+        trendsError: extractErrorMessage(error, 'Failed to fetch trends'),
         isLoadingTrends: false 
       });
     }
@@ -96,7 +97,7 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
       set({ categories, isLoadingCategories: false });
     } catch (error) {
       set({ 
-        categoriesError: error instanceof Error ? error.message : 'Failed to fetch categories',
+        categoriesError: extractErrorMessage(error, 'Failed to fetch categories'),
         isLoadingCategories: false 
       });
     }
@@ -109,7 +110,7 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
       set({ insights, isLoadingInsights: false });
     } catch (error) {
       set({ 
-        insightsError: error instanceof Error ? error.message : 'Failed to fetch insights',
+        insightsError: extractErrorMessage(error, 'Failed to fetch insights'),
         isLoadingInsights: false 
       });
     }
