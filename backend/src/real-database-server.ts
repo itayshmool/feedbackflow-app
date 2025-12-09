@@ -5328,13 +5328,23 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
     );
     
     res.status(201).json({ success: true, data: newFeedback });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating feedback:', error);
     console.error('Error details:', {
       message: error.message,
       stack: error.stack,
       name: error.name
     });
+    
+    // Check for duplicate feedback constraint violation
+    if (error.message?.includes('duplicate key') && error.message?.includes('feedback_requests')) {
+      return res.status(409).json({ 
+        success: false, 
+        error: 'You have already created feedback for this person in this cycle. Please edit your existing feedback instead, or delete the draft to start over.',
+        code: 'DUPLICATE_FEEDBACK'
+      });
+    }
+    
     res.status(500).json({ success: false, error: 'Failed to create feedback', details: error.message });
   }
 });
