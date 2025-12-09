@@ -229,12 +229,26 @@ const ManagerDashboard: React.FC = () => {
     }
   }, [user, fetchDirectReports, fetchHierarchyTree, fetchHierarchyStats, fetchFeedbackStats, fetchFeedbackList]);
   
-  // Auto-expand root node when hierarchy tree loads
+  // Auto-expand all nodes when hierarchy tree loads
   useEffect(() => {
-    if (hierarchyTree?.id) {
-      setExpandedNodes(prev => new Set(prev).add(hierarchyTree.id));
+    if (hierarchyTree && user?.id) {
+      // Find the current user's node in the hierarchy
+      const userNode = findUserNode(hierarchyTree, user.id);
+      if (userNode) {
+        // Collect all node IDs to expand all by default
+        const allIds = new Set<string>();
+        const collectIds = (n: HierarchyNode) => {
+          allIds.add(n.id);
+          (n.directReports || []).forEach(collectIds);
+        };
+        collectIds(userNode);
+        setExpandedNodes(allIds);
+      } else {
+        // Fallback: just expand root
+        setExpandedNodes(new Set([hierarchyTree.id]));
+      }
     }
-  }, [hierarchyTree?.id]);
+  }, [hierarchyTree, user?.id]);
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
