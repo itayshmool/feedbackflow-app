@@ -6250,6 +6250,8 @@ app.get('/api/v1/cycles', authenticateToken, async (req, res) => {
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
     // Main query with participant/completed counts
+    // Participants = employees in the org hierarchy (those who have managers, i.e., everyone except the head)
+    // Completed = employees who received feedback FROM their manager in this cycle
     const cyclesQuery = `
       SELECT 
         fc.id,
@@ -6273,20 +6275,26 @@ app.get('/api/v1/cycles', authenticateToken, async (req, res) => {
       FROM feedback_cycles fc
       LEFT JOIN users u ON fc.created_by = u.id
       LEFT JOIN (
+        -- Count employees who have managers in this org (hierarchy-based)
         SELECT 
-          cycle_id,
-          COUNT(DISTINCT recipient_id) as participants
-        FROM feedback_requests 
-        WHERE status != 'declined'
-        GROUP BY cycle_id
+          fc_inner.id as cycle_id,
+          COUNT(DISTINCT oh.employee_id) as participants
+        FROM feedback_cycles fc_inner
+        JOIN organizational_hierarchy oh ON oh.organization_id = fc_inner.organization_id
+        WHERE oh.is_active = true
+        GROUP BY fc_inner.id
       ) participant_counts ON fc.id = participant_counts.cycle_id
       LEFT JOIN (
+        -- Count employees who received feedback from their manager in this cycle
         SELECT 
-          cycle_id,
-          COUNT(DISTINCT giver_id) as completed
-        FROM feedback_responses 
-        WHERE is_approved = true
-        GROUP BY cycle_id
+          fr.cycle_id,
+          COUNT(DISTINCT fr.recipient_id) as completed
+        FROM feedback_responses fr
+        JOIN organizational_hierarchy oh ON 
+          oh.manager_id = fr.giver_id 
+          AND oh.employee_id = fr.recipient_id
+          AND oh.is_active = true
+        GROUP BY fr.cycle_id
       ) completed_counts ON fc.id = completed_counts.cycle_id
       ${whereClause}
       ORDER BY fc.created_at DESC
@@ -6332,6 +6340,8 @@ app.get('/api/v1/cycles', authenticateToken, async (req, res) => {
 // GET /api/v1/cycles/:id - Get specific cycle
 app.get('/api/v1/cycles/:id', authenticateToken, async (req, res) => {
   try {
+    // Participants = employees in the org hierarchy (those who have managers)
+    // Completed = employees who received feedback FROM their manager in this cycle
     const cycleQuery = `
       SELECT 
         fc.id,
@@ -6355,20 +6365,26 @@ app.get('/api/v1/cycles/:id', authenticateToken, async (req, res) => {
       FROM feedback_cycles fc
       LEFT JOIN users u ON fc.created_by = u.id
       LEFT JOIN (
+        -- Count employees who have managers in this org (hierarchy-based)
         SELECT 
-          cycle_id,
-          COUNT(DISTINCT recipient_id) as participants
-        FROM feedback_requests 
-        WHERE status != 'declined'
-        GROUP BY cycle_id
+          fc_inner.id as cycle_id,
+          COUNT(DISTINCT oh.employee_id) as participants
+        FROM feedback_cycles fc_inner
+        JOIN organizational_hierarchy oh ON oh.organization_id = fc_inner.organization_id
+        WHERE oh.is_active = true
+        GROUP BY fc_inner.id
       ) participant_counts ON fc.id = participant_counts.cycle_id
       LEFT JOIN (
+        -- Count employees who received feedback from their manager in this cycle
         SELECT 
-          cycle_id,
-          COUNT(DISTINCT giver_id) as completed
-        FROM feedback_responses 
-        WHERE is_approved = true
-        GROUP BY cycle_id
+          fr.cycle_id,
+          COUNT(DISTINCT fr.recipient_id) as completed
+        FROM feedback_responses fr
+        JOIN organizational_hierarchy oh ON 
+          oh.manager_id = fr.giver_id 
+          AND oh.employee_id = fr.recipient_id
+          AND oh.is_active = true
+        GROUP BY fr.cycle_id
       ) completed_counts ON fc.id = completed_counts.cycle_id
       WHERE fc.id = $1
     `;
@@ -6759,6 +6775,8 @@ app.post('/api/v1/cycles/:id/close', authenticateToken, async (req, res) => {
 // GET /api/v1/cycles/summary - Get cycle summary
 app.get('/api/v1/cycles/summary', authenticateToken, async (req, res) => {
   try {
+    // Participants = employees in the org hierarchy (those who have managers)
+    // Completed = employees who received feedback FROM their manager in this cycle
     const statsQuery = `
       SELECT 
         COUNT(*) as total_cycles,
@@ -6769,20 +6787,26 @@ app.get('/api/v1/cycles/summary', authenticateToken, async (req, res) => {
         COALESCE(SUM(completed_counts.completed), 0) as total_completed
       FROM feedback_cycles fc
       LEFT JOIN (
+        -- Count employees who have managers in this org (hierarchy-based)
         SELECT 
-          cycle_id,
-          COUNT(DISTINCT recipient_id) as participants
-        FROM feedback_requests 
-        WHERE status != 'declined'
-        GROUP BY cycle_id
+          fc_inner.id as cycle_id,
+          COUNT(DISTINCT oh.employee_id) as participants
+        FROM feedback_cycles fc_inner
+        JOIN organizational_hierarchy oh ON oh.organization_id = fc_inner.organization_id
+        WHERE oh.is_active = true
+        GROUP BY fc_inner.id
       ) participant_counts ON fc.id = participant_counts.cycle_id
       LEFT JOIN (
+        -- Count employees who received feedback from their manager in this cycle
         SELECT 
-          cycle_id,
-          COUNT(DISTINCT giver_id) as completed
-        FROM feedback_responses 
-        WHERE is_approved = true
-        GROUP BY cycle_id
+          fr.cycle_id,
+          COUNT(DISTINCT fr.recipient_id) as completed
+        FROM feedback_responses fr
+        JOIN organizational_hierarchy oh ON 
+          oh.manager_id = fr.giver_id 
+          AND oh.employee_id = fr.recipient_id
+          AND oh.is_active = true
+        GROUP BY fr.cycle_id
       ) completed_counts ON fc.id = completed_counts.cycle_id
     `;
 
