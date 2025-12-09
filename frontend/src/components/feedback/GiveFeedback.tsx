@@ -89,6 +89,35 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
     }
   }, [clearErrors, fetchCycles, user?.id, user?.organizationId, fetchDirectReports]);
 
+  // Initialize selectedUser when initialToUserEmail is provided and directReports are loaded
+  useEffect(() => {
+    if (initialToUserEmail && directReports.length > 0 && !selectedUser) {
+      const matchingUser = directReports.find(emp => emp.email === initialToUserEmail);
+      if (matchingUser) {
+        setSelectedUser({
+          id: matchingUser.id,
+          name: matchingUser.name,
+          email: matchingUser.email,
+          avatarUrl: matchingUser.avatarUrl,
+          department: matchingUser.department || '',
+          position: matchingUser.position || '',
+          isActive: true
+        });
+      } else if (toUserName) {
+        // If not in direct reports but we have the name, create a minimal user object
+        setSelectedUser({
+          id: '',
+          name: toUserName,
+          email: initialToUserEmail,
+          avatarUrl: '',
+          department: '',
+          position: '',
+          isActive: true
+        });
+      }
+    }
+  }, [initialToUserEmail, toUserName, directReports, selectedUser]);
+
   // Get active cycles for selection (already filtered by organization from backend)
   const activeCycles = (cycles || []).filter(cycle => cycle.status === 'active');
 
