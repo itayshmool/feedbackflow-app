@@ -1,6 +1,7 @@
 // Give Feedback Form Component
 
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useFeedbackStore } from '../../stores/feedbackStore';
 import { useCyclesStore } from '../../stores/cyclesStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -292,8 +293,13 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
 
     const result = await createFeedback(data);
     if (result) {
+      toast.success('Feedback saved as draft');
       onSuccess?.();
       onClose?.();
+    } else {
+      // Show error toast - the store already captured the error message
+      const errorMsg = useFeedbackStore.getState().createError;
+      toast.error(errorMsg || 'Failed to save feedback');
     }
   };
 
@@ -344,9 +350,18 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
     const result = await createFeedback(data);
     if (result) {
       // After creating as draft, submit it immediately
-      await submitFeedback(result.id);
-      onSuccess?.();
-      onClose?.();
+      const submitted = await submitFeedback(result.id);
+      if (submitted) {
+        toast.success('Feedback submitted successfully');
+        onSuccess?.();
+        onClose?.();
+      } else {
+        toast.error('Failed to submit feedback');
+      }
+    } else {
+      // Show error toast - the store already captured the error message
+      const errorMsg = useFeedbackStore.getState().createError;
+      toast.error(errorMsg || 'Failed to create feedback');
     }
   };
 
