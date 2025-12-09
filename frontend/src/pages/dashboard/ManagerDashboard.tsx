@@ -665,12 +665,11 @@ const ManagerDashboard: React.FC = () => {
   };
 
   const renderAnalytics = () => {
-    // Color chart data
+    // Color chart data (excluding unclassified since color is required)
     const colorChartData = colorDistribution ? [
       { name: 'Exceeds Expectations', value: colorDistribution.green, color: '#22c55e' },
       { name: 'Meets Expectations', value: colorDistribution.yellow, color: '#eab308' },
-      { name: 'Needs Improvement', value: colorDistribution.red, color: '#ef4444' },
-      { name: 'Not Classified', value: colorDistribution.unclassified, color: '#9ca3af' }
+      { name: 'Needs Improvement', value: colorDistribution.red, color: '#ef4444' }
     ].filter(item => item.value > 0) : [];
 
     const RADIAN = Math.PI / 180;
@@ -755,7 +754,7 @@ const ManagerDashboard: React.FC = () => {
                 </div>
               )}
               {colorDistribution && colorDistribution.total > 0 && (
-                <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-green-500"></div>
                     <span>Green: {colorDistribution.green}</span>
@@ -767,10 +766,6 @@ const ManagerDashboard: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-red-500"></div>
                     <span>Red: {colorDistribution.red}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-gray-400"></div>
-                    <span>Unclassified: {colorDistribution.unclassified}</span>
                   </div>
                 </div>
               )}
