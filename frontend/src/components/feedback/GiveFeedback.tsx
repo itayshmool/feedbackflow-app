@@ -296,8 +296,11 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
       toast.success('Feedback saved as draft');
       onSuccess?.();
       onClose?.();
+    } else {
+      // Show error from store
+      const errorMsg = useFeedbackStore.getState().createError;
+      toast.error(errorMsg || 'Failed to save feedback');
     }
-    // Error toast is handled by the API interceptor
   };
 
   const handleSubmit = async () => {
@@ -352,10 +355,14 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         toast.success('Feedback submitted successfully');
         onSuccess?.();
         onClose?.();
+      } else {
+        toast.error('Failed to submit feedback');
       }
-      // Submit error is handled by the API interceptor
+    } else {
+      // Show error from store
+      const errorMsg = useFeedbackStore.getState().createError;
+      toast.error(errorMsg || 'Failed to create feedback');
     }
-    // Create error is handled by the API interceptor
   };
 
   if (isLoadingDirectReports) {

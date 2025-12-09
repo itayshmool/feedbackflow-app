@@ -98,8 +98,8 @@ api.interceptors.response.use(
           break
           
         case 409:
-          // Conflict (e.g., duplicate resource) - show the specific error from backend
-          toast.error(data.error || data.message || 'This resource already exists.')
+          // Conflict (e.g., duplicate resource) - let the component handle this
+          // Don't show toast here, the component will show a more contextual message
           break
 
         case 429:
