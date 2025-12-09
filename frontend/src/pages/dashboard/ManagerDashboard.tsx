@@ -229,12 +229,26 @@ const ManagerDashboard: React.FC = () => {
     }
   }, [user, fetchDirectReports, fetchHierarchyTree, fetchHierarchyStats, fetchFeedbackStats, fetchFeedbackList]);
   
-  // Auto-expand root node when hierarchy tree loads
+  // Auto-expand all nodes when hierarchy tree loads
   useEffect(() => {
-    if (hierarchyTree?.id) {
-      setExpandedNodes(prev => new Set(prev).add(hierarchyTree.id));
+    if (hierarchyTree && user?.id) {
+      // Find the current user's node in the hierarchy
+      const userNode = findUserNode(hierarchyTree, user.id);
+      if (userNode) {
+        // Collect all node IDs to expand all by default
+        const allIds = new Set<string>();
+        const collectIds = (n: HierarchyNode) => {
+          allIds.add(n.id);
+          (n.directReports || []).forEach(collectIds);
+        };
+        collectIds(userNode);
+        setExpandedNodes(allIds);
+      } else {
+        // Fallback: just expand root
+        setExpandedNodes(new Set([hierarchyTree.id]));
+      }
     }
-  }, [hierarchyTree?.id]);
+  }, [hierarchyTree, user?.id]);
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
@@ -521,24 +535,44 @@ const ManagerDashboard: React.FC = () => {
           
           {/* Actions */}
           {!isCurrentUser && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                openProfileModal(node);
-              }}
-              className="
-                px-3 sm:px-4 py-1.5 sm:py-2 
-                text-xs sm:text-sm font-medium
-                text-blue-600 hover:text-white
-                bg-blue-50 hover:bg-blue-600
-                border border-blue-200 hover:border-blue-600
-                rounded-lg transition-all duration-200
-                flex items-center gap-1.5
-              "
-            >
-              <User className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Profile</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/feedback?action=give&recipient=${encodeURIComponent(node.email)}&name=${encodeURIComponent(node.name)}`);
+                }}
+                className="
+                  px-3 sm:px-4 py-1.5 sm:py-2 
+                  text-xs sm:text-sm font-medium
+                  text-green-600 hover:text-white
+                  bg-green-50 hover:bg-green-600
+                  border border-green-200 hover:border-green-600
+                  rounded-lg transition-all duration-200
+                  flex items-center gap-1.5
+                "
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Feedback</span>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openProfileModal(node);
+                }}
+                className="
+                  px-3 sm:px-4 py-1.5 sm:py-2 
+                  text-xs sm:text-sm font-medium
+                  text-blue-600 hover:text-white
+                  bg-blue-50 hover:bg-blue-600
+                  border border-blue-200 hover:border-blue-600
+                  rounded-lg transition-all duration-200
+                  flex items-center gap-1.5
+                "
+              >
+                <User className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Profile</span>
+              </button>
+            </div>
           )}
           
           {/* Mobile team count */}
