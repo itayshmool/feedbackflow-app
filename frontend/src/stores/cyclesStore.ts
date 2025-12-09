@@ -53,6 +53,7 @@ interface CyclesState {
   canDeleteCycle: (id: string) => Promise<{ canDelete: boolean; feedbackCount: number; requestCount: number; reason: string }>;
   activateCycle: (id: string) => Promise<Cycle | null>;
   closeCycle: (id: string) => Promise<Cycle | null>;
+  archiveCycle: (id: string) => Promise<Cycle | null>;
   fetchCycleSummary: () => Promise<void>;
   fetchCycleParticipants: (cycleId: string) => Promise<void>;
   addCycleParticipants: (cycleId: string, participants: CreateParticipantRequest[]) => Promise<CycleParticipant[] | null>;
@@ -254,6 +255,28 @@ export const useCyclesStore = create<CyclesState>()(
         } catch (error: any) {
           set({
             updateError: error.message || 'Failed to close cycle',
+            isUpdating: false,
+          });
+          return null;
+        }
+      },
+
+      archiveCycle: async (id: string) => {
+        set({ isUpdating: true, updateError: null });
+        try {
+          const updatedCycle = await cyclesService.archiveCycle(id);
+          const currentCycles = get().cycles || [];
+          set({
+            cycles: currentCycles.map(cycle => 
+              cycle.id === id ? updatedCycle : cycle
+            ),
+            currentCycle: get().currentCycle?.id === id ? updatedCycle : get().currentCycle,
+            isUpdating: false,
+          });
+          return updatedCycle;
+        } catch (error: any) {
+          set({
+            updateError: error.message || 'Failed to archive cycle',
             isUpdating: false,
           });
           return null;

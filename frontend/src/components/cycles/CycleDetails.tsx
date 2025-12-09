@@ -25,6 +25,7 @@ export const CycleDetails: React.FC<CycleDetailsProps> = ({ cycleId, onClose, on
     fetchCycle,
     fetchCycleParticipants,
     closeCycle,
+    archiveCycle,
     deleteCycle,
     canDeleteCycle,
   } = useCyclesStore();
@@ -80,6 +81,15 @@ export const CycleDetails: React.FC<CycleDetailsProps> = ({ cycleId, onClose, on
   const handleClose = async () => {
     if (currentCycle) {
       await closeCycle(currentCycle.id);
+    }
+  };
+
+  const handleArchive = async () => {
+    if (currentCycle) {
+      const result = await archiveCycle(currentCycle.id);
+      if (result) {
+        onClose();
+      }
     }
   };
 
@@ -353,7 +363,9 @@ export const CycleDetails: React.FC<CycleDetailsProps> = ({ cycleId, onClose, on
               <Button
                 variant="outline"
                 leftIcon={<Archive className="h-4 w-4" />}
-                disabled={isUpdating}
+                onClick={handleArchive}
+                disabled={isUpdating || currentCycle?.status === 'archived'}
+                title={currentCycle?.status === 'archived' ? 'Cycle is already archived' : 'Archive this cycle'}
               >
                 Archive
               </Button>

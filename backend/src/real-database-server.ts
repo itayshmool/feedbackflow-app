@@ -6782,6 +6782,36 @@ app.post('/api/v1/cycles/:id/close', authenticateToken, async (req, res) => {
   }
 });
 
+// POST /api/v1/cycles/:id/archive - Archive cycle
+app.post('/api/v1/cycles/:id/archive', authenticateToken, async (req, res) => {
+  try {
+    const updateQuery = `
+      UPDATE feedback_cycles 
+      SET status = 'archived', updated_at = NOW()
+      WHERE id = $1 AND status IN ('active', 'closed')
+      RETURNING id, name, status, updated_at
+    `;
+
+    const result = await query(updateQuery, [req.params.id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Cycle not found or not in active/closed status' 
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Cycle archived successfully',
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error archiving cycle:', error);
+    res.status(500).json({ success: false, error: 'Failed to archive cycle' });
+  }
+});
+
 // GET /api/v1/cycles/summary - Get cycle summary
 app.get('/api/v1/cycles/summary', authenticateToken, async (req, res) => {
   try {

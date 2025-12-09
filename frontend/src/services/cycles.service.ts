@@ -61,8 +61,8 @@ class CyclesService {
   }
 
   async canDeleteCycle(id: string): Promise<{ canDelete: boolean; feedbackCount: number; requestCount: number; reason: string }> {
-    const response = await api.get<{ canDelete: boolean; feedbackCount: number; requestCount: number; reason: string }>(`${this.baseUrl}/${id}/can-delete`);
-    return response.data;
+    const response = await api.get<{ success: boolean; data: { canDelete: boolean; feedbackCount: number; requestCount: number; reason: string } }>(`${this.baseUrl}/${id}/can-delete`);
+    return response.data.data;
   }
 
   async activateCycle(id: string): Promise<Cycle> {
@@ -73,6 +73,11 @@ class CyclesService {
   async closeCycle(id: string): Promise<Cycle> {
     const response = await api.post<Cycle>(`${this.baseUrl}/${id}/close`);
     return response.data;
+  }
+
+  async archiveCycle(id: string): Promise<Cycle> {
+    const response = await api.post<{ success: boolean; data: Cycle }>(`${this.baseUrl}/${id}/archive`);
+    return response.data.data;
   }
 
   async getCycleSummary(): Promise<CycleSummary> {
