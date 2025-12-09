@@ -97,6 +97,11 @@ api.interceptors.response.use(
           }
           break
           
+        case 409:
+          // Conflict (e.g., duplicate resource) - show the specific error from backend
+          toast.error(data.error || data.message || 'This resource already exists.')
+          break
+
         case 429:
           toast.error('Too many requests. Please try again later.')
           break
@@ -106,7 +111,8 @@ api.interceptors.response.use(
           break
           
         default:
-          toast.error(data.message || 'An error occurred')
+          // Don't show toast for unhandled status codes - let the component handle it
+          console.warn('Unhandled API error:', status, data)
       }
     } else if (error.request) {
       // Network error

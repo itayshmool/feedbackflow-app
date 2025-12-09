@@ -296,11 +296,8 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
       toast.success('Feedback saved as draft');
       onSuccess?.();
       onClose?.();
-    } else {
-      // Show error toast - the store already captured the error message
-      const errorMsg = useFeedbackStore.getState().createError;
-      toast.error(errorMsg || 'Failed to save feedback');
     }
+    // Error toast is handled by the API interceptor
   };
 
   const handleSubmit = async () => {
@@ -355,14 +352,10 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         toast.success('Feedback submitted successfully');
         onSuccess?.();
         onClose?.();
-      } else {
-        toast.error('Failed to submit feedback');
       }
-    } else {
-      // Show error toast - the store already captured the error message
-      const errorMsg = useFeedbackStore.getState().createError;
-      toast.error(errorMsg || 'Failed to create feedback');
+      // Submit error is handled by the API interceptor
     }
+    // Create error is handled by the API interceptor
   };
 
   if (isLoadingDirectReports) {
@@ -417,11 +410,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         </Card>
       )}
 
-      {createError && (
-        <Card className="p-4 bg-red-50 border-red-200">
-          <p className="text-red-800">{createError}</p>
-        </Card>
-      )}
+      {/* Error messages are shown via toast notifications */}
 
       {/* Basic Information */}
       <Card className="p-6">
