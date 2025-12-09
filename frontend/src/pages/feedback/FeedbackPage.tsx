@@ -1,6 +1,7 @@
 // Feedback Page - Main Entry Point
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { FeedbackList } from '../../components/feedback/FeedbackList';
 import { GiveFeedback } from '../../components/feedback/GiveFeedback';
 import { FeedbackDetail } from '../../components/feedback/FeedbackDetail';
@@ -12,10 +13,17 @@ import { Button } from '../../components/ui/Button';
 import { MessageSquare, TrendingUp, Users } from 'lucide-react';
 
 export default function FeedbackPage() {
+  const [searchParams] = useSearchParams();
   const [view, setView] = useState<'list' | 'give' | 'detail'>('list');
   const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
   const { feedbackStats, fetchFeedbackStats } = useFeedbackStore();
   const { user } = useAuthStore();
+
+  // Get initial tab from URL query parameter
+  const tabParam = searchParams.get('tab');
+  const initialTab = (tabParam === 'given' || tabParam === 'received' || tabParam === 'drafts') 
+    ? tabParam 
+    : 'all';
 
   // Get current user from auth store
   const currentUserId = user?.id;
@@ -118,6 +126,7 @@ export default function FeedbackPage() {
             onGiveFeedback={handleGiveFeedback}
             userId={currentUserEmail}
             showFilters={true}
+            initialTab={initialTab}
           />
         )}
 

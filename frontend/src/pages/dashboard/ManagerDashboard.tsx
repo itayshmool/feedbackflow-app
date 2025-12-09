@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useHierarchyStore } from '../../stores/hierarchyStore';
 import { useFeedbackStore } from '../../stores/feedbackStore';
@@ -100,6 +101,7 @@ interface TeamInsight {
 }
 
 const ManagerDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const {
     directReports,
@@ -255,7 +257,11 @@ const ManagerDashboard: React.FC = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
-        <Card className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
+        {/* Direct Reports - Click to switch to Team tab */}
+        <Card 
+          className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
+          onClick={() => setActiveTab('team')}
+        >
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center">
               <div className="p-2 sm:p-3 bg-blue-100 rounded-xl flex-shrink-0">
@@ -271,7 +277,11 @@ const ManagerDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
+        {/* Feedback Given - Navigate to feedback page with 'given' tab */}
+        <Card 
+          className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
+          onClick={() => navigate('/feedback?tab=given')}
+        >
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center">
               <div className="p-2 sm:p-3 bg-green-100 rounded-xl flex-shrink-0">
@@ -287,7 +297,11 @@ const ManagerDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
+        {/* Feedback Received - Navigate to feedback page with 'received' tab */}
+        <Card 
+          className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
+          onClick={() => navigate('/feedback?tab=received')}
+        >
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center">
               <div className="p-2 sm:p-3 bg-yellow-100 rounded-xl flex-shrink-0">
