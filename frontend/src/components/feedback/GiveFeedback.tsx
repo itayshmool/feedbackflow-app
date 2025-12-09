@@ -404,7 +404,12 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
             </Button>
           )}
           {onClose && (
-            <Button variant="ghost" onClick={onClose} icon={X}>
+            <Button 
+              type="button"
+              variant="ghost" 
+              onClick={onClose}
+              icon={X}
+            >
               Close
             </Button>
           )}
