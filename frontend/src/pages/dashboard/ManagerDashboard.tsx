@@ -168,8 +168,8 @@ const ManagerDashboard: React.FC = () => {
     
     try {
       const [colorRes, completionRes] = await Promise.all([
-        api.get('/api/v1/analytics/team-color-distribution'),
-        api.get('/api/v1/analytics/team-completion')
+        api.get('/analytics/team-color-distribution'),
+        api.get('/analytics/team-completion')
       ]);
       
       if (colorRes.data.success) {
