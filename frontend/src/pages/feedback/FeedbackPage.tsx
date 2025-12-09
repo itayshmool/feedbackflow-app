@@ -13,14 +13,23 @@ import { Button } from '../../components/ui/Button';
 import { MessageSquare, TrendingUp, Users } from 'lucide-react';
 
 export default function FeedbackPage() {
-  const [searchParams] = useSearchParams();
-  const [view, setView] = useState<'list' | 'give' | 'detail'>('list');
-  const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const { feedbackStats, fetchFeedbackStats } = useFeedbackStore();
   const { user } = useAuthStore();
 
-  // Get initial tab from URL query parameter
+  // Get URL parameters
   const tabParam = searchParams.get('tab');
+  const actionParam = searchParams.get('action');
+  const recipientEmail = searchParams.get('recipient');
+  const recipientName = searchParams.get('name');
+
+  // Determine initial view based on action param
+  const initialView = actionParam === 'give' ? 'give' : 'list';
+  
+  const [view, setView] = useState<'list' | 'give' | 'detail'>(initialView);
+  const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
+
+  // Get initial tab from URL query parameter
   const initialTab = (tabParam === 'given' || tabParam === 'received' || tabParam === 'drafts') 
     ? tabParam 
     : 'all';
@@ -60,6 +69,12 @@ export default function FeedbackPage() {
   };
 
   const handleCloseFeedbackForm = () => {
+    // Clear action and recipient params when closing the form
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('action');
+    newParams.delete('recipient');
+    newParams.delete('name');
+    setSearchParams(newParams);
     setView('list');
   };
 
@@ -134,6 +149,8 @@ export default function FeedbackPage() {
           <GiveFeedback
             onClose={handleCloseFeedbackForm}
             onSuccess={handleFeedbackSuccess}
+            toUserEmail={recipientEmail || undefined}
+            toUserName={recipientName || undefined}
           />
         )}
 
