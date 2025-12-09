@@ -16,6 +16,7 @@ interface FeedbackListProps {
   onGiveFeedback?: () => void;
   userId?: string;
   showFilters?: boolean;
+  initialTab?: 'received' | 'given' | 'all' | 'drafts';
 }
 
 export const FeedbackList: React.FC<FeedbackListProps> = ({
@@ -23,6 +24,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
   onGiveFeedback,
   userId,
   showFilters = true,
+  initialTab = 'all',
 }) => {
   const {
     feedbackList,
@@ -39,7 +41,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
     deleteFeedback,
   } = useFeedbackStore();
 
-  const [activeTab, setActiveTab] = useState<'received' | 'given' | 'all' | 'drafts'>('all');
+  const [activeTab, setActiveTab] = useState<'received' | 'given' | 'all' | 'drafts'>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<FeedbackStatus | ''>('');
   const [typeFilter, setTypeFilter] = useState<ReviewType | ''>('');
