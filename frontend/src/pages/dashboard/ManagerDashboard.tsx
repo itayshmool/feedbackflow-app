@@ -7,6 +7,7 @@ import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { HierarchyNode } from '../../types/hierarchy.types';
 import api from '../../lib/api';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { 
   Users, 
   TrendingUp, 
@@ -31,9 +32,39 @@ import {
   TrendingDown,
   Award,
   Zap,
-  Download
+  Download,
+  XCircle
 } from 'lucide-react';
 import { generateInsightsDocx } from '../../utils/generateInsightsDocx';
+
+// Types for Analytics
+interface ColorDistribution {
+  green: number;
+  yellow: number;
+  red: number;
+  unclassified: number;
+  total: number;
+}
+
+interface TeamMemberCompletion {
+  userId: string;
+  name: string;
+  email: string;
+  position: string;
+  department: string;
+  avatarUrl?: string;
+  hasReceivedFeedback: boolean;
+  feedbackCount: number;
+}
+
+interface CompletionData {
+  teamMembers: TeamMemberCompletion[];
+  summary: {
+    completed: number;
+    total: number;
+    percentage: number;
+  };
+}
 
 // Types for AI Insights
 interface TeamInsight {
@@ -123,6 +154,44 @@ const ManagerDashboard: React.FC = () => {
   const [teamInsights, setTeamInsights] = useState<TeamInsight | null>(null);
   const [isInsightsLoading, setIsInsightsLoading] = useState(false);
   const [insightsError, setInsightsError] = useState<string | null>(null);
+  
+  // State for Analytics
+  const [colorDistribution, setColorDistribution] = useState<ColorDistribution | null>(null);
+  const [completionData, setCompletionData] = useState<CompletionData | null>(null);
+  const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
+
+  // Function to fetch analytics data
+  const fetchAnalyticsData = async () => {
+    setIsAnalyticsLoading(true);
+    setAnalyticsError(null);
+    
+    try {
+      const [colorRes, completionRes] = await Promise.all([
+        api.get('/api/v1/analytics/team-color-distribution'),
+        api.get('/api/v1/analytics/team-completion')
+      ]);
+      
+      if (colorRes.data.success) {
+        setColorDistribution(colorRes.data.data);
+      }
+      if (completionRes.data.success) {
+        setCompletionData(completionRes.data.data);
+      }
+    } catch (err: any) {
+      console.error('Error fetching analytics:', err);
+      setAnalyticsError(err.response?.data?.error || 'Failed to load analytics');
+    } finally {
+      setIsAnalyticsLoading(false);
+    }
+  };
+
+  // Fetch analytics when switching to analytics tab
+  useEffect(() => {
+    if (activeTab === 'analytics' && !colorDistribution && !isAnalyticsLoading) {
+      fetchAnalyticsData();
+    }
+  }, [activeTab]);
   
   // Function to fetch AI team insights
   const fetchTeamInsights = async () => {
@@ -595,41 +664,209 @@ const ManagerDashboard: React.FC = () => {
     );
   };
 
-  const renderAnalytics = () => (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-gray-900">Team Analytics</h2>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Performance Trends</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64 flex items-center justify-center text-gray-500">
-              <div className="text-center">
-                <BarChart3 className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <p>Performance charts coming soon</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+  const renderAnalytics = () => {
+    // Color chart data
+    const colorChartData = colorDistribution ? [
+      { name: 'Exceeds Expectations', value: colorDistribution.green, color: '#22c55e' },
+      { name: 'Meets Expectations', value: colorDistribution.yellow, color: '#eab308' },
+      { name: 'Needs Improvement', value: colorDistribution.red, color: '#ef4444' },
+      { name: 'Not Classified', value: colorDistribution.unclassified, color: '#9ca3af' }
+    ].filter(item => item.value > 0) : [];
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Feedback Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64 flex items-center justify-center text-gray-500">
-              <div className="text-center">
-                <TrendingUp className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <p>Analytics charts coming soon</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+    const RADIAN = Math.PI / 180;
+    const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+      const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+      const x = cx + radius * Math.cos(-midAngle * RADIAN);
+      const y = cy + radius * Math.sin(-midAngle * RADIAN);
+      return percent > 0.05 ? (
+        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-sm font-medium">
+          {`${(percent * 100).toFixed(0)}%`}
+        </text>
+      ) : null;
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900">Team Analytics</h2>
+          <Button
+            variant="outline"
+            onClick={fetchAnalyticsData}
+            disabled={isAnalyticsLoading}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isAnalyticsLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
+
+        {analyticsError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+            {analyticsError}
+          </div>
+        )}
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Color Distribution Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-blue-600" />
+                Feedback Color Distribution
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isAnalyticsLoading ? (
+                <div className="h-64 flex items-center justify-center">
+                  <LoadingSpinner />
+                </div>
+              ) : colorDistribution && colorDistribution.total > 0 ? (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={colorChartData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={renderCustomizedLabel}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {colorChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value: number) => [`${value} feedback${value !== 1 ? 's' : ''}`, '']}
+                      />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-64 flex items-center justify-center text-gray-500">
+                  <div className="text-center">
+                    <BarChart3 className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <p>No feedback data available</p>
+                    <p className="text-sm mt-1">Feedback with color classifications will appear here</p>
+                  </div>
+                </div>
+              )}
+              {colorDistribution && colorDistribution.total > 0 && (
+                <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                    <span>Green: {colorDistribution.green}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <span>Yellow: {colorDistribution.yellow}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                    <span>Red: {colorDistribution.red}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-gray-400"></div>
+                    <span>Unclassified: {colorDistribution.unclassified}</span>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Feedback Completion Progress */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5 text-blue-600" />
+                Feedback Completion Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isAnalyticsLoading ? (
+                <div className="h-64 flex items-center justify-center">
+                  <LoadingSpinner />
+                </div>
+              ) : completionData && completionData.teamMembers.length > 0 ? (
+                <div className="space-y-4">
+                  {/* Progress Summary */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        Your Feedback Progress
+                      </span>
+                      <span className="text-sm font-semibold text-blue-600">
+                        {completionData.summary.completed} / {completionData.summary.total}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <div 
+                        className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                        style={{ width: `${completionData.summary.percentage}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {completionData.summary.percentage}% of your direct reports have received feedback from you
+                    </p>
+                  </div>
+
+                  {/* Team Members List */}
+                  <div className="max-h-48 overflow-y-auto space-y-2">
+                    {completionData.teamMembers.map((member) => (
+                      <div 
+                        key={member.userId}
+                        className={`flex items-center justify-between p-3 rounded-lg border ${
+                          member.hasReceivedFeedback 
+                            ? 'bg-green-50 border-green-200' 
+                            : 'bg-gray-50 border-gray-200'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-medium text-gray-600">
+                            {member.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{member.name}</p>
+                            <p className="text-xs text-gray-500">{member.position}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {member.hasReceivedFeedback ? (
+                            <>
+                              <span className="text-xs text-green-600 font-medium">
+                                {member.feedbackCount} feedback{member.feedbackCount !== 1 ? 's' : ''}
+                              </span>
+                              <CheckCircle className="h-5 w-5 text-green-500" />
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-xs text-gray-500">Pending</span>
+                              <XCircle className="h-5 w-5 text-gray-400" />
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="h-64 flex items-center justify-center text-gray-500">
+                  <div className="text-center">
+                    <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <p>No direct reports found</p>
+                    <p className="text-sm mt-1">Your team members will appear here</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderInsights = () => (
     <div className="space-y-6">

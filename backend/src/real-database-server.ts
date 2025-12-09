@@ -7325,6 +7325,193 @@ app.get('/api/v1/analytics/insights', authenticateToken, async (req, res) => {
   }
 });
 
+// GET /api/v1/analytics/team-color-distribution - Get color classification distribution for manager's team
+app.get('/api/v1/analytics/team-color-distribution', authenticateToken, async (req, res) => {
+  try {
+    const currentUserEmail = (req as any).user?.email;
+    
+    if (!currentUserEmail) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+
+    // Get current user
+    const userResult = await query(
+      'SELECT id, organization_id FROM users WHERE email = $1',
+      [currentUserEmail]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    
+    const currentUserId = userResult.rows[0].id;
+    const organizationId = userResult.rows[0].organization_id;
+
+    // Check if user is a manager
+    const rolesResult = await query(
+      `SELECT r.name FROM user_roles ur 
+       JOIN roles r ON ur.role_id = r.id 
+       WHERE ur.user_id = $1 AND ur.organization_id = $2 AND ur.is_active = true`,
+      [currentUserId, organizationId]
+    );
+    const userRoles = rolesResult.rows.map((row: any) => row.name);
+    
+    if (!userRoles.includes('manager') && !userRoles.includes('admin')) {
+      return res.status(403).json({ success: false, error: 'Manager role required' });
+    }
+
+    // Get all team members (direct and indirect reports)
+    const teamMemberIds = await getManagerEmployeeTree(currentUserId);
+    
+    if (teamMemberIds.length === 0) {
+      return res.json({ 
+        success: true, 
+        data: { green: 0, yellow: 0, red: 0, unclassified: 0, total: 0 }
+      });
+    }
+
+    // Count feedback by color classification for team members (as recipients)
+    const colorQuery = `
+      SELECT 
+        COALESCE(color_classification, 'unclassified') as color,
+        COUNT(*) as count
+      FROM feedback_responses
+      WHERE recipient_id = ANY($1)
+        AND is_approved = true
+      GROUP BY COALESCE(color_classification, 'unclassified')
+    `;
+    
+    const colorResult = await query(colorQuery, [teamMemberIds]);
+    
+    // Initialize counts
+    const distribution = { green: 0, yellow: 0, red: 0, unclassified: 0, total: 0 };
+    
+    for (const row of colorResult.rows) {
+      const color = row.color as string;
+      const count = parseInt(row.count);
+      if (color === 'green') distribution.green = count;
+      else if (color === 'yellow') distribution.yellow = count;
+      else if (color === 'red') distribution.red = count;
+      else distribution.unclassified = count;
+      distribution.total += count;
+    }
+
+    res.json({ success: true, data: distribution });
+  } catch (error) {
+    console.error('Error fetching team color distribution:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch team color distribution' });
+  }
+});
+
+// GET /api/v1/analytics/team-completion - Get feedback completion status for manager's direct reports
+app.get('/api/v1/analytics/team-completion', authenticateToken, async (req, res) => {
+  try {
+    const currentUserEmail = (req as any).user?.email;
+    const { cycleId } = req.query;
+    
+    if (!currentUserEmail) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+
+    // Get current user
+    const userResult = await query(
+      'SELECT id, organization_id FROM users WHERE email = $1',
+      [currentUserEmail]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    
+    const currentUserId = userResult.rows[0].id;
+    const organizationId = userResult.rows[0].organization_id;
+
+    // Check if user is a manager
+    const rolesResult = await query(
+      `SELECT r.name FROM user_roles ur 
+       JOIN roles r ON ur.role_id = r.id 
+       WHERE ur.user_id = $1 AND ur.organization_id = $2 AND ur.is_active = true`,
+      [currentUserId, organizationId]
+    );
+    const userRoles = rolesResult.rows.map((row: any) => row.name);
+    
+    if (!userRoles.includes('manager') && !userRoles.includes('admin')) {
+      return res.status(403).json({ success: false, error: 'Manager role required' });
+    }
+
+    // Get direct reports with their feedback status from current manager
+    // This checks if the manager has given feedback to each of their direct reports
+    let completionQuery = `
+      SELECT 
+        u.id as "userId",
+        u.name,
+        u.email,
+        u.position,
+        u.department,
+        u.avatar_url as "avatarUrl",
+        CASE 
+          WHEN EXISTS (
+            SELECT 1 FROM feedback_responses fr
+            WHERE fr.giver_id = $1 
+              AND fr.recipient_id = u.id
+              AND fr.is_approved = true
+              ${cycleId ? 'AND fr.cycle_id = $3' : ''}
+          ) THEN true
+          ELSE false
+        END as "hasReceivedFeedback",
+        (
+          SELECT COUNT(*) FROM feedback_responses fr
+          WHERE fr.giver_id = $1 
+            AND fr.recipient_id = u.id
+            AND fr.is_approved = true
+            ${cycleId ? 'AND fr.cycle_id = $3' : ''}
+        ) as "feedbackCount"
+      FROM organizational_hierarchy oh
+      JOIN users u ON oh.employee_id = u.id
+      WHERE oh.manager_id = $1
+        AND oh.is_active = true
+        AND u.is_active = true
+        AND oh.organization_id = $2
+      ORDER BY u.name ASC
+    `;
+
+    const queryParams = cycleId 
+      ? [currentUserId, organizationId, cycleId]
+      : [currentUserId, organizationId];
+    
+    const completionResult = await query(completionQuery, queryParams);
+    
+    const teamMembers = completionResult.rows.map((row: any) => ({
+      userId: row.userId,
+      name: row.name,
+      email: row.email,
+      position: row.position || 'No position',
+      department: row.department || 'No department',
+      avatarUrl: row.avatarUrl,
+      hasReceivedFeedback: row.hasReceivedFeedback,
+      feedbackCount: parseInt(row.feedbackCount) || 0
+    }));
+
+    const completed = teamMembers.filter((m: any) => m.hasReceivedFeedback).length;
+    const total = teamMembers.length;
+
+    res.json({ 
+      success: true, 
+      data: {
+        teamMembers,
+        summary: {
+          completed,
+          total,
+          percentage: total > 0 ? Math.round((completed / total) * 100) : 0
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching team completion status:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch team completion status' });
+  }
+});
+
 // Test endpoint
 app.get('/api/v1/test', (req, res) => {
   res.json({ success: true, message: 'Test endpoint working' });
