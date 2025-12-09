@@ -308,6 +308,11 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
       return;
     }
 
+    if (!colorClassification) {
+      alert('Please select a color classification');
+      return;
+    }
+
     if (!overallComment.trim()) {
       alert('Please provide an overall comment');
       return;
@@ -540,7 +545,9 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
       {/* Performance Classification - Internal Use Only */}
       <Card className="p-6">
         <div className="mb-4">
-          <h3 className="text-lg font-semibold">Performance Classification</h3>
+          <h3 className="text-lg font-semibold">
+            Performance Classification <span className="text-red-500">*</span>
+          </h3>
           <p className="text-sm text-gray-500 mt-1">
             🔒 This classification is for internal use only and will <strong>not</strong> be visible to the recipient.
           </p>
@@ -567,8 +574,8 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
           ))}
         </div>
         {!colorClassification && (
-          <p className="text-sm text-gray-400 mt-3 italic">
-            Optional: Select a classification to help with internal feedback triage
+          <p className="text-sm text-red-500 mt-3">
+            * Required: Please select a color classification
           </p>
         )}
       </Card>
