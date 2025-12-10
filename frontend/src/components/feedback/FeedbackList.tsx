@@ -365,10 +365,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
               <option value="">All Statuses</option>
               <option value={FeedbackStatus.DRAFT}>Draft</option>
               <option value={FeedbackStatus.SUBMITTED}>Submitted</option>
-              <option value={FeedbackStatus.UNDER_REVIEW}>Under Review</option>
               <option value={FeedbackStatus.COMPLETED}>Completed</option>
-              <option value={FeedbackStatus.ACKNOWLEDGED}>Acknowledged</option>
-              <option value={FeedbackStatus.ARCHIVED}>Archived</option>
             </Select>
             <Select
               label="Type"
