@@ -4,7 +4,7 @@ import { useFeedbackStore } from '../../stores/feedbackStore';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   MessageSquare, 
   Clock,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 
 const EmployeeDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const {
     feedbackStats,
@@ -69,7 +70,10 @@ const EmployeeDashboard: React.FC = () => {
 
       {/* Stats Cards */}
       <div className={`grid grid-cols-1 gap-3 sm:gap-6 ${isManager ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
-        <Card className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
+        <Card 
+          className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
+          onClick={() => navigate('/feedback?tab=received')}
+        >
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center">
               <div className="p-2 sm:p-3 bg-blue-100 rounded-xl flex-shrink-0">
@@ -87,7 +91,10 @@ const EmployeeDashboard: React.FC = () => {
 
         {/* Feedback Given - Only visible to managers */}
         {isManager && (
-          <Card className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
+          <Card 
+            className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
+            onClick={() => navigate('/feedback?tab=given')}
+          >
             <CardContent className="p-4 sm:p-6">
               <div className="flex items-center">
                 <div className="p-2 sm:p-3 bg-green-100 rounded-xl flex-shrink-0">
@@ -104,7 +111,10 @@ const EmployeeDashboard: React.FC = () => {
           </Card>
         )}
 
-        <Card className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
+        <Card 
+          className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
+          onClick={() => navigate('/feedback?tab=drafts')}
+        >
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center">
               <div className="p-2 sm:p-3 bg-orange-100 rounded-xl flex-shrink-0">
