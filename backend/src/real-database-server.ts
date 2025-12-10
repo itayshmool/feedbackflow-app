@@ -5456,15 +5456,40 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
       });
     }
     
-    // Build the structured content object for update
-    const structuredContent = typeof updates.content === 'object' ? {
-      overallComment: updates.content.overallComment || '',
-      strengths: updates.content.strengths || [],
-      areasForImprovement: updates.content.areasForImprovement || [],
-      specificExamples: updates.content.specificExamples || [],
-      recommendations: updates.content.recommendations || [],
-      confidential: updates.content.confidential || false
-    } : updates.content;
+    // Fetch existing feedback data to preserve unchanged fields
+    const existingQuery = `
+      SELECT content, rating, color_classification
+      FROM feedback_responses
+      WHERE id = $1
+    `;
+    const existingResult = await query(existingQuery, [id]);
+    const existing = existingResult.rows[0];
+    
+    // Parse existing content
+    let existingContent: any = {};
+    try {
+      existingContent = typeof existing.content === 'string' 
+        ? JSON.parse(existing.content) 
+        : (existing.content || {});
+    } catch (e) {
+      existingContent = { overallComment: existing.content || '' };
+    }
+    
+    // Merge updates with existing content - only overwrite if explicitly provided
+    // Using nullish coalescing (??) so that undefined/null preserves existing,
+    // but explicit values (including empty string, 0, false) overwrite
+    const structuredContent = {
+      overallComment: updates.content?.overallComment ?? existingContent.overallComment ?? '',
+      strengths: updates.content?.strengths ?? existingContent.strengths ?? [],
+      areasForImprovement: updates.content?.areasForImprovement ?? existingContent.areasForImprovement ?? [],
+      specificExamples: updates.content?.specificExamples ?? existingContent.specificExamples ?? [],
+      recommendations: updates.content?.recommendations ?? existingContent.recommendations ?? [],
+      confidential: updates.content?.confidential ?? existingContent.confidential ?? false
+    };
+    
+    // Merge rating and color_classification with existing values
+    const finalRating = updates.rating ?? updates.ratings?.[0]?.score ?? existing.rating;
+    const finalColorClassification = updates.colorClassification ?? existing.color_classification;
     
     // Update the feedback in database
     const updateQuery = `
@@ -5475,9 +5500,9 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
     `;
     
     const updateResult = await query(updateQuery, [
-      typeof structuredContent === 'object' ? JSON.stringify(structuredContent) : structuredContent,
-      updates.rating || updates.ratings?.[0]?.score || null,
-      updates.colorClassification || null, // Internal triage color (green/yellow/red)
+      JSON.stringify(structuredContent),
+      finalRating,
+      finalColorClassification,
       id
     ]);
     
