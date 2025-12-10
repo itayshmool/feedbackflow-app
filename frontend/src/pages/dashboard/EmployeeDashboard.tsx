@@ -48,23 +48,8 @@ const EmployeeDashboard: React.FC = () => {
     <div className="space-y-4 sm:space-y-6">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-4 sm:p-6 text-white shadow-lg transform transition-all duration-200 hover:shadow-xl">
-        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Welcome back, {user?.name}!</h1>
-            <p className="text-indigo-100 text-base sm:text-lg">
-              Track your performance and growth
-            </p>
-          </div>
-          <Link to="/feedback/give" className="w-full sm:w-auto">
-            <Button
-              variant="secondary"
-              size="sm"
-              className="bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all duration-200 w-full sm:w-auto justify-center"
-            >
-              <MessageSquare className="w-4 h-4 mr-2" />
-              Give Feedback
-            </Button>
-          </Link>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">Welcome back, {user?.name}!</h1>
         </div>
       </div>
 
