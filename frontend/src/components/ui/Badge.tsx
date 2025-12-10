@@ -5,20 +5,31 @@ import { cn } from '@/lib/utils'
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'outline' | 'destructive'
+  color?: 'blue' | 'green' | 'yellow' | 'red' | 'gray' | 'purple'
   size?: 'sm' | 'md' | 'lg'
 }
 
 const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
-  ({ className, variant = 'primary', size = 'md', ...props }, ref) => {
-    const baseClasses = 'badge'
+  ({ className, variant, color, size = 'md', ...props }, ref) => {
+    const baseClasses = 'inline-flex items-center font-medium rounded-full'
     
-    const variantClasses = {
-      primary: 'badge-primary',
-      secondary: 'badge-secondary',
-      success: 'badge-success',
-      warning: 'badge-warning',
-      error: 'badge-error',
-      destructive: 'badge-error',
+    // Map color to styles (takes precedence over variant if both provided)
+    const colorClasses: Record<string, string> = {
+      blue: 'bg-blue-100 text-blue-800',
+      green: 'bg-green-100 text-green-800',
+      yellow: 'bg-yellow-100 text-yellow-800',
+      red: 'bg-red-100 text-red-800',
+      gray: 'bg-gray-100 text-gray-800',
+      purple: 'bg-purple-100 text-purple-800',
+    }
+    
+    const variantClasses: Record<string, string> = {
+      primary: 'bg-blue-100 text-blue-800',
+      secondary: 'bg-gray-100 text-gray-800',
+      success: 'bg-green-100 text-green-800',
+      warning: 'bg-yellow-100 text-yellow-800',
+      error: 'bg-red-100 text-red-800',
+      destructive: 'bg-red-100 text-red-800',
       outline: 'border border-gray-300 bg-transparent text-gray-700',
     }
     
@@ -27,13 +38,20 @@ const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
       md: 'px-2.5 py-0.5 text-xs',
       lg: 'px-3 py-1 text-sm',
     }
+
+    // Determine the color/variant class to use
+    const styleClass = color 
+      ? colorClasses[color] 
+      : variant 
+        ? variantClasses[variant] 
+        : variantClasses.primary
     
     return (
       <span
         ref={ref}
         className={cn(
           baseClasses,
-          variantClasses[variant],
+          styleClass,
           sizeClasses[size],
           className
         )}
