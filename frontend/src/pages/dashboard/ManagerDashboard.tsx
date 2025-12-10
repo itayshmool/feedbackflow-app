@@ -258,10 +258,7 @@ const ManagerDashboard: React.FC = () => {
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-green-600 to-blue-600 rounded-xl p-4 sm:p-6 text-white shadow-lg transform transition-all duration-200 hover:shadow-xl">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2">Welcome back, {user?.name}!</h1>
-          <p className="text-green-100 text-base sm:text-lg">
-            Manage your team and track performance
-          </p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Welcome back, {user?.name}!</h1>
         </div>
       </div>
 
