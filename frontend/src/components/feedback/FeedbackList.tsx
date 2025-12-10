@@ -1,6 +1,6 @@
 // Feedback List Component
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useFeedbackStore } from '../../stores/feedbackStore';
 import { useCyclesStore } from '../../stores/cyclesStore';
 import { Feedback, FeedbackStatus, ReviewType, FeedbackFilters } from '../../types/feedback.types';
@@ -10,7 +10,8 @@ import { Badge } from '../ui/Badge';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
-import { MessageSquare, Calendar, User, Filter, Download, Eye, Edit, Trash2, RotateCcw } from 'lucide-react';
+import { HighlightText } from '../ui/HighlightText';
+import { MessageSquare, Calendar, User, Filter, Download, Eye, Edit, Trash2, RotateCcw, Search, X } from 'lucide-react';
 
 interface FeedbackListProps {
   onSelectFeedback?: (feedback: Feedback, editMode?: boolean) => void;
@@ -65,6 +66,25 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
       fetchCycles({}, 1, 100); // Fetch up to 100 cycles for dropdown
     }
   }, [cycles.length, fetchCycles]);
+
+  // Auto-apply dropdown filters when they change
+  useEffect(() => {
+    loadFeedback();
+  }, [statusFilter, typeFilter, cycleFilter]);
+
+  // Handle search on Enter key
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      loadFeedback();
+    }
+  };
+
+  // Clear search
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    // Trigger reload after clearing
+    setTimeout(() => loadFeedback(), 0);
+  };
 
   const loadFeedback = () => {
     const newFilters: FeedbackFilters = {};
@@ -231,25 +251,47 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header with Search */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="text-2xl font-bold">Feedback</h2>
-        <div className="flex gap-2">
-          {showFilters && (
-            <Button
-              variant="outline"
-              onClick={() => setShowFilterPanel(!showFilterPanel)}
-              icon={Filter}
-            >
-              Filters
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+          {/* Search Bar - Always visible */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search feedback..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              className="pl-10 pr-8 py-2 w-full sm:w-64 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            {searchQuery && (
+              <button
+                onClick={handleClearSearch}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 rounded"
+              >
+                <X className="w-4 h-4 text-gray-400" />
+              </button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            {showFilters && (
+              <Button
+                variant="outline"
+                onClick={() => setShowFilterPanel(!showFilterPanel)}
+                icon={Filter}
+              >
+                Filters
+              </Button>
+            )}
+            <Button variant="outline" onClick={handleExport} icon={Download}>
+              Export
             </Button>
-          )}
-          <Button variant="outline" onClick={handleExport} icon={Download}>
-            Export
-          </Button>
-          {onGiveFeedback && (
-            <Button onClick={onGiveFeedback}>Give Feedback</Button>
-          )}
+            {onGiveFeedback && (
+              <Button onClick={onGiveFeedback}>Give Feedback</Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -299,16 +341,10 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
         </div>
       )}
 
-      {/* Filter Panel */}
+      {/* Filter Panel - Dropdowns auto-apply on change */}
       {showFilters && showFilterPanel && (
         <Card className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Input
-              label="Search"
-              placeholder="Search feedback..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Select
               label="Cycle"
               value={cycleFilter}
@@ -344,12 +380,13 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
               <option value={ReviewType.PROJECT_REVIEW}>Project Review</option>
             </Select>
           </div>
-          <div className="flex gap-2 mt-4">
-            <Button onClick={handleSearch}>Apply Filters</Button>
-            <Button variant="outline" onClick={handleClearFilters}>
-              Clear Filters
-            </Button>
-          </div>
+          {(cycleFilter || statusFilter || typeFilter) && (
+            <div className="flex justify-end mt-4">
+              <Button variant="outline" size="sm" onClick={handleClearFilters} icon={RotateCcw}>
+                Clear Filters
+              </Button>
+            </div>
+          )}
         </Card>
       )}
 
@@ -402,9 +439,12 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
                         <User className="w-4 h-4" />
                         <span>
                           {activeTab === 'received' ? 'From: ' : 'To: '}
-                          {activeTab === 'received'
-                            ? feedback.fromUser?.name || feedback.fromUserEmail || feedback.fromUserId
-                            : feedback.toUser?.name || feedback.toUserEmail || feedback.toUserId}
+                          <HighlightText
+                            text={activeTab === 'received'
+                              ? (feedback.fromUser?.name || feedback.fromUserEmail || feedback.fromUserId || '')
+                              : (feedback.toUser?.name || feedback.toUserEmail || feedback.toUserId || '')}
+                            highlight={searchQuery}
+                          />
                         </span>
                       </div>
 
@@ -423,7 +463,10 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
 
                     {feedback.content?.overallComment && (
                       <p className="mt-3 text-gray-700 line-clamp-2">
-                        {feedback.content.overallComment}
+                        <HighlightText 
+                          text={feedback.content.overallComment} 
+                          highlight={searchQuery}
+                        />
                       </p>
                     )}
 
