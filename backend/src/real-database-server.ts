@@ -6789,7 +6789,9 @@ app.post('/api/v1/cycles/:id/archive', authenticateToken, async (req, res) => {
       UPDATE feedback_cycles 
       SET status = 'archived', updated_at = NOW()
       WHERE id = $1 AND status IN ('active', 'closed')
-      RETURNING id, name, status, updated_at
+      RETURNING id, name, description, organization_id, type, status, 
+                start_date, end_date, feedback_start_date, feedback_end_date,
+                settings, created_by, created_at, updated_at
     `;
 
     const result = await query(updateQuery, [req.params.id]);
@@ -6801,10 +6803,28 @@ app.post('/api/v1/cycles/:id/archive', authenticateToken, async (req, res) => {
       });
     }
 
+    const cycle = result.rows[0];
+    const response = {
+      id: cycle.id,
+      name: cycle.name,
+      description: cycle.description,
+      organizationId: cycle.organization_id,
+      type: cycle.type,
+      status: cycle.status,
+      startDate: cycle.start_date,
+      endDate: cycle.end_date,
+      feedbackStartDate: cycle.feedback_start_date,
+      feedbackEndDate: cycle.feedback_end_date,
+      settings: typeof cycle.settings === 'string' ? JSON.parse(cycle.settings) : cycle.settings,
+      createdBy: cycle.created_by,
+      createdAt: cycle.created_at,
+      updatedAt: cycle.updated_at
+    };
+
     res.json({ 
       success: true, 
       message: 'Cycle archived successfully',
-      data: result.rows[0]
+      data: response
     });
   } catch (error) {
     console.error('Error archiving cycle:', error);
@@ -6819,7 +6839,9 @@ app.post('/api/v1/cycles/:id/restore', authenticateToken, async (req, res) => {
       UPDATE feedback_cycles 
       SET status = 'closed', updated_at = NOW()
       WHERE id = $1 AND status = 'archived'
-      RETURNING id, name, status, updated_at
+      RETURNING id, name, description, organization_id, type, status, 
+                start_date, end_date, feedback_start_date, feedback_end_date,
+                settings, created_by, created_at, updated_at
     `;
 
     const result = await query(updateQuery, [req.params.id]);
@@ -6831,10 +6853,28 @@ app.post('/api/v1/cycles/:id/restore', authenticateToken, async (req, res) => {
       });
     }
 
+    const cycle = result.rows[0];
+    const response = {
+      id: cycle.id,
+      name: cycle.name,
+      description: cycle.description,
+      organizationId: cycle.organization_id,
+      type: cycle.type,
+      status: cycle.status,
+      startDate: cycle.start_date,
+      endDate: cycle.end_date,
+      feedbackStartDate: cycle.feedback_start_date,
+      feedbackEndDate: cycle.feedback_end_date,
+      settings: typeof cycle.settings === 'string' ? JSON.parse(cycle.settings) : cycle.settings,
+      createdBy: cycle.created_by,
+      createdAt: cycle.created_at,
+      updatedAt: cycle.updated_at
+    };
+
     res.json({ 
       success: true, 
       message: 'Cycle restored successfully',
-      data: result.rows[0]
+      data: response
     });
   } catch (error) {
     console.error('Error restoring cycle:', error);
