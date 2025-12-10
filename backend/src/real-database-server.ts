@@ -5167,6 +5167,29 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
     
     const dbFeedbackType = feedbackTypeMap[reviewType] || 'peer';
 
+    // Check for existing feedback before attempting to create
+    const existingCheckQuery = `
+      SELECT fr.id as request_id, fr.status, fc.name as cycle_name, fres.id as feedback_id
+      FROM feedback_requests fr
+      JOIN feedback_cycles fc ON fr.cycle_id = fc.id
+      LEFT JOIN feedback_responses fres ON fres.request_id = fr.id
+      WHERE fr.cycle_id = $1 AND fr.requester_id = $2 AND fr.recipient_id = $3 AND fr.feedback_type = $4
+      LIMIT 1
+    `;
+    const existingCheck = await query(existingCheckQuery, [cycleIdToUse, currentUserId, targetUserId, dbFeedbackType]);
+    
+    if (existingCheck.rows.length > 0) {
+      const existing = existingCheck.rows[0];
+      return res.status(409).json({
+        success: false,
+        error: `You already have ${existing.status} feedback for this person in cycle "${existing.cycle_name}". Please edit your existing feedback instead.`,
+        code: 'DUPLICATE_FEEDBACK',
+        existingFeedbackId: existing.feedback_id || existing.request_id,
+        cycleName: existing.cycle_name,
+        status: existing.status
+      });
+    }
+
     // Create feedback request in database
     const requestResult = await query(
       `INSERT INTO feedback_requests 
@@ -5338,9 +5361,27 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
     
     // Check for duplicate feedback constraint violation
     if (error.message?.includes('duplicate key') && error.message?.includes('feedback_requests')) {
+      // Try to find the existing feedback to provide helpful info
+      let existingFeedbackInfo = '';
+      try {
+        const existingQuery = `
+          SELECT fr.id, fr.status, fc.name as cycle_name, fres.id as response_id
+          FROM feedback_requests fr
+          JOIN feedback_cycles fc ON fr.cycle_id = fc.id
+          LEFT JOIN feedback_responses fres ON fres.request_id = fr.id
+          WHERE fr.cycle_id = $1 AND fr.requester_id = $2 AND fr.recipient_id = $3
+          LIMIT 1
+        `;
+        const existingResult = await query(existingQuery, [cycleIdToUse, currentUserId, targetUserId]);
+        if (existingResult.rows.length > 0) {
+          const existing = existingResult.rows[0];
+          existingFeedbackInfo = ` Your existing ${existing.status} feedback is in cycle "${existing.cycle_name}".`;
+        }
+      } catch {}
+      
       return res.status(409).json({ 
         success: false, 
-        error: 'You have already created feedback for this person in this cycle. Please edit your existing feedback instead, or delete the draft to start over.',
+        error: `You have already created feedback for this person in this cycle.${existingFeedbackInfo} Please edit your existing feedback instead, or delete the draft to start over.`,
         code: 'DUPLICATE_FEEDBACK'
       });
     }
