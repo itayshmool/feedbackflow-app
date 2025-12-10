@@ -860,10 +860,13 @@ const ManagerDashboard: React.FC = () => {
                               <CheckCircle className="h-5 w-5 text-green-500" />
                             </>
                           ) : (
-                            <>
-                              <span className="text-xs text-gray-500">Pending</span>
-                              <XCircle className="h-5 w-5 text-gray-400" />
-                            </>
+                            <button
+                              onClick={() => navigate(`/feedback?action=give&recipient=${encodeURIComponent(member.email)}&name=${encodeURIComponent(member.name)}`)}
+                              className="px-3 py-1 text-xs font-medium text-green-600 hover:text-white bg-green-50 hover:bg-green-600 border border-green-200 hover:border-green-600 rounded-lg transition-all duration-200 flex items-center gap-1"
+                            >
+                              <MessageSquare className="w-3 h-3" />
+                              Give Feedback
+                            </button>
                           )}
                         </div>
                       </div>
