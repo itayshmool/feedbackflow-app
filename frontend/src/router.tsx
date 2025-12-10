@@ -11,6 +11,7 @@ import GoogleOAuthTestPage from './pages/auth/GoogleOAuthTestPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
 import ManagerDashboard from './pages/dashboard/ManagerDashboard';
+import EmployeeDashboard from './pages/dashboard/EmployeeDashboard';
 import OrganizationManagement from './pages/admin/OrganizationManagement';
 import UserManagement from './pages/admin/UserManagement';
 import SystemSettings from './pages/admin/SystemSettings';
@@ -139,6 +140,10 @@ const AppRouter: React.FC = () => {
               element: <FeedbackDetailPage />,
             },
           ],
+        },
+        {
+          path: 'myself',
+          element: <EmployeeDashboard />,
         },
         {
           path: 'team-feedback',
