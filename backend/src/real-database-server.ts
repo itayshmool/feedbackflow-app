@@ -7,7 +7,7 @@ import multer from 'multer';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import fs from 'fs';
-import { query, testConnection, pool } from './config/real-database.js';
+import { query, testConnection, pool, getClient } from './config/real-database.js';
 import { DatabaseOrganizationService } from './services/DatabaseOrganizationService.js';
 import { AdminUserService } from './modules/admin/services/admin-user.service.js';
 import { createAdminUserRoutes } from './modules/admin/routes/admin-user.routes.js';
@@ -5190,78 +5190,103 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
       });
     }
 
-    // Create feedback request in database
-    const requestResult = await query(
-      `INSERT INTO feedback_requests 
-       (cycle_id, requester_id, recipient_id, feedback_type, status, message, due_date, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-       RETURNING id, cycle_id, requester_id, recipient_id, feedback_type, status, message, due_date, created_at, updated_at`,
-      [
-        cycleIdToUse,
-        currentUserId,
-        targetUserId,
-        dbFeedbackType,
-        'draft', // Mark as draft when feedback is first created
-        content?.overallComment || comment || '',
-        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
-      ]
-    );
-
-    const requestId = requestResult.rows[0].id;
-
-    // Create structured content object for database storage
-    const structuredContent = {
-      overallComment: content?.overallComment || comment || '',
-      strengths: content?.strengths || [],
-      areasForImprovement: content?.areasForImprovement || [],
-      specificExamples: content?.specificExamples || [],
-      recommendations: content?.recommendations || [],
-      confidential: content?.confidential || false
-    };
-
-    // Create feedback response in database
-    const responseResult = await query(
-      `INSERT INTO feedback_responses 
-       (request_id, giver_id, recipient_id, cycle_id, content, rating, is_anonymous, is_approved, color_classification, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-       RETURNING id, request_id, giver_id, recipient_id, cycle_id, content, rating, is_anonymous, is_approved, color_classification, created_at, updated_at`,
-      [
-        requestId,
-        currentUserId,
-        targetUserId,
-        cycleIdToUse,
-        JSON.stringify(structuredContent), // Store structured content as JSON
-        rating || (ratings && ratings.length > 0 ? ratings[0].score || ratings[0].rating : null),
-        false, // is_anonymous
-        true,  // is_approved (auto-approve for now)
-        colorClassification || null // Internal triage color (green/yellow/red)
-      ]
-    );
-
-    const responseId = responseResult.rows[0].id;
-
-    // Save development goals to database
+    // Use a transaction to ensure both feedback_request and feedback_response are created together
+    // This prevents orphaned records if one insert fails
+    const client = await getClient();
+    let requestResult: any;
+    let responseResult: any;
+    let requestId: string;
+    let responseId: string;
     const savedGoals: any[] = [];
-    if (goals && goals.length > 0) {
-      console.log('💾 Saving', goals.length, 'development goals to database');
-      for (const goal of goals) {
-        const goalResult = await query(
-          `INSERT INTO feedback_goals 
-           (feedback_response_id, title, description, category, priority, target_date, status, progress)
-           VALUES ($1, $2, $3, $4, $5, $6, 'not_started', 0)
-           RETURNING id, feedback_response_id, title, description, category, priority, target_date, status, progress, created_at, updated_at`,
-          [
-            responseId,
-            goal.title,
-            goal.description || '',
-            goal.category || 'development',
-            goal.priority || 'medium',
-            goal.targetDate ? new Date(goal.targetDate) : null
-          ]
-        );
-        savedGoals.push(goalResult.rows[0]);
+
+    try {
+      await client.query('BEGIN');
+
+      // Create feedback request in database
+      requestResult = await client.query(
+        `INSERT INTO feedback_requests 
+         (cycle_id, requester_id, recipient_id, feedback_type, status, message, due_date, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+         RETURNING id, cycle_id, requester_id, recipient_id, feedback_type, status, message, due_date, created_at, updated_at`,
+        [
+          cycleIdToUse,
+          currentUserId,
+          targetUserId,
+          dbFeedbackType,
+          'draft', // Mark as draft when feedback is first created
+          content?.overallComment || comment || '',
+          new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+        ]
+      );
+
+      requestId = requestResult.rows[0].id;
+
+      // Create structured content object for database storage
+      const structuredContent = {
+        overallComment: content?.overallComment || comment || '',
+        strengths: content?.strengths || [],
+        areasForImprovement: content?.areasForImprovement || [],
+        specificExamples: content?.specificExamples || [],
+        recommendations: content?.recommendations || [],
+        confidential: content?.confidential || false
+      };
+
+      // Create feedback response in database
+      responseResult = await client.query(
+        `INSERT INTO feedback_responses 
+         (request_id, giver_id, recipient_id, cycle_id, content, rating, is_anonymous, is_approved, color_classification, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+         RETURNING id, request_id, giver_id, recipient_id, cycle_id, content, rating, is_anonymous, is_approved, color_classification, created_at, updated_at`,
+        [
+          requestId,
+          currentUserId,
+          targetUserId,
+          cycleIdToUse,
+          JSON.stringify(structuredContent), // Store structured content as JSON
+          rating || (ratings && ratings.length > 0 ? ratings[0].score || ratings[0].rating : null),
+          false, // is_anonymous
+          true,  // is_approved (auto-approve for now)
+          colorClassification || null // Internal triage color (green/yellow/red)
+        ]
+      );
+
+      responseId = responseResult.rows[0].id;
+
+      // Save development goals to database (within the same transaction)
+      if (goals && goals.length > 0) {
+        console.log('💾 Saving', goals.length, 'development goals to database');
+        for (const goal of goals) {
+          const goalResult = await client.query(
+            `INSERT INTO feedback_goals 
+             (feedback_response_id, title, description, category, priority, target_date, status, progress)
+             VALUES ($1, $2, $3, $4, $5, $6, 'not_started', 0)
+             RETURNING id, feedback_response_id, title, description, category, priority, target_date, status, progress, created_at, updated_at`,
+            [
+              responseId,
+              goal.title,
+              goal.description || '',
+              goal.category || 'development',
+              goal.priority || 'medium',
+              goal.targetDate ? new Date(goal.targetDate) : null
+            ]
+          );
+          savedGoals.push(goalResult.rows[0]);
+        }
+        console.log('✅ Saved', savedGoals.length, 'development goals');
       }
-      console.log('✅ Saved', savedGoals.length, 'development goals');
+
+      // Commit the transaction
+      await client.query('COMMIT');
+      console.log('✅ Feedback creation transaction committed successfully');
+
+    } catch (txError) {
+      // Rollback on any error
+      await client.query('ROLLBACK');
+      console.error('❌ Transaction rolled back due to error:', txError);
+      throw txError;
+    } finally {
+      // Always release the client back to the pool
+      client.release();
     }
 
     // Fetch user names for both giver and recipient
