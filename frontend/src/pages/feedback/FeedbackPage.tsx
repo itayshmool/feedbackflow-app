@@ -20,14 +20,17 @@ export default function FeedbackPage() {
   // Get URL parameters
   const tabParam = searchParams.get('tab');
   const actionParam = searchParams.get('action');
+  const viewParam = searchParams.get('view'); // For deep-linking to specific feedback
   const recipientEmail = searchParams.get('recipient');
   const recipientName = searchParams.get('name');
 
-  // Determine initial view based on action param
-  const initialView = actionParam === 'give' ? 'give' : 'list';
+  // Determine initial view based on action param or view param
+  const initialView = actionParam === 'give' ? 'give' : viewParam ? 'detail' : 'list';
   
   const [view, setView] = useState<'list' | 'give' | 'detail'>(initialView);
-  const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
+  const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(
+    viewParam ? { id: viewParam } as Feedback : null
+  );
 
   // Get initial tab from URL query parameter
   const initialTab = (tabParam === 'given' || tabParam === 'received' || tabParam === 'drafts') 
@@ -79,6 +82,10 @@ export default function FeedbackPage() {
   };
 
   const handleCloseFeedbackDetail = () => {
+    // Clear view param when closing detail
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('view');
+    setSearchParams(newParams);
     setSelectedFeedback(null);
     setView('list');
   };

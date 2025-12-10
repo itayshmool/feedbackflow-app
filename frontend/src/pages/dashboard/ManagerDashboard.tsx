@@ -325,7 +325,11 @@ const ManagerDashboard: React.FC = () => {
             ) : recentFeedback && recentFeedback.length > 0 ? (
               <div className="space-y-3">
                 {recentFeedback.slice(0, 3).map((feedback) => (
-                  <div key={feedback.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-150">
+                  <div 
+                    key={feedback.id} 
+                    className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-150 cursor-pointer"
+                    onClick={() => navigate(`/feedback?view=${feedback.id}`)}
+                  >
                     <div className={`w-2 h-2 rounded-full ${
                       feedback.status === 'completed' ? 'bg-green-500' :
                       (feedback.status as any) === 'pending' || feedback.status === 'submitted' ? 'bg-yellow-500' : 

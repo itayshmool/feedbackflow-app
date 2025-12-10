@@ -154,7 +154,11 @@ const EmployeeDashboard: React.FC = () => {
             ) : recentFeedback && recentFeedback.length > 0 ? (
               <div className="space-y-3">
                 {recentFeedback.slice(0, 3).map((feedback) => (
-                  <div key={feedback.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-150">
+                  <div 
+                    key={feedback.id} 
+                    className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-150 cursor-pointer"
+                    onClick={() => navigate(`/feedback?view=${feedback.id}`)}
+                  >
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                     <div className="flex-1">
                       <p className="text-sm font-medium">{feedback.fromUser?.name || 'Anonymous'}</p>
