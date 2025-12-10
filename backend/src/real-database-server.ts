@@ -7693,13 +7693,12 @@ app.get('/api/v1/team/employee/:employeeId/history', authenticateToken, async (r
         fr.color_classification as "colorClassification",
         frr.status,
         frr.feedback_type as "reviewType",
-        LEFT(fr.content->>'overallComment', 150) as "contentPreview"
+        LEFT(fr.content, 150) as "contentPreview"
       FROM feedback_responses fr
       JOIN feedback_requests frr ON fr.request_id = frr.id
       LEFT JOIN feedback_cycles fc ON fr.cycle_id = fc.id
       WHERE fr.giver_id = $1 
         AND fr.recipient_id = $2
-        AND fr.is_approved = true
       ORDER BY fr.created_at DESC
     `;
     const feedbackResult = await query(feedbackQuery, [currentUserId, employeeId]);
