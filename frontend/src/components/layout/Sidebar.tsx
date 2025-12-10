@@ -16,6 +16,7 @@ import {
   User
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
+import { useHierarchyStore } from '@/stores/hierarchyStore'
 import { cn } from '@/lib/utils'
 
 const navigation = [
@@ -51,9 +52,13 @@ interface SidebarProps {
 
 export default function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
   const { user } = useAuthStore()
+  const { directReports } = useHierarchyStore()
   const isAdmin = user?.roles?.includes('admin') || user?.roles?.includes('super_admin')
   const isSuperAdmin = user?.roles?.includes('super_admin') || user?.isSuperAdmin
   const isManager = user?.roles?.includes('manager')
+  
+  // Check if any direct reports are managers (needed for Team Feedback tab)
+  const hasManagerReports = directReports.some(dr => dr.isManager)
   
   // Build admin navigation based on role
   // Super admin sees all items, org-scoped admin sees only their org's items
@@ -131,33 +136,36 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
                   Management
                 </h3>
               </div>
-              {managerNavigation.map((item) => {
-                const Icon = item.icon
-                return (
-                  <NavLink
-                    key={item.name}
-                    to={item.href}
-                    onClick={handleNavClick}
-                    className={({ isActive }) =>
-                      cn(
-                        'group flex items-center px-3 py-3 text-sm font-medium rounded-md transition-colors',
-                        isActive
-                          ? 'bg-primary-100 text-primary-900'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                      )
-                    }
-                  >
-                    <Icon
-                      className={cn(
-                        'mr-3 flex-shrink-0 h-5 w-5',
-                        'text-gray-400 group-hover:text-gray-500'
-                      )}
-                      aria-hidden="true"
-                    />
-                    {item.name}
-                  </NavLink>
-                )
-              })}
+              {managerNavigation
+                // Only show "Team Feedback" if user has managers reporting to them
+                .filter(item => item.href !== '/team-feedback' || hasManagerReports)
+                .map((item) => {
+                  const Icon = item.icon
+                  return (
+                    <NavLink
+                      key={item.name}
+                      to={item.href}
+                      onClick={handleNavClick}
+                      className={({ isActive }) =>
+                        cn(
+                          'group flex items-center px-3 py-3 text-sm font-medium rounded-md transition-colors',
+                          isActive
+                            ? 'bg-primary-100 text-primary-900'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        )
+                      }
+                    >
+                      <Icon
+                        className={cn(
+                          'mr-3 flex-shrink-0 h-5 w-5',
+                          'text-gray-400 group-hover:text-gray-500'
+                        )}
+                        aria-hidden="true"
+                      />
+                      {item.name}
+                    </NavLink>
+                  )
+                })}
             </>
           )}
           
