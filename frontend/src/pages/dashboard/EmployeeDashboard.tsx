@@ -4,7 +4,7 @@ import { useFeedbackStore } from '../../stores/feedbackStore';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   MessageSquare, 
   Clock,
@@ -17,6 +17,7 @@ import {
 
 const EmployeeDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuthStore();
   const {
     feedbackStats,
@@ -30,6 +31,10 @@ const EmployeeDashboard: React.FC = () => {
   
   // Check if user is a manager (managers see "Feedback Given" stat)
   const isManager = user?.roles?.includes('manager');
+  
+  // Check if this is the /myself route (managers accessing personal dashboard)
+  // Don't show welcome banner on /myself since managers already see it on their Dashboard
+  const isMyselfRoute = location.pathname === '/myself';
 
   useEffect(() => {
     if (user?.id) {
@@ -46,12 +51,14 @@ const EmployeeDashboard: React.FC = () => {
 
   const renderOverview = () => (
     <div className="space-y-4 sm:space-y-6">
-      {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-4 sm:p-6 text-white shadow-lg transform transition-all duration-200 hover:shadow-xl">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Welcome back, {user?.name}!</h1>
+      {/* Welcome Section - Only show on main dashboard, not on /myself for managers */}
+      {!isMyselfRoute && (
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-4 sm:p-6 text-white shadow-lg transform transition-all duration-200 hover:shadow-xl">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold">Welcome back, {user?.name}!</h1>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Stats Cards */}
       <div className={`grid grid-cols-1 gap-3 sm:gap-6 ${isManager ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
