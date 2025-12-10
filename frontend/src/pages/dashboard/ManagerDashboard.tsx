@@ -14,16 +14,11 @@ import {
   TrendingUp, 
   MessageSquare, 
   BarChart3, 
-  Clock,
   CheckCircle,
   AlertCircle,
   UserPlus,
   Activity,
   Target,
-  X,
-  Mail,
-  Briefcase,
-  Building,
   ChevronRight,
   ChevronDown,
   User,
@@ -114,22 +109,8 @@ const ManagerDashboard: React.FC = () => {
     fetchHierarchyStats
   } = useHierarchyStore();
   
-  // State for team member profile modal
-  const [selectedMember, setSelectedMember] = useState<HierarchyNode | null>(null);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  
   // State for expanded tree nodes
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
-  
-  const openProfileModal = (member: HierarchyNode) => {
-    setSelectedMember(member);
-    setIsProfileModalOpen(true);
-  };
-  
-  const closeProfileModal = () => {
-    setIsProfileModalOpen(false);
-    setSelectedMember(null);
-  };
   
   const toggleNode = (nodeId: string) => {
     setExpandedNodes(prev => {
@@ -415,10 +396,18 @@ const ManagerDashboard: React.FC = () => {
   const renderHierarchyNode = (node: HierarchyNode, level: number = 0, isCurrentUser: boolean = false): React.ReactNode => {
     const isExpanded = expandedNodes.has(node.id);
     const hasChildren = node.directReports && node.directReports.length > 0;
+    const isDirectReport = directReports.some(dr => dr.id === node.id);
     
     // Limit indentation on mobile
     const mobileIndent = Math.min(level, 4);
     const indentPx = mobileIndent * 24;
+    
+    // Handle click on the row - only for direct reports
+    const handleRowClick = () => {
+      if (isDirectReport && !isCurrentUser) {
+        navigate(`/team/${node.id}`);
+      }
+    };
     
     return (
       <div key={node.id} className="select-none">
@@ -429,10 +418,13 @@ const ManagerDashboard: React.FC = () => {
             transition-all duration-300 ease-out
             ${isCurrentUser 
               ? 'bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 border-2 border-emerald-300 shadow-lg shadow-emerald-100' 
-              : 'bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:scale-[1.01]'
+              : isDirectReport
+                ? 'bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:scale-[1.01] cursor-pointer'
+                : 'bg-gray-50 border border-gray-100 opacity-75'
             }
           `}
           style={{ marginLeft: `${indentPx}px` }}
+          onClick={handleRowClick}
         >
           {/* Connecting line to parent */}
           {level > 0 && (
@@ -444,7 +436,10 @@ const ManagerDashboard: React.FC = () => {
           
           {/* Expand/collapse button */}
           <button
-            onClick={() => hasChildren && toggleNode(node.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              hasChildren && toggleNode(node.id);
+            }}
             className={`
               p-1.5 rounded-lg transition-all duration-200
               ${hasChildren 
@@ -489,6 +484,11 @@ const ManagerDashboard: React.FC = () => {
                   You
                 </span>
               )}
+              {isDirectReport && !isCurrentUser && (
+                <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium">
+                  Direct
+                </span>
+              )}
               {hasChildren && (
                 <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-medium hidden sm:inline-flex items-center gap-1">
                   <Users className="w-3 h-3" />
@@ -502,68 +502,10 @@ const ManagerDashboard: React.FC = () => {
             </p>
           </div>
           
-          {/* Actions */}
-          {!isCurrentUser && (
-            <div className="flex items-center gap-2">
-              {/* Give Feedback button - only for direct reports */}
-              {directReports.some(dr => dr.id === node.id) && (
-                <>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/feedback?action=give&recipient=${encodeURIComponent(node.email)}&name=${encodeURIComponent(node.name)}`);
-                    }}
-                    className="
-                      px-3 sm:px-4 py-1.5 sm:py-2 
-                      text-xs sm:text-sm font-medium
-                      text-green-600 hover:text-white
-                      bg-green-50 hover:bg-green-600
-                      border border-green-200 hover:border-green-600
-                      rounded-lg transition-all duration-200
-                      flex items-center gap-1.5
-                    "
-                  >
-                    <MessageSquare className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Feedback</span>
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/team/${node.id}`);
-                    }}
-                    className="
-                      px-3 sm:px-4 py-1.5 sm:py-2 
-                      text-xs sm:text-sm font-medium
-                      text-purple-600 hover:text-white
-                      bg-purple-50 hover:bg-purple-600
-                      border border-purple-200 hover:border-purple-600
-                      rounded-lg transition-all duration-200
-                      flex items-center gap-1.5
-                    "
-                  >
-                    <Clock className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">History</span>
-                  </button>
-                </>
-              )}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openProfileModal(node);
-                }}
-                className="
-                  px-3 sm:px-4 py-1.5 sm:py-2 
-                  text-xs sm:text-sm font-medium
-                  text-blue-600 hover:text-white
-                  bg-blue-50 hover:bg-blue-600
-                  border border-blue-200 hover:border-blue-600
-                  rounded-lg transition-all duration-200
-                  flex items-center gap-1.5
-                "
-              >
-                <User className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Profile</span>
-              </button>
+          {/* Clickable indicator for direct reports */}
+          {isDirectReport && !isCurrentUser && (
+            <div className="flex items-center text-gray-400">
+              <ChevronRight className="w-5 h-5" />
             </div>
           )}
           
@@ -1230,69 +1172,6 @@ const ManagerDashboard: React.FC = () => {
         {activeTab === 'insights' && renderInsights()}
         {activeTab === 'analytics' && renderAnalytics()}
       </div>
-
-      {/* Team Member Profile Modal */}
-      {isProfileModalOpen && selectedMember && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          {/* Backdrop */}
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-            onClick={closeProfileModal}
-          />
-          
-          {/* Modal */}
-          <div className="flex min-h-full items-center justify-center p-4">
-            <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full transform transition-all">
-              {/* Close button */}
-              <button
-                onClick={closeProfileModal}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              {/* Profile content */}
-              <div className="p-6">
-                {/* Avatar and name */}
-                <div className="text-center mb-6">
-                  <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                    <span className="text-3xl font-bold text-white">
-                      {selectedMember.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <h2 className="text-xl font-bold text-gray-900">{selectedMember.name}</h2>
-                  {selectedMember.position && (
-                    <p className="text-gray-600">{selectedMember.position}</p>
-                  )}
-                </div>
-
-                {/* Info grid */}
-                <div className="space-y-4">
-                  <div className="flex items-center text-gray-600">
-                    <Mail className="w-5 h-5 mr-3 text-gray-400" />
-                    <span>{selectedMember.email}</span>
-                  </div>
-                  
-                  {selectedMember.department && (
-                    <div className="flex items-center text-gray-600">
-                      <Building className="w-5 h-5 mr-3 text-gray-400" />
-                      <span>{selectedMember.department}</span>
-                    </div>
-                  )}
-                  
-                  {selectedMember.position && (
-                    <div className="flex items-center text-gray-600">
-                      <Briefcase className="w-5 h-5 mr-3 text-gray-400" />
-                      <span>{selectedMember.position}</span>
-                    </div>
-                  )}
-                </div>
-
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
