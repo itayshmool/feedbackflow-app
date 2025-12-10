@@ -220,12 +220,14 @@ const ManagerDashboard: React.FC = () => {
       fetchDirectReports(user.id);
       fetchHierarchyStats(user.organizationId || '');
       fetchFeedbackStats();
-      // Fetch recent team feedback
+      // Fetch recent team feedback (feedback given by manager)
       fetchFeedbackList({ fromUserId: user.id }, 1, 5);
       // Fetch hierarchy tree for team view
       if (user.organizationId) {
         fetchHierarchyTree(user.organizationId);
       }
+      // Fetch completion data for overview card
+      fetchAnalyticsData();
     }
   }, [user, fetchDirectReports, fetchHierarchyTree, fetchHierarchyStats, fetchFeedbackStats, fetchFeedbackList]);
   
@@ -263,8 +265,8 @@ const ManagerDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
+      {/* Stats Cards - Team focused */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
         {/* Direct Reports - Click to switch to Team tab */}
         <Card 
           className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
@@ -285,7 +287,7 @@ const ManagerDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Feedback Given - Navigate to feedback page with 'given' tab */}
+        {/* Team Feedback Given - Navigate to feedback page with 'given' tab */}
         <Card 
           className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
           onClick={() => navigate('/feedback?tab=given')}
@@ -296,7 +298,7 @@ const ManagerDashboard: React.FC = () => {
                 <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
               </div>
               <div className="ml-3 sm:ml-4 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Feedback Given</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Feedback to Team</p>
                 <p className="text-xl sm:text-2xl font-bold text-gray-900">
                   {isFeedbackLoading ? '...' : feedbackStats?.given || 0}
                 </p>
@@ -304,27 +306,6 @@ const ManagerDashboard: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* Feedback Received - Navigate to feedback page with 'received' tab */}
-        <Card 
-          className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
-          onClick={() => navigate('/feedback?tab=received')}
-        >
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-center">
-              <div className="p-2 sm:p-3 bg-yellow-100 rounded-xl flex-shrink-0">
-                <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-600" />
-              </div>
-              <div className="ml-3 sm:ml-4 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Feedback Received</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900">
-                  {isFeedbackLoading ? '...' : feedbackStats?.received || 0}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
       </div>
 
       {/* Recent Activity */}
@@ -333,7 +314,7 @@ const ManagerDashboard: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center">
               <MessageSquare className="h-5 w-5 mr-2 text-green-600" />
-              Recent Team Feedback
+              Feedback You Gave
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -352,24 +333,19 @@ const ManagerDashboard: React.FC = () => {
                     }`}></div>
                     <div className="flex-1">
                       <p className="text-sm font-medium">
-                        {feedback.toUser?.name} - {feedback.reviewType}
+                        To: {feedback.toUser?.name || 'Unknown'}
                       </p>
                       <p className="text-xs text-gray-500">
                         {new Date(feedback.createdAt).toLocaleDateString()} • {feedback.status}
                       </p>
                     </div>
-                    {feedback.ratings && feedback.ratings.length > 0 && (
-                      <div className="text-sm font-medium text-gray-900">
-                        {feedback.ratings[0].score}/5
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
             ) : (
               <div className="text-center py-8 text-gray-500">
                 <Activity className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-                <p className="text-sm">No recent feedback activity</p>
+                <p className="text-sm">No recent feedback given</p>
               </div>
             )}
           </CardContent>
@@ -379,42 +355,40 @@ const ManagerDashboard: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center">
               <Target className="h-5 w-5 mr-2 text-purple-600" />
-              Team Performance
+              Team Feedback Progress
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Feedback Completion</span>
+                  <span className="text-sm font-medium">Team Members with Feedback</span>
                   <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
-                    {feedbackStats?.completionRate ? `${Math.round(feedbackStats.completionRate * 100)}%` : '85%'}
+                    {completionData?.summary ? `${completionData.summary.completed}/${completionData.summary.total}` : `${directReports.length} reports`}
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-green-500 h-2 rounded-full transition-all duration-500" style={{ width: feedbackStats?.completionRate ? `${feedbackStats.completionRate * 100}%` : '85%' }}></div>
+                  <div 
+                    className="bg-green-500 h-2 rounded-full transition-all duration-500" 
+                    style={{ width: completionData?.summary ? `${completionData.summary.percentage}%` : '0%' }}
+                  ></div>
                 </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {completionData?.summary 
+                    ? `${completionData.summary.percentage}% of your team has received feedback from you`
+                    : 'View Analytics tab for detailed completion data'}
+                </p>
               </div>
               
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Team Development</span>
-                  <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full">In Progress</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-yellow-500 h-2 rounded-full transition-all duration-500" style={{ width: '60%' }}></div>
-                </div>
-              </div>
-              
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Team Engagement</span>
-                  <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">On Track</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-blue-500 h-2 rounded-full transition-all duration-500" style={{ width: '92%' }}></div>
-                </div>
-              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full"
+                onClick={() => setActiveTab('analytics')}
+              >
+                <BarChart3 className="w-4 h-4 mr-2" />
+                View Team Analytics
+              </Button>
             </div>
           </CardContent>
         </Card>
