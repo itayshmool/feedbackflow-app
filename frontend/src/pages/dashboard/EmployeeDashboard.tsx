@@ -26,6 +26,9 @@ const EmployeeDashboard: React.FC = () => {
   } = useFeedbackStore();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'my-feedback' | 'goals'>('overview');
+  
+  // Check if user is a manager (managers see "Feedback Given" stat)
+  const isManager = user?.roles?.includes('manager');
 
   useEffect(() => {
     if (user?.id) {
@@ -65,7 +68,7 @@ const EmployeeDashboard: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
+      <div className={`grid grid-cols-1 gap-3 sm:gap-6 ${isManager ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
         <Card className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center">
@@ -82,21 +85,24 @@ const EmployeeDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-3 bg-green-100 rounded-xl">
-                <FileText className="h-6 w-6 text-green-600" />
+        {/* Feedback Given - Only visible to managers */}
+        {isManager && (
+          <Card className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center">
+                <div className="p-2 sm:p-3 bg-green-100 rounded-xl flex-shrink-0">
+                  <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+                </div>
+                <div className="ml-3 sm:ml-4 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Feedback Given</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">
+                    {isFeedbackLoading ? '...' : feedbackStats?.given || 0}
+                  </p>
+                </div>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Feedback Given</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {isFeedbackLoading ? '...' : feedbackStats?.given || 0}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
           <CardContent className="p-4 sm:p-6">
