@@ -80,6 +80,11 @@ class CyclesService {
     return response.data.data;
   }
 
+  async restoreCycle(id: string): Promise<Cycle> {
+    const response = await api.post<{ success: boolean; data: Cycle }>(`${this.baseUrl}/${id}/restore`);
+    return response.data.data;
+  }
+
   async getCycleSummary(): Promise<CycleSummary> {
     const response = await api.get<CycleSummary>(`${this.baseUrl}/summary`);
     return response.data;
