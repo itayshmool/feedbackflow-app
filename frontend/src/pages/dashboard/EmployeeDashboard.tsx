@@ -7,13 +7,12 @@ import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { Link } from 'react-router-dom';
 import { 
   MessageSquare, 
-  TrendingUp, 
   Clock,
   Target,
-  Award,
   Activity,
   FileText,
-  Calendar
+  Calendar,
+  User
 } from 'lucide-react';
 
 const EmployeeDashboard: React.FC = () => {
@@ -27,6 +26,9 @@ const EmployeeDashboard: React.FC = () => {
   } = useFeedbackStore();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'my-feedback' | 'goals'>('overview');
+  
+  // Check if user is a manager (managers see "Feedback Given" stat)
+  const isManager = user?.roles?.includes('manager');
 
   useEffect(() => {
     if (user?.id) {
@@ -66,7 +68,7 @@ const EmployeeDashboard: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+      <div className={`grid grid-cols-1 gap-3 sm:gap-6 ${isManager ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
         <Card className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center">
@@ -83,47 +85,34 @@ const EmployeeDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-3 bg-green-100 rounded-xl">
-                <FileText className="h-6 w-6 text-green-600" />
+        {/* Feedback Given - Only visible to managers */}
+        {isManager && (
+          <Card className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center">
+                <div className="p-2 sm:p-3 bg-green-100 rounded-xl flex-shrink-0">
+                  <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+                </div>
+                <div className="ml-3 sm:ml-4 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Feedback Given</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">
+                    {isFeedbackLoading ? '...' : feedbackStats?.given || 0}
+                  </p>
+                </div>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Feedback Given</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {isFeedbackLoading ? '...' : feedbackStats?.given || 0}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center">
-              <div className="p-3 bg-purple-100 rounded-xl">
-                <TrendingUp className="h-6 w-6 text-purple-600" />
+              <div className="p-2 sm:p-3 bg-orange-100 rounded-xl flex-shrink-0">
+                <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Average Rating</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {isFeedbackLoading ? '...' : feedbackStats?.averageRating ? `${feedbackStats.averageRating.toFixed(1)}/5` : 'N/A'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-3 bg-orange-100 rounded-xl">
-                <Clock className="h-6 w-6 text-orange-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Pending Actions</p>
-                <p className="text-2xl font-bold text-gray-900">
+              <div className="ml-3 sm:ml-4 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Pending Actions</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">
                   {isFeedbackLoading ? '...' : feedbackStats?.pending || 0}
                 </p>
               </div>
@@ -163,14 +152,6 @@ const EmployeeDashboard: React.FC = () => {
                         {new Date(feedback.createdAt).toLocaleDateString()}
                       </p>
                     </div>
-                    {feedback.ratings && feedback.ratings.length > 0 && (
-                      <div className="flex items-center space-x-1">
-                        <Award className="w-4 h-4 text-yellow-500" />
-                        <span className="text-sm font-medium text-gray-900">
-                          {feedback.ratings[0].score}/5
-                        </span>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
@@ -259,7 +240,7 @@ const EmployeeDashboard: React.FC = () => {
             </Link>
             <Link to="/profile">
               <Button variant="outline" className="w-full h-24 flex-col space-y-2 hover:bg-orange-50 hover:border-orange-300 transition-all duration-200">
-                <Award className="w-6 h-6 text-orange-600" />
+                <User className="w-6 h-6 text-orange-600" />
                 <span className="font-medium">My Profile</span>
               </Button>
             </Link>

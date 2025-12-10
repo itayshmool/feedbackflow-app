@@ -12,7 +12,8 @@ import {
   TreePine,
   Users2,
   FileText,
-  X
+  X,
+  User
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { cn } from '@/lib/utils'
@@ -25,6 +26,7 @@ const navigation = [
 ]
 
 const managerNavigation = [
+  { name: 'Myself', href: '/myself', icon: User },
   { name: 'Team Feedback', href: '/team-feedback', icon: Users2 },
   { name: 'Templates', href: '/templates', icon: FileText },
 ]
