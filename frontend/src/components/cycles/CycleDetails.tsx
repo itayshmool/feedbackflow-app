@@ -1,7 +1,7 @@
 // frontend/src/components/cycles/CycleDetails.tsx
 
 import React, { useEffect, useState } from 'react';
-import { Calendar, Users, Settings, Edit, Square, Archive, Trash2, X, UserPlus } from 'lucide-react';
+import { Calendar, Users, Settings, Edit, Square, Archive, RotateCcw, Trash2, X, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
@@ -26,6 +26,7 @@ export const CycleDetails: React.FC<CycleDetailsProps> = ({ cycleId, onClose, on
     fetchCycleParticipants,
     closeCycle,
     archiveCycle,
+    restoreCycle,
     deleteCycle,
     canDeleteCycle,
   } = useCyclesStore();
@@ -90,6 +91,12 @@ export const CycleDetails: React.FC<CycleDetailsProps> = ({ cycleId, onClose, on
       if (result) {
         onClose();
       }
+    }
+  };
+
+  const handleRestore = async () => {
+    if (currentCycle) {
+      await restoreCycle(currentCycle.id);
     }
   };
 
@@ -360,15 +367,27 @@ export const CycleDetails: React.FC<CycleDetailsProps> = ({ cycleId, onClose, on
             </div>
 
             <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                leftIcon={<Archive className="h-4 w-4" />}
-                onClick={handleArchive}
-                disabled={isUpdating || currentCycle?.status === 'archived'}
-                title={currentCycle?.status === 'archived' ? 'Cycle is already archived' : 'Archive this cycle'}
-              >
-                Archive
-              </Button>
+              {currentCycle?.status === CycleStatus.ARCHIVED ? (
+                <Button
+                  variant="outline"
+                  leftIcon={<RotateCcw className="h-4 w-4" />}
+                  onClick={handleRestore}
+                  disabled={isUpdating}
+                  title="Restore this archived cycle to closed status"
+                >
+                  Restore
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  leftIcon={<Archive className="h-4 w-4" />}
+                  onClick={handleArchive}
+                  disabled={isUpdating}
+                  title="Archive this cycle"
+                >
+                  Archive
+                </Button>
+              )}
               <Button
                 variant="outline"
                 leftIcon={<Trash2 className="h-4 w-4" />}
