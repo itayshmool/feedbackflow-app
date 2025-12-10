@@ -7627,6 +7627,107 @@ app.get('/api/v1/test', (req, res) => {
   res.json({ success: true, message: 'Test endpoint working' });
 });
 
+// GET /api/v1/team/employee/:employeeId/history - Get feedback history for a specific team member
+app.get('/api/v1/team/employee/:employeeId/history', authenticateToken, async (req, res) => {
+  try {
+    const currentUserEmail = (req as any).user?.email;
+    const { employeeId } = req.params;
+    
+    console.log('Employee history request from:', currentUserEmail, 'for employee:', employeeId);
+    
+    if (!currentUserEmail) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+
+    // Get current user
+    const userQuery = `
+      SELECT u.id, u.organization_id, u.name
+      FROM users u
+      WHERE u.email = $1
+    `;
+    const userResult = await query(userQuery, [currentUserEmail]);
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    
+    const currentUser = userResult.rows[0];
+    const currentUserId = currentUser.id;
+
+    // Verify this employee is a direct report of the current user
+    const directReportCheck = `
+      SELECT oh.employee_id 
+      FROM organizational_hierarchy oh
+      WHERE oh.manager_id = $1 AND oh.employee_id = $2 AND oh.is_active = true
+    `;
+    const directReportResult = await query(directReportCheck, [currentUserId, employeeId]);
+    
+    if (directReportResult.rows.length === 0) {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Access denied. This employee is not your direct report.' 
+      });
+    }
+
+    // Get employee details
+    const employeeQuery = `
+      SELECT u.id, u.name, u.email, u.position, u.department, u.avatar_url as "avatarUrl"
+      FROM users u
+      WHERE u.id = $1
+    `;
+    const employeeResult = await query(employeeQuery, [employeeId]);
+    
+    if (employeeResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Employee not found' });
+    }
+    
+    const employee = employeeResult.rows[0];
+
+    // Get all feedback given by this manager to this employee
+    const feedbackQuery = `
+      SELECT 
+        fr.id,
+        fr.cycle_id as "cycleId",
+        fc.name as "cycleName",
+        fr.created_at as "createdAt",
+        fr.color_classification as "colorClassification",
+        frr.status,
+        frr.feedback_type as "reviewType",
+        LEFT(fr.content->>'overallComment', 150) as "contentPreview"
+      FROM feedback_responses fr
+      JOIN feedback_requests frr ON fr.request_id = frr.id
+      LEFT JOIN feedback_cycles fc ON fr.cycle_id = fc.id
+      WHERE fr.giver_id = $1 
+        AND fr.recipient_id = $2
+        AND fr.is_approved = true
+      ORDER BY fr.created_at DESC
+    `;
+    const feedbackResult = await query(feedbackQuery, [currentUserId, employeeId]);
+
+    // Calculate stats
+    const feedbackHistory = feedbackResult.rows;
+    const stats = {
+      totalFeedback: feedbackHistory.length,
+      greenCount: feedbackHistory.filter((f: any) => f.colorClassification === 'green').length,
+      yellowCount: feedbackHistory.filter((f: any) => f.colorClassification === 'yellow').length,
+      redCount: feedbackHistory.filter((f: any) => f.colorClassification === 'red').length,
+      lastFeedbackDate: feedbackHistory.length > 0 ? feedbackHistory[0].createdAt : null,
+    };
+
+    res.json({
+      success: true,
+      data: {
+        employee,
+        feedbackHistory,
+        stats,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching employee history:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch employee history' });
+  }
+});
+
 // GET /api/v1/team/feedback - Get team feedback for managers
 app.get('/api/v1/team/feedback', authenticateToken, async (req, res) => {
   try {

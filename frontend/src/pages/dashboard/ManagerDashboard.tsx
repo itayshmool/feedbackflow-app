@@ -507,24 +507,44 @@ const ManagerDashboard: React.FC = () => {
             <div className="flex items-center gap-2">
               {/* Give Feedback button - only for direct reports */}
               {directReports.some(dr => dr.id === node.id) && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/feedback?action=give&recipient=${encodeURIComponent(node.email)}&name=${encodeURIComponent(node.name)}`);
-                  }}
-                  className="
-                    px-3 sm:px-4 py-1.5 sm:py-2 
-                    text-xs sm:text-sm font-medium
-                    text-green-600 hover:text-white
-                    bg-green-50 hover:bg-green-600
-                    border border-green-200 hover:border-green-600
-                    rounded-lg transition-all duration-200
-                    flex items-center gap-1.5
-                  "
-                >
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Feedback</span>
-                </button>
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/feedback?action=give&recipient=${encodeURIComponent(node.email)}&name=${encodeURIComponent(node.name)}`);
+                    }}
+                    className="
+                      px-3 sm:px-4 py-1.5 sm:py-2 
+                      text-xs sm:text-sm font-medium
+                      text-green-600 hover:text-white
+                      bg-green-50 hover:bg-green-600
+                      border border-green-200 hover:border-green-600
+                      rounded-lg transition-all duration-200
+                      flex items-center gap-1.5
+                    "
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Feedback</span>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/team/${node.id}`);
+                    }}
+                    className="
+                      px-3 sm:px-4 py-1.5 sm:py-2 
+                      text-xs sm:text-sm font-medium
+                      text-purple-600 hover:text-white
+                      bg-purple-50 hover:bg-purple-600
+                      border border-purple-200 hover:border-purple-600
+                      rounded-lg transition-all duration-200
+                      flex items-center gap-1.5
+                    "
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">History</span>
+                  </button>
+                </>
               )}
               <button
                 onClick={(e) => {
