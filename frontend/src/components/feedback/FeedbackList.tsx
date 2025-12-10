@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useFeedbackStore } from '../../stores/feedbackStore';
+import { useCyclesStore } from '../../stores/cyclesStore';
 import { Feedback, FeedbackStatus, ReviewType, FeedbackFilters } from '../../types/feedback.types';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -9,7 +10,7 @@ import { Badge } from '../ui/Badge';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
-import { MessageSquare, Calendar, User, Filter, Download, Eye, Edit, Trash2 } from 'lucide-react';
+import { MessageSquare, Calendar, User, Filter, Download, Eye, Edit, Trash2, RotateCcw } from 'lucide-react';
 
 interface FeedbackListProps {
   onSelectFeedback?: (feedback: Feedback, editMode?: boolean) => void;
@@ -41,10 +42,14 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
     deleteFeedback,
   } = useFeedbackStore();
 
+  // Get cycles for filter dropdown
+  const { cycles, fetchCycles, isLoading: isCyclesLoading } = useCyclesStore();
+
   const [activeTab, setActiveTab] = useState<'received' | 'given' | 'all' | 'drafts'>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<FeedbackStatus | ''>('');
   const [typeFilter, setTypeFilter] = useState<ReviewType | ''>('');
+  const [cycleFilter, setCycleFilter] = useState<string>('');
   const [showFilterPanel, setShowFilterPanel] = useState(false);
 
   useEffect(() => {
@@ -53,6 +58,13 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
       fetchFeedbackStats(userId);
     }
   }, [activeTab, userId, fetchFeedbackStats]);
+
+  // Fetch available cycles for filter dropdown
+  useEffect(() => {
+    if (cycles.length === 0) {
+      fetchCycles({}, 1, 100); // Fetch up to 100 cycles for dropdown
+    }
+  }, [cycles.length, fetchCycles]);
 
   const loadFeedback = () => {
     const newFilters: FeedbackFilters = {};
@@ -84,6 +96,10 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
       newFilters.search = searchQuery;
     }
 
+    if (cycleFilter) {
+      newFilters.cycleId = cycleFilter;
+    }
+
     fetchFeedbackList(newFilters, pagination.page, pagination.limit);
   };
 
@@ -95,6 +111,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
     setSearchQuery('');
     setStatusFilter('');
     setTypeFilter('');
+    setCycleFilter('');
     clearFilters();
     loadFeedback();
   };
@@ -194,6 +211,10 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
       currentFilters.search = searchQuery;
     }
 
+    if (cycleFilter) {
+      currentFilters.cycleId = cycleFilter;
+    }
+
     fetchFeedbackList(currentFilters, newPage, pagination.limit);
   };
 
@@ -281,13 +302,25 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
       {/* Filter Panel */}
       {showFilters && showFilterPanel && (
         <Card className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Input
               label="Search"
               placeholder="Search feedback..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            <Select
+              label="Cycle"
+              value={cycleFilter}
+              onChange={(e) => setCycleFilter(e.target.value)}
+            >
+              <option value="">All Cycles</option>
+              {cycles.map((cycle) => (
+                <option key={cycle.id} value={cycle.id}>
+                  {cycle.name}
+                </option>
+              ))}
+            </Select>
             <Select
               label="Status"
               value={statusFilter}
