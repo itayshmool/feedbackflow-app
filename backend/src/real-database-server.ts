@@ -6873,12 +6873,12 @@ app.post('/api/v1/cycles/:id/archive', authenticateToken, async (req, res) => {
   }
 });
 
-// POST /api/v1/cycles/:id/restore - Restore archived cycle
+// POST /api/v1/cycles/:id/restore - Restore archived cycle (restores as active)
 app.post('/api/v1/cycles/:id/restore', authenticateToken, async (req, res) => {
   try {
     const updateQuery = `
       UPDATE feedback_cycles 
-      SET status = 'closed', updated_at = NOW()
+      SET status = 'active', updated_at = NOW()
       WHERE id = $1 AND status = 'archived'
       RETURNING id, name, description, organization_id, type, status, 
                 start_date, end_date, feedback_start_date, feedback_end_date,
