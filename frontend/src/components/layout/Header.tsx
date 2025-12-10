@@ -1,12 +1,11 @@
 // frontend/src/components/layout/Header.tsx
 
 import { useState } from 'react'
-import { Search, Menu, User, LogOut, Settings } from 'lucide-react'
+import { Menu, User, LogOut, Settings } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useProfileStore } from '@/stores/profileStore'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import Button from '@/components/ui/Button'
-import Input from '@/components/ui/Input'
 // import { cn } from '@/lib/utils'
 
 interface HeaderProps {
@@ -30,8 +29,8 @@ export default function Header({ onMenuToggle }: HeaderProps) {
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Left side - Mobile menu button + Search */}
-          <div className="flex items-center gap-3 flex-1">
+          {/* Left side - Mobile menu button */}
+          <div className="flex items-center gap-3">
             {/* Mobile menu button */}
             <Button
               variant="ghost"
@@ -42,20 +41,6 @@ export default function Header({ onMenuToggle }: HeaderProps) {
             >
               <Menu className="h-6 w-6" />
             </Button>
-            
-            {/* Search - hidden on small mobile, visible on larger screens */}
-            <div className="hidden sm:block flex-1 max-w-lg">
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-5 w-5 text-gray-400" />
-                </div>
-                <Input
-                  type="text"
-                  placeholder="Search..."
-                  className="pl-10 w-full"
-                />
-              </div>
-            </div>
           </div>
 
           {/* Right side - Actions */}
