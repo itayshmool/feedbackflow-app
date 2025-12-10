@@ -31,6 +31,7 @@ import SettingsPage from './pages/settings/SettingsPage';
 import HierarchyManagement from './pages/admin/HierarchyManagement';
 import TemplatesManagement from './pages/admin/TemplatesManagement';
 import TemplateLibrary from './pages/manager/TemplateLibrary';
+import EmployeeHistoryPage from './pages/team/EmployeeHistoryPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 // Layout
@@ -144,6 +145,10 @@ const AppRouter: React.FC = () => {
         {
           path: 'myself',
           element: <EmployeeDashboard />,
+        },
+        {
+          path: 'team/:employeeId',
+          element: <EmployeeHistoryPage />,
         },
         {
           path: 'team-feedback',
