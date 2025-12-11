@@ -105,7 +105,7 @@ const EmployeeDashboard: React.FC = () => {
 
         <Card 
           className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
-          onClick={() => navigate('/feedback?tab=drafts')}
+          onClick={() => navigate('/feedback?tab=waiting')}
         >
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center">
@@ -113,7 +113,7 @@ const EmployeeDashboard: React.FC = () => {
                 <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600" />
               </div>
               <div className="ml-3 sm:ml-4 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Pending Actions</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Waiting for Ack</p>
                 <p className="text-xl sm:text-2xl font-bold text-gray-900">
                   {isFeedbackLoading ? '...' : feedbackStats?.pending || 0}
                 </p>
@@ -230,23 +230,19 @@ const EmployeeDashboard: React.FC = () => {
           <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Link to="/feedback/give">
-              <Button variant="outline" className="w-full h-24 flex-col space-y-2 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200">
-                <MessageSquare className="w-6 h-6 text-blue-600" />
-                <span className="font-medium">Give Feedback</span>
-              </Button>
-            </Link>
+          <div className={`grid grid-cols-1 gap-4 ${isManager ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+            {isManager && (
+              <Link to="/feedback/give">
+                <Button variant="outline" className="w-full h-24 flex-col space-y-2 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200">
+                  <MessageSquare className="w-6 h-6 text-blue-600" />
+                  <span className="font-medium">Give Feedback</span>
+                </Button>
+              </Link>
+            )}
             <Link to="/feedback">
               <Button variant="outline" className="w-full h-24 flex-col space-y-2 hover:bg-green-50 hover:border-green-300 transition-all duration-200">
                 <FileText className="w-6 h-6 text-green-600" />
                 <span className="font-medium">View Feedback</span>
-              </Button>
-            </Link>
-            <Link to="/cycles">
-              <Button variant="outline" className="w-full h-24 flex-col space-y-2 hover:bg-purple-50 hover:border-purple-300 transition-all duration-200">
-                <Calendar className="w-6 h-6 text-purple-600" />
-                <span className="font-medium">Active Cycles</span>
               </Button>
             </Link>
             <Link to="/profile">

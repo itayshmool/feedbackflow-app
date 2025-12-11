@@ -18,7 +18,9 @@ interface FeedbackListProps {
   onGiveFeedback?: () => void;
   userId?: string;
   showFilters?: boolean;
-  initialTab?: 'received' | 'given' | 'all' | 'drafts';
+  initialTab?: 'received' | 'given' | 'all' | 'drafts' | 'waiting' | 'acknowledged';
+  initialStatus?: string;
+  isManager?: boolean;
 }
 
 export const FeedbackList: React.FC<FeedbackListProps> = ({
@@ -27,6 +29,8 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
   userId,
   showFilters = true,
   initialTab = 'all',
+  initialStatus,
+  isManager = true, // Default to manager view for backwards compatibility
 }) => {
   const {
     feedbackList,
@@ -46,12 +50,14 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
   // Get cycles for filter dropdown
   const { cycles, fetchCycles, isLoading: isCyclesLoading } = useCyclesStore();
 
-  const [activeTab, setActiveTab] = useState<'received' | 'given' | 'all' | 'drafts'>(initialTab);
+  // For employees, default to 'waiting' tab; for managers, use initialTab
+  const defaultTab = isManager ? initialTab : (initialTab === 'all' ? 'waiting' : initialTab);
+  const [activeTab, setActiveTab] = useState<'received' | 'given' | 'all' | 'drafts' | 'waiting' | 'acknowledged'>(defaultTab as any);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<FeedbackStatus | ''>('');
+  const [statusFilter, setStatusFilter] = useState<FeedbackStatus | ''>(initialStatus as FeedbackStatus || '');
   const [typeFilter, setTypeFilter] = useState<ReviewType | ''>('');
   const [cycleFilter, setCycleFilter] = useState<string>('');
-  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [showFilterPanel, setShowFilterPanel] = useState(!!initialStatus); // Auto-show filter panel if status is pre-set
 
   useEffect(() => {
     loadFeedback();
@@ -101,10 +107,21 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
         // Only show drafts created by the current user
         newFilters.fromUserId = userId;
         newFilters.status = FeedbackStatus.DRAFT;
+      } else if (activeTab === 'waiting') {
+        // Employee tab: Feedback received, waiting to be acknowledged (status = submitted)
+        newFilters.toUserId = userId;
+        newFilters.toUserEmail = userId;
+        newFilters.status = FeedbackStatus.SUBMITTED;
+      } else if (activeTab === 'acknowledged') {
+        // Employee tab: Feedback received and acknowledged (status = completed)
+        newFilters.toUserId = userId;
+        newFilters.toUserEmail = userId;
+        newFilters.status = FeedbackStatus.COMPLETED;
       }
     }
     
-    if (statusFilter) {
+    if (statusFilter && activeTab !== 'waiting' && activeTab !== 'acknowledged') {
+      // Don't override status for waiting/acknowledged tabs
       newFilters.status = statusFilter;
     }
     
@@ -216,10 +233,18 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
       } else if (activeTab === 'drafts') {
         currentFilters.fromUserId = userId;
         currentFilters.status = FeedbackStatus.DRAFT;
+      } else if (activeTab === 'waiting') {
+        currentFilters.toUserId = userId;
+        currentFilters.toUserEmail = userId;
+        currentFilters.status = FeedbackStatus.SUBMITTED;
+      } else if (activeTab === 'acknowledged') {
+        currentFilters.toUserId = userId;
+        currentFilters.toUserEmail = userId;
+        currentFilters.status = FeedbackStatus.COMPLETED;
       }
     }
     
-    if (statusFilter) {
+    if (statusFilter && activeTab !== 'waiting' && activeTab !== 'acknowledged') {
       currentFilters.status = statusFilter;
     }
     
@@ -298,46 +323,85 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
       {/* Tabs */}
       {userId && (
         <div className="flex gap-2 border-b">
-          <button
-            className={`px-4 py-2 font-medium transition-colors ${
-              activeTab === 'received'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-            onClick={() => setActiveTab('received')}
-          >
-            Received ({feedbackStats?.received || 0})
-          </button>
-          <button
-            className={`px-4 py-2 font-medium transition-colors ${
-              activeTab === 'given'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-            onClick={() => setActiveTab('given')}
-          >
-            Given ({feedbackStats?.given || 0})
-          </button>
-          <button
-            className={`px-4 py-2 font-medium transition-colors ${
-              activeTab === 'drafts'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-            onClick={() => setActiveTab('drafts')}
-          >
-            Drafts ({feedbackStats?.drafts || 0})
-          </button>
-          <button
-            className={`px-4 py-2 font-medium transition-colors ${
-              activeTab === 'all'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-            onClick={() => setActiveTab('all')}
-          >
-            All ({(feedbackStats?.given || 0) + (feedbackStats?.received || 0) + (feedbackStats?.drafts || 0)})
-          </button>
+          {isManager ? (
+            // Manager tabs: Received, Given, Drafts, All
+            <>
+              <button
+                className={`px-4 py-2 font-medium transition-colors ${
+                  activeTab === 'received'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                onClick={() => setActiveTab('received')}
+              >
+                Received ({feedbackStats?.received || 0})
+              </button>
+              <button
+                className={`px-4 py-2 font-medium transition-colors ${
+                  activeTab === 'given'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                onClick={() => setActiveTab('given')}
+              >
+                Given ({feedbackStats?.given || 0})
+              </button>
+              <button
+                className={`px-4 py-2 font-medium transition-colors ${
+                  activeTab === 'drafts'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                onClick={() => setActiveTab('drafts')}
+              >
+                Drafts ({feedbackStats?.drafts || 0})
+              </button>
+              <button
+                className={`px-4 py-2 font-medium transition-colors ${
+                  activeTab === 'all'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                onClick={() => setActiveTab('all')}
+              >
+                All ({(feedbackStats?.given || 0) + (feedbackStats?.received || 0) + (feedbackStats?.drafts || 0)})
+              </button>
+            </>
+          ) : (
+            // Employee tabs: Waiting for Ack, Acknowledged, All Received
+            <>
+              <button
+                className={`px-4 py-2 font-medium transition-colors ${
+                  activeTab === 'waiting'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                onClick={() => setActiveTab('waiting')}
+              >
+                Waiting for Ack ({feedbackStats?.pending || 0})
+              </button>
+              <button
+                className={`px-4 py-2 font-medium transition-colors ${
+                  activeTab === 'acknowledged'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                onClick={() => setActiveTab('acknowledged')}
+              >
+                Acknowledged ({feedbackStats?.acknowledged || 0})
+              </button>
+              <button
+                className={`px-4 py-2 font-medium transition-colors ${
+                  activeTab === 'received'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                onClick={() => setActiveTab('received')}
+              >
+                All Received ({feedbackStats?.received || 0})
+              </button>
+            </>
+          )}
         </div>
       )}
 

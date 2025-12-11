@@ -23,6 +23,7 @@ export default function FeedbackPage() {
   const viewParam = searchParams.get('view'); // For deep-linking to specific feedback
   const recipientEmail = searchParams.get('recipient');
   const recipientName = searchParams.get('name');
+  const statusParam = searchParams.get('status'); // For filtering by status
 
   // Determine initial view based on action param or view param
   const initialView = actionParam === 'give' ? 'give' : viewParam ? 'detail' : 'list';
@@ -32,14 +33,21 @@ export default function FeedbackPage() {
     viewParam ? { id: viewParam } as Feedback : null
   );
 
-  // Get initial tab from URL query parameter
-  const initialTab = (tabParam === 'given' || tabParam === 'received' || tabParam === 'drafts') 
-    ? tabParam 
-    : 'all';
-
   // Get current user from auth store
   const currentUserId = user?.id;
   const currentUserEmail = user?.email;
+  const isManager = user?.roles?.includes('manager');
+
+  // Get initial tab from URL query parameter
+  // For managers: received, given, drafts, all
+  // For employees: waiting, acknowledged, received
+  const validManagerTabs = ['given', 'received', 'drafts', 'all'];
+  const validEmployeeTabs = ['waiting', 'acknowledged', 'received'];
+  const defaultTab = isManager ? 'all' : 'waiting';
+  
+  const initialTab = isManager 
+    ? (validManagerTabs.includes(tabParam || '') ? tabParam : defaultTab)
+    : (validEmployeeTabs.includes(tabParam || '') ? tabParam : defaultTab);
 
   useEffect(() => {
     if (currentUserId) {
@@ -145,10 +153,12 @@ export default function FeedbackPage() {
         {view === 'list' && (
           <FeedbackList
             onSelectFeedback={handleSelectFeedback}
-            onGiveFeedback={handleGiveFeedback}
+            onGiveFeedback={isManager ? handleGiveFeedback : undefined}
             userId={currentUserEmail}
             showFilters={true}
-            initialTab={initialTab}
+            initialTab={initialTab as any}
+            initialStatus={statusParam || undefined}
+            isManager={!!isManager}
           />
         )}
 

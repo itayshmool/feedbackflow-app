@@ -27,7 +27,7 @@ const navigation = [
 
 const managerNavigation = [
   { name: 'Myself', href: '/myself', icon: User },
-  { name: 'Team Feedback', href: '/team-feedback', icon: Users2 },
+  { name: "Team's Given Feedback", href: '/team-feedback', icon: Users2 },
   { name: 'Templates', href: '/templates', icon: FileText },
 ]
 
