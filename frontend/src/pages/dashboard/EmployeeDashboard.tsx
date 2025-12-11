@@ -230,7 +230,7 @@ const EmployeeDashboard: React.FC = () => {
           <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className={`grid grid-cols-1 gap-4 ${isManager ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
+          <div className={`grid grid-cols-1 gap-4 ${isManager ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
             {isManager && (
               <Link to="/feedback/give">
                 <Button variant="outline" className="w-full h-24 flex-col space-y-2 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200">
@@ -243,12 +243,6 @@ const EmployeeDashboard: React.FC = () => {
               <Button variant="outline" className="w-full h-24 flex-col space-y-2 hover:bg-green-50 hover:border-green-300 transition-all duration-200">
                 <FileText className="w-6 h-6 text-green-600" />
                 <span className="font-medium">View Feedback</span>
-              </Button>
-            </Link>
-            <Link to="/cycles">
-              <Button variant="outline" className="w-full h-24 flex-col space-y-2 hover:bg-purple-50 hover:border-purple-300 transition-all duration-200">
-                <Calendar className="w-6 h-6 text-purple-600" />
-                <span className="font-medium">Active Cycles</span>
               </Button>
             </Link>
             <Link to="/profile">
