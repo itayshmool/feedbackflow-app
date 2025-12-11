@@ -2839,6 +2839,133 @@ app.post('/api/v1/notifications', authenticateToken, async (req, res) => {
   }
 });
 
+// POST /api/v1/notifications/cycle-reminder - Send reminder to team members with pending feedback
+app.post('/api/v1/notifications/cycle-reminder', authenticateToken, async (req, res) => {
+  try {
+    const { cycleId } = req.body;
+    const currentUserEmail = (req as any).user?.email;
+
+    if (!currentUserEmail) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+
+    if (!cycleId) {
+      return res.status(400).json({ success: false, error: 'cycleId is required' });
+    }
+
+    // Get current user (manager)
+    const userResult = await query(
+      'SELECT id, organization_id, name FROM users WHERE email = $1',
+      [currentUserEmail]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    
+    const managerId = userResult.rows[0].id;
+    const organizationId = userResult.rows[0].organization_id;
+    const managerName = userResult.rows[0].name;
+
+    // Check if user is a manager
+    const rolesResult = await query(
+      `SELECT r.name FROM user_roles ur 
+       JOIN roles r ON ur.role_id = r.id 
+       WHERE ur.user_id = $1 AND ur.organization_id = $2 AND ur.is_active = true`,
+      [managerId, organizationId]
+    );
+    const userRoles = rolesResult.rows.map((row: any) => row.name);
+    
+    if (!userRoles.includes('manager') && !userRoles.includes('admin')) {
+      return res.status(403).json({ success: false, error: 'Manager role required' });
+    }
+
+    // Get cycle details
+    const cycleResult = await query(
+      'SELECT id, name, end_date FROM feedback_cycles WHERE id = $1 AND organization_id = $2',
+      [cycleId, organizationId]
+    );
+    
+    if (cycleResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Cycle not found' });
+    }
+    
+    const cycle = cycleResult.rows[0];
+    const endDate = new Date(cycle.end_date).toLocaleDateString();
+
+    // Get direct reports who haven't received feedback from this manager for this cycle
+    const pendingQuery = `
+      SELECT 
+        u.id,
+        u.name,
+        u.email
+      FROM organizational_hierarchy oh
+      JOIN users u ON oh.employee_id = u.id
+      WHERE oh.manager_id = $1
+        AND oh.is_active = true
+        AND u.is_active = true
+        AND oh.organization_id = $2
+        AND NOT EXISTS (
+          SELECT 1 FROM feedback_responses fr
+          WHERE fr.giver_id = $1 
+            AND fr.recipient_id = u.id
+            AND fr.cycle_id = $3
+            AND fr.is_approved = true
+        )
+      ORDER BY u.name ASC
+    `;
+    
+    const pendingResult = await query(pendingQuery, [managerId, organizationId, cycleId]);
+    const pendingMembers = pendingResult.rows;
+
+    if (pendingMembers.length === 0) {
+      return res.json({ 
+        success: true, 
+        sentCount: 0, 
+        recipients: [],
+        message: 'All team members have already received feedback'
+      });
+    }
+
+    // Create notifications for each pending member
+    const recipients: string[] = [];
+    const notificationTitle = `Feedback Reminder - ${cycle.name}`;
+    const notificationMessage = `Hi! This is a reminder that the "${cycle.name}" feedback cycle ends on ${endDate}. Your manager ${managerName} is waiting to provide you feedback. Please ensure all feedback activities are completed before the deadline.`;
+
+    for (const member of pendingMembers) {
+      try {
+        // Insert in-app notification
+        await query(
+          `INSERT INTO user_notifications (
+            user_id, organization_id, type, category, title, message, data, priority, status
+          ) VALUES ($1, $2, 'in_app', 'cycle_reminder', $3, $4, $5, 'normal', 'pending')`,
+          [
+            member.id,
+            organizationId,
+            notificationTitle,
+            notificationMessage,
+            JSON.stringify({ cycleId, cycleName: cycle.name, managerId, managerName })
+          ]
+        );
+        
+        recipients.push(member.name);
+      } catch (notifError) {
+        console.error(`Failed to create notification for ${member.email}:`, notifError);
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      sentCount: recipients.length,
+      recipients,
+      message: `Reminder sent to ${recipients.length} team member(s)`
+    });
+  } catch (error) {
+    console.error('Error sending cycle reminders:', error);
+    res.status(500).json({ success: false, error: 'Failed to send reminders' });
+  }
+});
+
 // GET /api/v1/users/search - Search users by email/name within organization
 app.get('/api/v1/users/search', authenticateToken, async (req, res) => {
   try {

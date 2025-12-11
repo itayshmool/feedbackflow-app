@@ -21,7 +21,6 @@ import { cn } from '@/lib/utils'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Cycles', href: '/cycles', icon: RotateCcw },
   { name: 'Feedback', href: '/feedback', icon: MessageSquare },
   { name: 'Notifications', href: '/notifications', icon: Bell },
 ]
@@ -35,6 +34,7 @@ const managerNavigation = [
 // Base admin navigation (visible to all admins)
 const baseAdminNavigation = [
   { name: 'Admin Dashboard', href: '/admin', icon: Settings },
+  { name: 'Cycles', href: '/cycles', icon: RotateCcw },
   { name: 'Users', href: '/admin/users', icon: Users },
   { name: 'Hierarchy', href: '/admin/hierarchy', icon: TreePine },
   { name: 'Templates', href: '/admin/templates', icon: FileText },
