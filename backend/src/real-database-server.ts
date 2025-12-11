@@ -2839,7 +2839,9 @@ app.post('/api/v1/notifications', authenticateToken, async (req, res) => {
   }
 });
 
-// POST /api/v1/notifications/cycle-reminder - Send reminder to team members with pending feedback
+// POST /api/v1/notifications/cycle-reminder - Send reminder based on manager type
+// Scenario A (Manager of Employees): Remind employees to acknowledge submitted feedback
+// Scenario B (Manager of Managers): Remind managers to give feedback to their teams
 app.post('/api/v1/notifications/cycle-reminder', authenticateToken, async (req, res) => {
   try {
     const { cycleId } = req.body;
@@ -2893,64 +2895,170 @@ app.post('/api/v1/notifications/cycle-reminder', authenticateToken, async (req, 
     const cycle = cycleResult.rows[0];
     const endDate = new Date(cycle.end_date).toLocaleDateString();
 
-    // Get direct reports who haven't received feedback from this manager for this cycle
-    const pendingQuery = `
+    // Check if this manager manages other managers (Scenario B) or employees (Scenario A)
+    // A direct report is a manager if they have their own direct reports
+    const managerCheckQuery = `
       SELECT 
-        u.id,
-        u.name,
-        u.email
+        dr.id as direct_report_id,
+        dr.name as direct_report_name,
+        EXISTS (
+          SELECT 1 FROM organizational_hierarchy sub_oh 
+          WHERE sub_oh.manager_id = dr.id 
+            AND sub_oh.is_active = true
+            AND sub_oh.organization_id = $2
+        ) as is_manager
       FROM organizational_hierarchy oh
-      JOIN users u ON oh.employee_id = u.id
+      JOIN users dr ON oh.employee_id = dr.id
       WHERE oh.manager_id = $1
         AND oh.is_active = true
-        AND u.is_active = true
         AND oh.organization_id = $2
-        AND NOT EXISTS (
-          SELECT 1 FROM feedback_responses fr
-          WHERE fr.giver_id = $1 
-            AND fr.recipient_id = u.id
-            AND fr.cycle_id = $3
-            AND fr.is_approved = true
-        )
-      ORDER BY u.name ASC
+        AND dr.is_active = true
     `;
+    const managerCheckResult = await query(managerCheckQuery, [managerId, organizationId]);
+    const directReports = managerCheckResult.rows;
     
-    const pendingResult = await query(pendingQuery, [managerId, organizationId, cycleId]);
-    const pendingMembers = pendingResult.rows;
-
-    if (pendingMembers.length === 0) {
-      return res.json({ 
-        success: true, 
-        sentCount: 0, 
-        recipients: [],
-        message: 'All team members have already received feedback'
-      });
-    }
-
-    // Create notifications for each pending member
+    // Determine if user is Manager of Managers
+    const hasManagerReports = directReports.some((dr: any) => dr.is_manager);
+    
     const recipients: string[] = [];
-    const notificationTitle = `Feedback Reminder - ${cycle.name}`;
-    const notificationMessage = `Hi! This is a reminder that the "${cycle.name}" feedback cycle ends on ${endDate}. Your manager ${managerName} is waiting to provide you feedback. Please ensure all feedback activities are completed before the deadline.`;
+    let notificationTitle: string;
+    let notificationMessage: string;
+    let reminderType: string;
 
-    for (const member of pendingMembers) {
-      try {
-        // Insert in-app notification
-        await query(
-          `INSERT INTO user_notifications (
-            user_id, organization_id, type, category, title, message, data, priority, status
-          ) VALUES ($1, $2, 'in_app', 'cycle_reminder', $3, $4, $5, 'normal', 'pending')`,
-          [
-            member.id,
-            organizationId,
-            notificationTitle,
-            notificationMessage,
-            JSON.stringify({ cycleId, cycleName: cycle.name, managerId, managerName })
-          ]
-        );
+    if (hasManagerReports) {
+      // SCENARIO B: Manager of Managers
+      // Find managers who haven't given feedback to ALL their direct reports
+      reminderType = 'give_feedback';
+      
+      const managersWithIncompleteTeams: any[] = [];
+      
+      for (const dr of directReports) {
+        if (!dr.is_manager) continue; // Skip non-managers
         
-        recipients.push(member.name);
-      } catch (notifError) {
-        console.error(`Failed to create notification for ${member.email}:`, notifError);
+        // Check how many of this manager's direct reports have received feedback
+        const teamCompletionQuery = `
+          SELECT 
+            COUNT(DISTINCT sub_oh.employee_id) as total_team,
+            COUNT(DISTINCT CASE 
+              WHEN EXISTS (
+                SELECT 1 FROM feedback_responses fr 
+                JOIN feedback_requests freq ON fr.request_id = freq.id
+                WHERE fr.giver_id = $1 
+                  AND fr.recipient_id = sub_oh.employee_id
+                  AND fr.cycle_id = $3
+                  AND freq.status IN ('submitted', 'completed')
+              ) THEN sub_oh.employee_id 
+            END) as completed_count
+          FROM organizational_hierarchy sub_oh
+          JOIN users sub_u ON sub_oh.employee_id = sub_u.id
+          WHERE sub_oh.manager_id = $1
+            AND sub_oh.is_active = true
+            AND sub_oh.organization_id = $2
+            AND sub_u.is_active = true
+        `;
+        const completionResult = await query(teamCompletionQuery, [dr.direct_report_id, organizationId, cycleId]);
+        const { total_team, completed_count } = completionResult.rows[0];
+        
+        if (parseInt(total_team) > 0 && parseInt(completed_count) < parseInt(total_team)) {
+          managersWithIncompleteTeams.push({
+            id: dr.direct_report_id,
+            name: dr.direct_report_name,
+            totalTeam: parseInt(total_team),
+            completedCount: parseInt(completed_count)
+          });
+        }
+      }
+
+      if (managersWithIncompleteTeams.length === 0) {
+        return res.json({ 
+          success: true, 
+          sentCount: 0, 
+          recipients: [],
+          reminderType,
+          message: 'All your managers have given feedback to their teams'
+        });
+      }
+
+      notificationTitle = `Team Feedback Reminder - ${cycle.name}`;
+      
+      for (const mgr of managersWithIncompleteTeams) {
+        const remaining = mgr.totalTeam - mgr.completedCount;
+        notificationMessage = `Hi ${mgr.name}! This is a reminder from ${managerName} to give feedback to your remaining ${remaining} direct report(s) for the "${cycle.name}" cycle. The cycle ends on ${endDate}.`;
+        
+        try {
+          await query(
+            `INSERT INTO user_notifications (
+              user_id, organization_id, type, category, title, message, data, priority, status
+            ) VALUES ($1, $2, 'in_app', 'cycle_reminder', $3, $4, $5, 'normal', 'pending')`,
+            [
+              mgr.id,
+              organizationId,
+              notificationTitle,
+              notificationMessage,
+              JSON.stringify({ cycleId, cycleName: cycle.name, senderId: managerId, senderName: managerName, reminderType: 'give_feedback' })
+            ]
+          );
+          recipients.push(mgr.name);
+        } catch (notifError) {
+          console.error(`Failed to create notification for manager ${mgr.name}:`, notifError);
+        }
+      }
+    } else {
+      // SCENARIO A: Manager of Employees
+      // Find employees who have feedback with status 'submitted' (not yet acknowledged/completed)
+      reminderType = 'acknowledge_feedback';
+      
+      const unacknowledgedQuery = `
+        SELECT 
+          u.id,
+          u.name,
+          u.email
+        FROM organizational_hierarchy oh
+        JOIN users u ON oh.employee_id = u.id
+        JOIN feedback_responses fr ON fr.recipient_id = u.id AND fr.giver_id = $1 AND fr.cycle_id = $3
+        JOIN feedback_requests freq ON fr.request_id = freq.id
+        WHERE oh.manager_id = $1
+          AND oh.is_active = true
+          AND u.is_active = true
+          AND oh.organization_id = $2
+          AND freq.status = 'submitted'
+        ORDER BY u.name ASC
+      `;
+      
+      const unacknowledgedResult = await query(unacknowledgedQuery, [managerId, organizationId, cycleId]);
+      const unacknowledgedMembers = unacknowledgedResult.rows;
+
+      if (unacknowledgedMembers.length === 0) {
+        return res.json({ 
+          success: true, 
+          sentCount: 0, 
+          recipients: [],
+          reminderType,
+          message: 'All employees have acknowledged their feedback'
+        });
+      }
+
+      notificationTitle = `Please Acknowledge Your Feedback - ${cycle.name}`;
+      notificationMessage = `Hi! You have received feedback from ${managerName} for the "${cycle.name}" cycle that is waiting for your acknowledgment. Please review and acknowledge it.`;
+
+      for (const member of unacknowledgedMembers) {
+        try {
+          await query(
+            `INSERT INTO user_notifications (
+              user_id, organization_id, type, category, title, message, data, priority, status
+            ) VALUES ($1, $2, 'in_app', 'cycle_reminder', $3, $4, $5, 'normal', 'pending')`,
+            [
+              member.id,
+              organizationId,
+              notificationTitle,
+              notificationMessage,
+              JSON.stringify({ cycleId, cycleName: cycle.name, managerId, managerName, reminderType: 'acknowledge_feedback' })
+            ]
+          );
+          recipients.push(member.name);
+        } catch (notifError) {
+          console.error(`Failed to create notification for ${member.email}:`, notifError);
+        }
       }
     }
 
@@ -2958,11 +3066,150 @@ app.post('/api/v1/notifications/cycle-reminder', authenticateToken, async (req, 
       success: true, 
       sentCount: recipients.length,
       recipients,
-      message: `Reminder sent to ${recipients.length} team member(s)`
+      reminderType,
+      message: `Reminder sent to ${recipients.length} ${hasManagerReports ? 'manager(s)' : 'employee(s)'}`
     });
   } catch (error) {
     console.error('Error sending cycle reminders:', error);
     res.status(500).json({ success: false, error: 'Failed to send reminders' });
+  }
+});
+
+// GET /api/v1/notifications/cycle-reminder-preview - Preview who would receive reminders (without sending)
+app.get('/api/v1/notifications/cycle-reminder-preview', authenticateToken, async (req, res) => {
+  try {
+    const { cycleId } = req.query;
+    const currentUserEmail = (req as any).user?.email;
+
+    if (!currentUserEmail) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+
+    if (!cycleId) {
+      return res.status(400).json({ success: false, error: 'cycleId is required' });
+    }
+
+    // Get current user (manager)
+    const userResult = await query(
+      'SELECT id, organization_id, name FROM users WHERE email = $1',
+      [currentUserEmail]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    
+    const managerId = userResult.rows[0].id;
+    const organizationId = userResult.rows[0].organization_id;
+
+    // Check if this manager manages other managers (Scenario B) or employees (Scenario A)
+    const managerCheckQuery = `
+      SELECT 
+        dr.id as direct_report_id,
+        dr.name as direct_report_name,
+        EXISTS (
+          SELECT 1 FROM organizational_hierarchy sub_oh 
+          WHERE sub_oh.manager_id = dr.id 
+            AND sub_oh.is_active = true
+            AND sub_oh.organization_id = $2
+        ) as is_manager
+      FROM organizational_hierarchy oh
+      JOIN users dr ON oh.employee_id = dr.id
+      WHERE oh.manager_id = $1
+        AND oh.is_active = true
+        AND oh.organization_id = $2
+        AND dr.is_active = true
+    `;
+    const managerCheckResult = await query(managerCheckQuery, [managerId, organizationId]);
+    const directReports = managerCheckResult.rows;
+    
+    const hasManagerReports = directReports.some((dr: any) => dr.is_manager);
+    
+    let pendingRecipients: { id: string; name: string; detail?: string }[] = [];
+    let reminderType: string;
+    let buttonText: string;
+
+    if (hasManagerReports) {
+      // SCENARIO B: Manager of Managers
+      reminderType = 'give_feedback';
+      buttonText = 'Remind to Give Feedback';
+      
+      for (const dr of directReports) {
+        if (!dr.is_manager) continue;
+        
+        const teamCompletionQuery = `
+          SELECT 
+            COUNT(DISTINCT sub_oh.employee_id) as total_team,
+            COUNT(DISTINCT CASE 
+              WHEN EXISTS (
+                SELECT 1 FROM feedback_responses fr 
+                JOIN feedback_requests freq ON fr.request_id = freq.id
+                WHERE fr.giver_id = $1 
+                  AND fr.recipient_id = sub_oh.employee_id
+                  AND fr.cycle_id = $3
+                  AND freq.status IN ('submitted', 'completed')
+              ) THEN sub_oh.employee_id 
+            END) as completed_count
+          FROM organizational_hierarchy sub_oh
+          JOIN users sub_u ON sub_oh.employee_id = sub_u.id
+          WHERE sub_oh.manager_id = $1
+            AND sub_oh.is_active = true
+            AND sub_oh.organization_id = $2
+            AND sub_u.is_active = true
+        `;
+        const completionResult = await query(teamCompletionQuery, [dr.direct_report_id, organizationId, cycleId]);
+        const { total_team, completed_count } = completionResult.rows[0];
+        
+        if (parseInt(total_team) > 0 && parseInt(completed_count) < parseInt(total_team)) {
+          const remaining = parseInt(total_team) - parseInt(completed_count);
+          pendingRecipients.push({
+            id: dr.direct_report_id,
+            name: dr.direct_report_name,
+            detail: `${remaining}/${total_team} remaining`
+          });
+        }
+      }
+    } else {
+      // SCENARIO A: Manager of Employees
+      reminderType = 'acknowledge_feedback';
+      buttonText = 'Remind to Acknowledge';
+      
+      const unacknowledgedQuery = `
+        SELECT 
+          u.id,
+          u.name
+        FROM organizational_hierarchy oh
+        JOIN users u ON oh.employee_id = u.id
+        JOIN feedback_responses fr ON fr.recipient_id = u.id AND fr.giver_id = $1 AND fr.cycle_id = $3
+        JOIN feedback_requests freq ON fr.request_id = freq.id
+        WHERE oh.manager_id = $1
+          AND oh.is_active = true
+          AND u.is_active = true
+          AND oh.organization_id = $2
+          AND freq.status = 'submitted'
+        ORDER BY u.name ASC
+      `;
+      
+      const unacknowledgedResult = await query(unacknowledgedQuery, [managerId, organizationId, cycleId]);
+      pendingRecipients = unacknowledgedResult.rows.map((r: any) => ({
+        id: r.id,
+        name: r.name
+      }));
+    }
+
+    res.json({ 
+      success: true, 
+      data: {
+        reminderType,
+        buttonText,
+        pendingCount: pendingRecipients.length,
+        pendingRecipients,
+        isManagerOfManagers: hasManagerReports
+      }
+    });
+  } catch (error) {
+    console.error('Error getting cycle reminder preview:', error);
+    res.status(500).json({ success: false, error: 'Failed to get reminder preview' });
   }
 });
 

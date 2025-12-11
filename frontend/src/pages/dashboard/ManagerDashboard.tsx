@@ -153,6 +153,15 @@ const ManagerDashboard: React.FC = () => {
   const [selectedCycleId, setSelectedCycleId] = useState<string>('');
   const [cycleCompletionData, setCycleCompletionData] = useState<CompletionData | null>(null);
   const [isReminderSending, setIsReminderSending] = useState(false);
+  
+  // State for reminder preview (who would receive reminders)
+  const [reminderPreview, setReminderPreview] = useState<{
+    reminderType: 'give_feedback' | 'acknowledge_feedback';
+    buttonText: string;
+    pendingCount: number;
+    pendingRecipients: { id: string; name: string; detail?: string }[];
+    isManagerOfManagers: boolean;
+  } | null>(null);
 
   // Function to fetch analytics data
   const fetchAnalyticsData = async () => {
@@ -224,22 +233,28 @@ const ManagerDashboard: React.FC = () => {
     }
   };
 
-  // Fetch cycle completion when selected cycle changes
+  // Fetch cycle completion and reminder preview when selected cycle changes
   useEffect(() => {
-    const fetchCycleCompletion = async () => {
+    const fetchCycleData = async () => {
       if (!selectedCycleId) return;
       try {
-        const response = await api.get('/analytics/team-completion', {
-          params: { cycleId: selectedCycleId }
-        });
-        if (response.data.success) {
-          setCycleCompletionData(response.data.data);
+        // Fetch both completion data and reminder preview in parallel
+        const [completionResponse, reminderResponse] = await Promise.all([
+          api.get('/analytics/team-completion', { params: { cycleId: selectedCycleId } }),
+          api.get('/notifications/cycle-reminder-preview', { params: { cycleId: selectedCycleId } })
+        ]);
+        
+        if (completionResponse.data.success) {
+          setCycleCompletionData(completionResponse.data.data);
+        }
+        if (reminderResponse.data.success) {
+          setReminderPreview(reminderResponse.data.data);
         }
       } catch (error) {
-        console.error('Failed to fetch cycle completion:', error);
+        console.error('Failed to fetch cycle data:', error);
       }
     };
-    fetchCycleCompletion();
+    fetchCycleData();
   }, [selectedCycleId]);
 
   useEffect(() => {
@@ -291,12 +306,9 @@ const ManagerDashboard: React.FC = () => {
   };
 
   const selectedCycle = Array.isArray(activeCycles) ? activeCycles.find(c => c.id === selectedCycleId) : null;
-  const pendingMembers = cycleCompletionData?.teamMembers?.filter(
-    (m: TeamMemberCompletion) => !m.hasReceivedFeedback
-  ) || [];
 
   const handleSendReminder = async () => {
-    if (!selectedCycleId || pendingMembers.length === 0) return;
+    if (!selectedCycleId || !reminderPreview || reminderPreview.pendingCount === 0) return;
     
     setIsReminderSending(true);
     try {
@@ -305,7 +317,15 @@ const ManagerDashboard: React.FC = () => {
       });
       
       if (response.data.success) {
-        alert(`Reminder sent to ${response.data.sentCount} team member(s): ${response.data.recipients.join(', ')}`);
+        const recipientType = response.data.reminderType === 'give_feedback' ? 'manager(s)' : 'employee(s)';
+        alert(`Reminder sent to ${response.data.sentCount} ${recipientType}: ${response.data.recipients.join(', ')}`);
+        // Refresh the reminder preview
+        const previewResponse = await api.get('/notifications/cycle-reminder-preview', { 
+          params: { cycleId: selectedCycleId } 
+        });
+        if (previewResponse.data.success) {
+          setReminderPreview(previewResponse.data.data);
+        }
       }
     } catch (error: any) {
       console.error('Failed to send reminders:', error);
@@ -426,33 +446,51 @@ const ManagerDashboard: React.FC = () => {
                   </div>
                 </div>
                 
-                {/* Pending Members */}
-                {pendingMembers.length > 0 && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                    <p className="text-sm text-yellow-800">
-                      <span className="font-medium">Pending feedback for: </span>
-                      {pendingMembers.map((m: TeamMemberCompletion) => m.name).join(', ')}
+                {/* Pending Recipients (based on reminder type) */}
+                {reminderPreview && reminderPreview.pendingCount > 0 && (
+                  <div className={`border rounded-lg p-3 ${
+                    reminderPreview.reminderType === 'acknowledge_feedback' 
+                      ? 'bg-blue-50 border-blue-200' 
+                      : 'bg-yellow-50 border-yellow-200'
+                  }`}>
+                    <p className={`text-sm ${
+                      reminderPreview.reminderType === 'acknowledge_feedback' 
+                        ? 'text-blue-800' 
+                        : 'text-yellow-800'
+                    }`}>
+                      <span className="font-medium">
+                        {reminderPreview.reminderType === 'acknowledge_feedback' 
+                          ? 'Waiting to acknowledge: ' 
+                          : 'Need to give feedback: '}
+                      </span>
+                      {reminderPreview.pendingRecipients.map(r => 
+                        r.detail ? `${r.name} (${r.detail})` : r.name
+                      ).join(', ')}
                     </p>
                   </div>
                 )}
                 
                 {/* Send Reminder Button */}
-                {pendingMembers.length > 0 && (
+                {reminderPreview && reminderPreview.pendingCount > 0 && (
                   <Button 
                     className="w-full"
                     onClick={handleSendReminder}
                     disabled={isReminderSending}
                   >
                     <Bell className="w-4 h-4 mr-2" />
-                    {isReminderSending ? 'Sending...' : `Send Reminder (${pendingMembers.length})`}
+                    {isReminderSending ? 'Sending...' : `${reminderPreview.buttonText} (${reminderPreview.pendingCount})`}
                   </Button>
                 )}
                 
                 {/* All complete message */}
-                {pendingMembers.length === 0 && (cycleCompletionData?.summary?.total || 0) > 0 && (
+                {reminderPreview && reminderPreview.pendingCount === 0 && (cycleCompletionData?.summary?.total || 0) > 0 && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center">
                     <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
-                    <span className="text-sm text-green-700">All team members have received feedback!</span>
+                    <span className="text-sm text-green-700">
+                      {reminderPreview.isManagerOfManagers 
+                        ? 'All your managers have given feedback to their teams!' 
+                        : 'All team members have acknowledged their feedback!'}
+                    </span>
                   </div>
                 )}
               </div>
