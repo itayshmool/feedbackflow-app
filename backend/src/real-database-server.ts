@@ -4182,24 +4182,51 @@ app.get('/api/v1/hierarchy/search-employees', async (req, res) => {
   }
 });
 
-// POST /api/v1/hierarchy - Create hierarchy relationship
+// POST /api/v1/hierarchy - Create or update hierarchy relationship
+// Uses UPSERT logic: if employee already has a manager in this org, update it
 app.post('/api/v1/hierarchy', async (req, res) => {
   try {
     const { organizationId, managerId, employeeId, level, isDirectReport } = req.body;
     const hierarchyLevel = level !== undefined ? level : 1;
 
-    // Store in database
+    // First, deactivate any existing manager relationship for this employee in this org
+    // An employee can only have ONE active manager
+    await query(
+      `UPDATE organizational_hierarchy 
+       SET is_active = false, updated_at = NOW()
+       WHERE organization_id = $1 AND employee_id = $2 AND is_active = true`,
+      [organizationId, employeeId]
+    );
+
+    // Then insert the new relationship
     const result = await query(
-      `
-      INSERT INTO organizational_hierarchy 
-      (organization_id, manager_id, employee_id, level, is_direct_report, is_active, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, true, NOW(), NOW())
-      RETURNING id, organization_id, manager_id, employee_id, level, is_direct_report, is_active, created_at, updated_at
-      `,
+      `INSERT INTO organizational_hierarchy 
+       (organization_id, manager_id, employee_id, level, is_direct_report, is_active, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, true, NOW(), NOW())
+       RETURNING id, organization_id, manager_id, employee_id, level, is_direct_report, is_active, created_at, updated_at`,
       [organizationId, managerId, employeeId, Number(hierarchyLevel) || 1, Boolean(isDirectReport)]
     );
 
     const newHierarchy = result.rows[0];
+    
+    // Ensure the new manager has the 'manager' role
+    try {
+      const roleResult = await query(
+        `SELECT id FROM roles WHERE name = 'manager' LIMIT 1`
+      );
+      if (roleResult.rows.length > 0) {
+        const managerRoleId = roleResult.rows[0].id;
+        await query(
+          `INSERT INTO user_roles (user_id, role_id, organization_id, is_active, created_at, updated_at)
+           VALUES ($1, $2, $3, true, NOW(), NOW())
+           ON CONFLICT (user_id, role_id, organization_id) DO NOTHING`,
+          [managerId, managerRoleId, organizationId]
+        );
+      }
+    } catch (roleError) {
+      console.warn('Could not auto-assign manager role:', roleError);
+    }
+    
     res.json({ success: true, data: newHierarchy });
   } catch (error) {
     console.error('Error creating hierarchy:', error);
@@ -4211,22 +4238,68 @@ app.post('/api/v1/hierarchy', async (req, res) => {
 app.put('/api/v1/hierarchy/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { level, isDirectReport, isActive } = req.body;
+    const { managerId, level, isDirectReport, isActive } = req.body;
     
-    // Mock hierarchy update
-    const updatedHierarchy = {
-      id,
-      organizationId: 'org-1',
-      managerId: 'manager-1',
-      employeeId: 'employee-1',
-      level: level || 1,
-      isDirectReport: isDirectReport !== undefined ? isDirectReport : true,
-      isActive: isActive !== undefined ? isActive : true,
-      createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+    // Build dynamic update query based on provided fields
+    const updates: string[] = [];
+    const params: any[] = [];
+    let paramIndex = 1;
     
-    res.json({ success: true, data: updatedHierarchy });
+    if (managerId !== undefined) {
+      // If changing manager, first get the employee and org from current record
+      const currentRecord = await query(
+        'SELECT organization_id, employee_id FROM organizational_hierarchy WHERE id = $1',
+        [id]
+      );
+      
+      if (currentRecord.rows.length > 0) {
+        const { organization_id, employee_id } = currentRecord.rows[0];
+        
+        // Deactivate any other active relationships for this employee (except this one)
+        await query(
+          `UPDATE organizational_hierarchy 
+           SET is_active = false, updated_at = NOW()
+           WHERE organization_id = $1 AND employee_id = $2 AND id != $3 AND is_active = true`,
+          [organization_id, employee_id, id]
+        );
+      }
+      
+      updates.push(`manager_id = $${paramIndex++}`);
+      params.push(managerId);
+    }
+    
+    if (level !== undefined) {
+      updates.push(`level = $${paramIndex++}`);
+      params.push(level);
+    }
+    
+    if (isDirectReport !== undefined) {
+      updates.push(`is_direct_report = $${paramIndex++}`);
+      params.push(isDirectReport);
+    }
+    
+    if (isActive !== undefined) {
+      updates.push(`is_active = $${paramIndex++}`);
+      params.push(isActive);
+    }
+    
+    updates.push(`updated_at = NOW()`);
+    params.push(id);
+    
+    const updateQuery = `
+      UPDATE organizational_hierarchy 
+      SET ${updates.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING id, organization_id, manager_id, employee_id, level, is_direct_report, is_active, created_at, updated_at
+    `;
+    
+    const result = await query(updateQuery, params);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Hierarchy relationship not found' });
+    }
+    
+    res.json({ success: true, data: result.rows[0] });
   } catch (error) {
     console.error('Error updating hierarchy:', error);
     res.status(500).json({ success: false, error: 'Failed to update hierarchy' });
@@ -4237,6 +4310,19 @@ app.put('/api/v1/hierarchy/:id', async (req, res) => {
 app.delete('/api/v1/hierarchy/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Soft delete by setting is_active = false (preserves history)
+    const result = await query(
+      `UPDATE organizational_hierarchy 
+       SET is_active = false, updated_at = NOW()
+       WHERE id = $1
+       RETURNING id`,
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Hierarchy relationship not found' });
+    }
     
     res.json({ success: true, message: 'Hierarchy relationship deleted successfully' });
   } catch (error) {
