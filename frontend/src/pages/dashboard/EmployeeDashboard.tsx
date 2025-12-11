@@ -230,13 +230,15 @@ const EmployeeDashboard: React.FC = () => {
           <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Link to="/feedback/give">
-              <Button variant="outline" className="w-full h-24 flex-col space-y-2 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200">
-                <MessageSquare className="w-6 h-6 text-blue-600" />
-                <span className="font-medium">Give Feedback</span>
-              </Button>
-            </Link>
+          <div className={`grid grid-cols-1 gap-4 ${isManager ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
+            {isManager && (
+              <Link to="/feedback/give">
+                <Button variant="outline" className="w-full h-24 flex-col space-y-2 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200">
+                  <MessageSquare className="w-6 h-6 text-blue-600" />
+                  <span className="font-medium">Give Feedback</span>
+                </Button>
+              </Link>
+            )}
             <Link to="/feedback">
               <Button variant="outline" className="w-full h-24 flex-col space-y-2 hover:bg-green-50 hover:border-green-300 transition-all duration-200">
                 <FileText className="w-6 h-6 text-green-600" />

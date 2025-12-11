@@ -40,6 +40,7 @@ export default function FeedbackPage() {
   // Get current user from auth store
   const currentUserId = user?.id;
   const currentUserEmail = user?.email;
+  const isManager = user?.roles?.includes('manager');
 
   useEffect(() => {
     if (currentUserId) {
@@ -145,7 +146,7 @@ export default function FeedbackPage() {
         {view === 'list' && (
           <FeedbackList
             onSelectFeedback={handleSelectFeedback}
-            onGiveFeedback={handleGiveFeedback}
+            onGiveFeedback={isManager ? handleGiveFeedback : undefined}
             userId={currentUserEmail}
             showFilters={true}
             initialTab={initialTab}
