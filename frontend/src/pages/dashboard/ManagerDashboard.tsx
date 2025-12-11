@@ -29,8 +29,12 @@ import {
   Award,
   Zap,
   Download,
-  XCircle
+  XCircle,
+  Bell,
+  RotateCcw,
+  Clock
 } from 'lucide-react';
+import { Select } from '../../components/ui/Select';
 import { generateInsightsDocx } from '../../utils/generateInsightsDocx';
 
 // Types for Analytics
@@ -143,6 +147,21 @@ const ManagerDashboard: React.FC = () => {
   const [completionData, setCompletionData] = useState<CompletionData | null>(null);
   const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
+  
+  // State for Active Cycles Card
+  const [activeCycles, setActiveCycles] = useState<any[]>([]);
+  const [selectedCycleId, setSelectedCycleId] = useState<string>('');
+  const [cycleCompletionData, setCycleCompletionData] = useState<CompletionData | null>(null);
+  const [isReminderSending, setIsReminderSending] = useState(false);
+  
+  // State for reminder preview (who would receive reminders)
+  const [reminderPreview, setReminderPreview] = useState<{
+    reminderType: 'give_feedback' | 'acknowledge_feedback';
+    buttonText: string;
+    pendingCount: number;
+    pendingRecipients: { id: string; name: string; detail?: string }[];
+    isManagerOfManagers: boolean;
+  } | null>(null);
 
   // Function to fetch analytics data
   const fetchAnalyticsData = async () => {
@@ -196,6 +215,48 @@ const ManagerDashboard: React.FC = () => {
     }
   };
 
+  // Fetch active cycles
+  const fetchActiveCycles = async () => {
+    try {
+      const response = await api.get('/cycles', { 
+        params: { status: 'active' } 
+      });
+      // API returns { success, data: { cycles: [...], pagination: {...} } }
+      const cycles = response.data?.data?.cycles || [];
+      setActiveCycles(cycles);
+      if (cycles.length > 0 && !selectedCycleId) {
+        setSelectedCycleId(cycles[0].id);
+      }
+    } catch (error) {
+      console.error('Failed to fetch active cycles:', error);
+      setActiveCycles([]);
+    }
+  };
+
+  // Fetch cycle completion and reminder preview when selected cycle changes
+  useEffect(() => {
+    const fetchCycleData = async () => {
+      if (!selectedCycleId) return;
+      try {
+        // Fetch both completion data and reminder preview in parallel
+        const [completionResponse, reminderResponse] = await Promise.all([
+          api.get('/analytics/team-completion', { params: { cycleId: selectedCycleId } }),
+          api.get('/notifications/cycle-reminder-preview', { params: { cycleId: selectedCycleId } })
+        ]);
+        
+        if (completionResponse.data.success) {
+          setCycleCompletionData(completionResponse.data.data);
+        }
+        if (reminderResponse.data.success) {
+          setReminderPreview(reminderResponse.data.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch cycle data:', error);
+      }
+    };
+    fetchCycleData();
+  }, [selectedCycleId]);
+
   useEffect(() => {
     if (user?.id) {
       fetchDirectReports(user.id);
@@ -209,6 +270,8 @@ const ManagerDashboard: React.FC = () => {
       }
       // Fetch completion data for overview card
       fetchAnalyticsData();
+      // Fetch active cycles
+      fetchActiveCycles();
     }
   }, [user, fetchDirectReports, fetchHierarchyTree, fetchHierarchyStats, fetchFeedbackStats, fetchFeedbackList]);
   
@@ -233,6 +296,44 @@ const ManagerDashboard: React.FC = () => {
     { id: 'insights', label: 'AI Insights', icon: Sparkles },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   ];
+
+  // Helper functions for Active Cycles card
+  const daysRemaining = (endDate: string) => {
+    const end = new Date(endDate);
+    const now = new Date();
+    const diff = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.max(0, diff);
+  };
+
+  const selectedCycle = Array.isArray(activeCycles) ? activeCycles.find(c => c.id === selectedCycleId) : null;
+
+  const handleSendReminder = async () => {
+    if (!selectedCycleId || !reminderPreview || reminderPreview.pendingCount === 0) return;
+    
+    setIsReminderSending(true);
+    try {
+      const response = await api.post('/notifications/cycle-reminder', {
+        cycleId: selectedCycleId
+      });
+      
+      if (response.data.success) {
+        const recipientType = response.data.reminderType === 'give_feedback' ? 'manager(s)' : 'employee(s)';
+        alert(`Reminder sent to ${response.data.sentCount} ${recipientType}: ${response.data.recipients.join(', ')}`);
+        // Refresh the reminder preview
+        const previewResponse = await api.get('/notifications/cycle-reminder-preview', { 
+          params: { cycleId: selectedCycleId } 
+        });
+        if (previewResponse.data.success) {
+          setReminderPreview(previewResponse.data.data);
+        }
+      }
+    } catch (error: any) {
+      console.error('Failed to send reminders:', error);
+      alert(error.response?.data?.error || 'Failed to send reminders');
+    } finally {
+      setIsReminderSending(false);
+    }
+  };
 
   const renderOverview = () => (
     <div className="space-y-4 sm:space-y-6">
@@ -285,6 +386,118 @@ const ManagerDashboard: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Active Cycles Card */}
+      {Array.isArray(activeCycles) && activeCycles.length > 0 && (
+        <Card className="transform transition-all duration-200 hover:shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center">
+                <RotateCcw className="h-5 w-5 mr-2 text-blue-600" />
+                Active Cycles
+              </span>
+              {activeCycles.length > 1 && (
+                <Select
+                  value={selectedCycleId}
+                  onChange={(e) => setSelectedCycleId(e.target.value)}
+                  className="w-56"
+                >
+                  {activeCycles.map((cycle) => (
+                    <option key={cycle.id} value={cycle.id}>
+                      {cycle.name} ({daysRemaining(cycle.endDate)}d left)
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {selectedCycle && (
+              <div className="space-y-4">
+                {/* Cycle Name (shown when only 1 cycle) */}
+                {activeCycles.length === 1 && (
+                  <h3 className="text-lg font-semibold">{selectedCycle.name}</h3>
+                )}
+                
+                {/* End Date and Countdown */}
+                <div className="flex items-center text-sm text-gray-600">
+                  <Clock className="w-4 h-4 mr-2" />
+                  <span>
+                    Ends: {new Date(selectedCycle.endDate).toLocaleDateString()}
+                    <span className={`ml-2 font-medium ${daysRemaining(selectedCycle.endDate) <= 7 ? 'text-red-500' : 'text-gray-700'}`}>
+                      ({daysRemaining(selectedCycle.endDate)} days left)
+                    </span>
+                  </span>
+                </div>
+                
+                {/* Team Progress */}
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-600">Team Participation</span>
+                    <span className="font-medium">
+                      {cycleCompletionData?.summary?.completed || 0}/{cycleCompletionData?.summary?.total || 0}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div 
+                      className="bg-green-500 h-2.5 rounded-full transition-all duration-300" 
+                      style={{ width: `${cycleCompletionData?.summary?.percentage || 0}%` }}
+                    />
+                  </div>
+                </div>
+                
+                {/* Pending Recipients (based on reminder type) */}
+                {reminderPreview && reminderPreview.pendingCount > 0 && (
+                  <div className={`border rounded-lg p-3 ${
+                    reminderPreview.reminderType === 'acknowledge_feedback' 
+                      ? 'bg-blue-50 border-blue-200' 
+                      : 'bg-yellow-50 border-yellow-200'
+                  }`}>
+                    <p className={`text-sm ${
+                      reminderPreview.reminderType === 'acknowledge_feedback' 
+                        ? 'text-blue-800' 
+                        : 'text-yellow-800'
+                    }`}>
+                      <span className="font-medium">
+                        {reminderPreview.reminderType === 'acknowledge_feedback' 
+                          ? 'Waiting to acknowledge: ' 
+                          : 'Need to give feedback: '}
+                      </span>
+                      {reminderPreview.pendingRecipients.map(r => 
+                        r.detail ? `${r.name} (${r.detail})` : r.name
+                      ).join(', ')}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Send Reminder Button */}
+                {reminderPreview && reminderPreview.pendingCount > 0 && (
+                  <Button 
+                    className="w-full"
+                    onClick={handleSendReminder}
+                    disabled={isReminderSending}
+                  >
+                    <Bell className="w-4 h-4 mr-2" />
+                    {isReminderSending ? 'Sending...' : `${reminderPreview.buttonText} (${reminderPreview.pendingCount})`}
+                  </Button>
+                )}
+                
+                {/* All complete message */}
+                {reminderPreview && reminderPreview.pendingCount === 0 && (cycleCompletionData?.summary?.total || 0) > 0 && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center">
+                    <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
+                    <span className="text-sm text-green-700">
+                      {reminderPreview.isManagerOfManagers 
+                        ? 'All your managers have given feedback to their teams!' 
+                        : 'All team members have acknowledged their feedback!'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
