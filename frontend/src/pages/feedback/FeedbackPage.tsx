@@ -33,15 +33,21 @@ export default function FeedbackPage() {
     viewParam ? { id: viewParam } as Feedback : null
   );
 
-  // Get initial tab from URL query parameter
-  const initialTab = (tabParam === 'given' || tabParam === 'received' || tabParam === 'drafts') 
-    ? tabParam 
-    : 'all';
-
   // Get current user from auth store
   const currentUserId = user?.id;
   const currentUserEmail = user?.email;
   const isManager = user?.roles?.includes('manager');
+
+  // Get initial tab from URL query parameter
+  // For managers: received, given, drafts, all
+  // For employees: waiting, acknowledged, received
+  const validManagerTabs = ['given', 'received', 'drafts', 'all'];
+  const validEmployeeTabs = ['waiting', 'acknowledged', 'received'];
+  const defaultTab = isManager ? 'all' : 'waiting';
+  
+  const initialTab = isManager 
+    ? (validManagerTabs.includes(tabParam || '') ? tabParam : defaultTab)
+    : (validEmployeeTabs.includes(tabParam || '') ? tabParam : defaultTab);
 
   useEffect(() => {
     if (currentUserId) {
@@ -150,8 +156,9 @@ export default function FeedbackPage() {
             onGiveFeedback={isManager ? handleGiveFeedback : undefined}
             userId={currentUserEmail}
             showFilters={true}
-            initialTab={initialTab}
+            initialTab={initialTab as any}
             initialStatus={statusParam || undefined}
+            isManager={!!isManager}
           />
         )}
 

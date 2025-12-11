@@ -105,7 +105,7 @@ const EmployeeDashboard: React.FC = () => {
 
         <Card 
           className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
-          onClick={() => navigate('/feedback?tab=received&status=submitted')}
+          onClick={() => navigate('/feedback?tab=waiting')}
         >
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center">
@@ -113,7 +113,7 @@ const EmployeeDashboard: React.FC = () => {
                 <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600" />
               </div>
               <div className="ml-3 sm:ml-4 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Pending Actions</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Waiting for Ack</p>
                 <p className="text-xl sm:text-2xl font-bold text-gray-900">
                   {isFeedbackLoading ? '...' : feedbackStats?.pending || 0}
                 </p>
