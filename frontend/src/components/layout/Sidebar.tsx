@@ -131,11 +131,6 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
           {isManager && (
             <>
               <div className="border-t border-gray-200 my-4"></div>
-              <div className="px-2">
-                <h3 className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Management
-                </h3>
-              </div>
               {managerNavigation
                 // Only show "Team Feedback" if user has managers reporting to them
                 .filter(item => item.href !== '/team-feedback' || hasManagerReports)
