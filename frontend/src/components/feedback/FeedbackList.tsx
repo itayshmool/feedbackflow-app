@@ -19,6 +19,7 @@ interface FeedbackListProps {
   userId?: string;
   showFilters?: boolean;
   initialTab?: 'received' | 'given' | 'all' | 'drafts';
+  initialStatus?: string;
 }
 
 export const FeedbackList: React.FC<FeedbackListProps> = ({
@@ -27,6 +28,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
   userId,
   showFilters = true,
   initialTab = 'all',
+  initialStatus,
 }) => {
   const {
     feedbackList,
@@ -48,10 +50,10 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
 
   const [activeTab, setActiveTab] = useState<'received' | 'given' | 'all' | 'drafts'>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<FeedbackStatus | ''>('');
+  const [statusFilter, setStatusFilter] = useState<FeedbackStatus | ''>(initialStatus as FeedbackStatus || '');
   const [typeFilter, setTypeFilter] = useState<ReviewType | ''>('');
   const [cycleFilter, setCycleFilter] = useState<string>('');
-  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [showFilterPanel, setShowFilterPanel] = useState(!!initialStatus); // Auto-show filter panel if status is pre-set
 
   useEffect(() => {
     loadFeedback();

@@ -23,6 +23,7 @@ export default function FeedbackPage() {
   const viewParam = searchParams.get('view'); // For deep-linking to specific feedback
   const recipientEmail = searchParams.get('recipient');
   const recipientName = searchParams.get('name');
+  const statusParam = searchParams.get('status'); // For filtering by status
 
   // Determine initial view based on action param or view param
   const initialView = actionParam === 'give' ? 'give' : viewParam ? 'detail' : 'list';
@@ -150,6 +151,7 @@ export default function FeedbackPage() {
             userId={currentUserEmail}
             showFilters={true}
             initialTab={initialTab}
+            initialStatus={statusParam || undefined}
           />
         )}
 

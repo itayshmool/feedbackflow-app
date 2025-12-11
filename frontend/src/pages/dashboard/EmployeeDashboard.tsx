@@ -105,7 +105,7 @@ const EmployeeDashboard: React.FC = () => {
 
         <Card 
           className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
-          onClick={() => navigate('/feedback?tab=drafts')}
+          onClick={() => navigate('/feedback?tab=received&status=submitted')}
         >
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center">
