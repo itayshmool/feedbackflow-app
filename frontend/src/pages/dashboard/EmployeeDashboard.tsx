@@ -14,6 +14,7 @@ import {
   Calendar,
   User
 } from 'lucide-react';
+import api from '../../services/api';
 
 const EmployeeDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -328,24 +329,83 @@ const EmployeeDashboard: React.FC = () => {
     </div>
   );
 
-  const renderGoals = () => (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">My Development Goals</h2>
-        <Button>
-          <Target className="w-4 h-4 mr-2" />
-          Add New Goal
-        </Button>
-      </div>
+  const renderGoals = () => {
+    // Extract all goals from received feedback
+    const allGoals = recentFeedback?.flatMap(feedback => 
+      (feedback.goals || []).map(goal => ({
+        ...goal,
+        feedbackFrom: feedback.fromUser?.name || 'Manager',
+      }))
+    ) || [];
 
-      <div className="text-center py-16 text-gray-500">
-        <Target className="w-20 h-20 mx-auto mb-4 text-gray-400" />
-        <p className="text-lg mb-4">Track your career development</p>
-        <p className="text-sm text-gray-600 mb-6">Set and monitor your professional growth goals</p>
-        <Button size="lg">Create Your First Goal</Button>
+    const toggleGoalComplete = async (goalId: string, currentStatus: string) => {
+      const completed = currentStatus !== 'completed';
+      try {
+        await api.put(`/goals/${goalId}`, { completed });
+        // Refresh feedback to get updated goals
+        if (user?.id) {
+          fetchFeedbackList({ toUserId: user.id }, 1, 10);
+        }
+      } catch (error) {
+        console.error('Failed to update goal:', error);
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold text-gray-900">My Development Goals</h2>
+
+        {isFeedbackLoading ? (
+          <div className="flex justify-center py-12">
+            <LoadingSpinner />
+          </div>
+        ) : allGoals.length > 0 ? (
+          <div className="space-y-3">
+            {allGoals.map((goal) => (
+              <div 
+                key={goal.id}
+                className={`flex items-start gap-3 p-4 bg-white rounded-lg border ${
+                  goal.status === 'completed' ? 'bg-gray-50' : ''
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={goal.status === 'completed'}
+                  onChange={() => toggleGoalComplete(goal.id, goal.status)}
+                  className="mt-1 h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                />
+                <div className="flex-1">
+                  <h3 className={`font-medium ${goal.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                    {goal.title}
+                  </h3>
+                  {goal.description && (
+                    <p className={`text-sm mt-1 ${goal.status === 'completed' ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {goal.description}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                    {goal.targetDate && (
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        Target: {new Date(goal.targetDate).toLocaleDateString()}
+                      </span>
+                    )}
+                    <span>From: {goal.feedbackFrom}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-16 text-gray-500">
+            <Target className="w-20 h-20 mx-auto mb-4 text-gray-400" />
+            <p className="text-lg mb-4">No goals yet</p>
+            <p className="text-sm text-gray-600">Goals from your feedback will appear here</p>
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -6071,6 +6071,77 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// ==================
+// GOALS API ROUTES
+// ==================
+
+// PUT /api/v1/goals/:id - Update goal (toggle completed status)
+app.put('/api/v1/goals/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { completed } = req.body;
+    const status = completed ? 'completed' : 'not_started';
+    
+    // Get user context from authentication
+    const currentUserEmail = (req as any).user?.email;
+    if (!currentUserEmail) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+
+    // Get current user
+    const userResult = await query(
+      `SELECT id FROM users WHERE email = $1`,
+      [currentUserEmail]
+    );
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    const currentUserId = userResult.rows[0].id;
+
+    // Verify the goal belongs to feedback the user received
+    const goalCheck = await query(
+      `SELECT fg.id, fr.recipient_id 
+       FROM feedback_goals fg
+       JOIN feedback_responses fr ON fg.feedback_response_id = fr.id
+       WHERE fg.id = $1`,
+      [id]
+    );
+    
+    if (goalCheck.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Goal not found' });
+    }
+    
+    if (goalCheck.rows[0].recipient_id !== currentUserId) {
+      return res.status(403).json({ success: false, error: 'You can only update goals assigned to you' });
+    }
+    
+    // Update the goal status
+    const result = await query(
+      `UPDATE feedback_goals 
+       SET status = $1, updated_at = NOW() 
+       WHERE id = $2 
+       RETURNING id, title, description, target_date, status, created_at, updated_at`,
+      [status, id]
+    );
+    
+    res.json({ 
+      success: true, 
+      data: {
+        id: result.rows[0].id,
+        title: result.rows[0].title,
+        description: result.rows[0].description,
+        targetDate: result.rows[0].target_date,
+        status: result.rows[0].status,
+        createdAt: result.rows[0].created_at,
+        updatedAt: result.rows[0].updated_at
+      }
+    });
+  } catch (error) {
+    console.error('Error updating goal:', error);
+    res.status(500).json({ success: false, error: 'Failed to update goal' });
+  }
+});
+
 // POST /api/v1/feedback/:id/submit - Submit feedback
 app.post('/api/v1/feedback/:id/submit', authenticateToken, async (req, res) => {
   try {
