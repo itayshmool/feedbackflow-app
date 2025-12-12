@@ -15,6 +15,7 @@ import {
   BellRing
 } from 'lucide-react';
 import { NotificationType, NotificationFilters } from '../../types/notification.types';
+// NotificationType still used for getNotificationIcon function
 
 export default function NotificationsPage() {
   const {
@@ -33,17 +34,15 @@ export default function NotificationsPage() {
     limit: 20,
     offset: 0
   });
-  const [selectedType, setSelectedType] = useState<string>('');
   const [showRead, setShowRead] = useState<boolean | undefined>(undefined);
 
   useEffect(() => {
     const currentFilters = {
       ...filters,
-      type: selectedType ? selectedType as NotificationType : undefined,
       isRead: showRead
     };
     fetchNotifications(currentFilters);
-  }, [fetchNotifications, filters, selectedType, showRead]);
+  }, [fetchNotifications, filters, showRead]);
 
   const handleMarkAllAsRead = async () => {
     await markAllAsRead();
@@ -148,38 +147,19 @@ export default function NotificationsPage() {
         </div>
       )}
 
-      {/* Filters */}
+      {/* Filter */}
       <Card className="p-4 mb-6">
         <div className="flex items-center gap-4">
           <Filter className="w-5 h-5 text-gray-500" />
-          <div className="flex items-center space-x-4">
-            <Select
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
-              placeholder="All Types"
-              className="w-48"
-            >
-              <option value="">All Types</option>
-              <option value="feedback_received">Feedback Received</option>
-              <option value="feedback_reminder">Feedback Reminder</option>
-              <option value="cycle_started">Cycle Started</option>
-              <option value="cycle_ending">Cycle Ending</option>
-              <option value="system_announcement">System Announcement</option>
-              <option value="user_invited">User Invited</option>
-              <option value="goal_assigned">Goal Assigned</option>
-            </Select>
-            
-            <Select
-              value={showRead === undefined ? '' : showRead.toString()}
-              onChange={(e) => setShowRead(e.target.value === '' ? undefined : e.target.value === 'true')}
-              placeholder="All Status"
-              className="w-32"
-            >
-              <option value="">All Status</option>
-              <option value="false">Unread</option>
-              <option value="true">Read</option>
-            </Select>
-          </div>
+          <Select
+            value={showRead === undefined ? '' : showRead.toString()}
+            onChange={(e) => setShowRead(e.target.value === '' ? undefined : e.target.value === 'true')}
+            className="w-36"
+          >
+            <option value="">All</option>
+            <option value="false">Unread</option>
+            <option value="true">Read</option>
+          </Select>
         </div>
       </Card>
 
