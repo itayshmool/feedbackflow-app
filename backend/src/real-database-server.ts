@@ -5856,6 +5856,9 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
     let requestId: string;
     let responseId: string;
     const savedGoals: any[] = [];
+    
+    // Declare structuredContent outside try block so it's accessible for response building
+    let structuredContent: ReturnType<typeof sanitizeFeedbackContent>;
 
     try {
       await client.query('BEGIN');
@@ -5881,7 +5884,7 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
 
     // Create structured content object for database storage
     // Apply XSS sanitization to prevent stored XSS attacks
-    const structuredContent = sanitizeFeedbackContent({
+    structuredContent = sanitizeFeedbackContent({
       overallComment: content?.overallComment || comment || '',
       strengths: content?.strengths || [],
       areasForImprovement: content?.areasForImprovement || [],
