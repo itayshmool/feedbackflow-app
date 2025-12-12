@@ -93,7 +93,15 @@ app.get('/api/v1/admin/organizations/test', (_req, res) => res.json({
 
 // Auth (Google login)
 const googleService = new GoogleOAuthService(process.env.GOOGLE_CLIENT_ID || '')
-const jwtService = new JwtService(process.env.JWT_SECRET || 'changeme')
+
+// Fail fast if JWT_SECRET is not properly configured
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET === 'changeme') {
+  console.error('❌ JWT_SECRET environment variable is not set or uses insecure default');
+  console.error('Generate one with: openssl rand -base64 32');
+  process.exit(1);
+}
+const jwtService = new JwtService(JWT_SECRET)
 const userService = new UserService()
 const authController = new GoogleAuthController(googleService, jwtService, userService)
 app.use('/api/v1/auth', createGoogleAuthRoutes(authController))
