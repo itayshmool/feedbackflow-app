@@ -10,15 +10,11 @@ import { Select } from '../../components/ui/Select';
 import { 
   Bell, 
   Check, 
-  Trash2, 
   RefreshCw, 
   Filter,
-  BellRing,
-  AlertCircle,
-  Info,
-  CheckCircle
+  BellRing
 } from 'lucide-react';
-import { NotificationType, NotificationPriority, NotificationFilters } from '../../types/notification.types';
+import { NotificationType, NotificationFilters } from '../../types/notification.types';
 
 export default function NotificationsPage() {
   const {
@@ -29,7 +25,6 @@ export default function NotificationsPage() {
     error,
     fetchNotifications,
     markAllAsRead,
-    deleteNotification,
     refreshNotifications,
     clearError
   } = useNotificationStore();
@@ -39,18 +34,16 @@ export default function NotificationsPage() {
     offset: 0
   });
   const [selectedType, setSelectedType] = useState<string>('');
-  const [selectedPriority, setSelectedPriority] = useState<string>('');
   const [showRead, setShowRead] = useState<boolean | undefined>(undefined);
 
   useEffect(() => {
     const currentFilters = {
       ...filters,
       type: selectedType ? selectedType as NotificationType : undefined,
-      priority: selectedPriority ? selectedPriority as NotificationPriority : undefined,
       isRead: showRead
     };
     fetchNotifications(currentFilters);
-  }, [fetchNotifications, filters, selectedType, selectedPriority, showRead]);
+  }, [fetchNotifications, filters, selectedType, showRead]);
 
   const handleMarkAllAsRead = async () => {
     await markAllAsRead();
@@ -85,36 +78,6 @@ export default function NotificationsPage() {
         return '🎯';
       default:
         return '🔔';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent':
-        return 'border-l-red-500 bg-red-50';
-      case 'high':
-        return 'border-l-orange-500 bg-orange-50';
-      case 'medium':
-        return 'border-l-blue-500 bg-blue-50';
-      case 'low':
-        return 'border-l-gray-400 bg-gray-50';
-      default:
-        return 'border-l-gray-400 bg-gray-50';
-    }
-  };
-
-  const getPriorityIcon = (priority: string) => {
-    switch (priority) {
-      case 'urgent':
-        return <AlertCircle className="w-4 h-4 text-red-500" />;
-      case 'high':
-        return <AlertCircle className="w-4 h-4 text-orange-500" />;
-      case 'medium':
-        return <Info className="w-4 h-4 text-blue-500" />;
-      case 'low':
-        return <CheckCircle className="w-4 h-4 text-gray-500" />;
-      default:
-        return <Info className="w-4 h-4 text-gray-500" />;
     }
   };
 
@@ -154,7 +117,7 @@ export default function NotificationsPage() {
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <Card className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -182,17 +145,6 @@ export default function NotificationsPage() {
               <Check className="w-8 h-8 text-green-500" />
             </div>
           </Card>
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">High Priority</p>
-                <p className="text-2xl font-bold text-orange-600">
-                  {(stats.byPriority.high || 0) + (stats.byPriority.urgent || 0)}
-                </p>
-              </div>
-              <AlertCircle className="w-8 h-8 text-orange-500" />
-            </div>
-          </Card>
         </div>
       )}
 
@@ -215,19 +167,6 @@ export default function NotificationsPage() {
               <option value="system_announcement">System Announcement</option>
               <option value="user_invited">User Invited</option>
               <option value="goal_assigned">Goal Assigned</option>
-            </Select>
-            
-            <Select
-              value={selectedPriority}
-              onChange={(e) => setSelectedPriority(e.target.value)}
-              placeholder="All Priorities"
-              className="w-48"
-            >
-              <option value="">All Priorities</option>
-              <option value="urgent">Urgent</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
             </Select>
             
             <Select
@@ -277,9 +216,7 @@ export default function NotificationsPage() {
           {notifications.map((notification) => (
             <Card
               key={notification.id}
-              className={`p-6 border-l-4 ${getPriorityColor(notification.priority)} ${
-                !notification.isRead ? 'ring-2 ring-blue-100' : ''
-              }`}
+              className={`p-6 ${!notification.isRead ? 'bg-blue-50 ring-2 ring-blue-100' : ''}`}
             >
               <NotificationItem
                 notification={notification}
