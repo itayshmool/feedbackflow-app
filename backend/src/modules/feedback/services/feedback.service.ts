@@ -1,4 +1,13 @@
 // backend/src/modules/feedback/services/feedback.service.ts
+/**
+ * @deprecated NOT USED IN PRODUCTION
+ * 
+ * This service uses stub models (FeedbackModelClass, etc.) that return
+ * empty/null values. Production feedback functionality is implemented
+ * directly in real-database-server.ts with actual SQL queries.
+ * 
+ * Only kept for legacy test compatibility.
+ */
 
 import { Pool, PoolClient } from 'pg';
 import { EventEmitter } from 'events';

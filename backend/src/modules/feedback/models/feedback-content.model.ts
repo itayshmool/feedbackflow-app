@@ -1,4 +1,10 @@
 // backend/src/modules/feedback/models/feedback-content.model.ts
+/**
+ * @deprecated STUB IMPLEMENTATION - NOT USED IN PRODUCTION
+ * 
+ * Methods are placeholders that don't actually query the database.
+ * Production functionality is in real-database-server.ts.
+ */
 
 import { Pool, PoolClient } from 'pg';
 import { FeedbackContentModel } from '../types/feedback.types.js';

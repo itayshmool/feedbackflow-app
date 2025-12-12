@@ -1,4 +1,14 @@
 // backend/src/modules/admin/services/admin-system.service.ts
+/**
+ * PARTIAL STUB WARNING
+ * 
+ * Some methods in this service return hardcoded mock data:
+ * - getSystemStats() - returns fake statistics
+ * - getSystemAlerts() - returns fake alerts
+ * - getRecentActivity() - returns fake audit entries
+ * 
+ * These should be implemented with real database queries if used.
+ */
 
 import { Pool, PoolClient } from 'pg';
 import { EventEmitter } from 'events';
@@ -220,9 +230,12 @@ export class AdminSystemService {
     }
   }
 
+  /**
+   * @deprecated Returns hardcoded mock data - NOT real statistics
+   * TODO: Implement with actual database queries
+   */
   async getSystemStats(): Promise<SystemStats> {
-    // This would typically aggregate data from multiple sources
-    // For now, we'll return mock data
+    // WARNING: Returns hardcoded mock data
     return {
       users: {
         total: 150,
@@ -306,9 +319,12 @@ export class AdminSystemService {
     };
   }
 
+  /**
+   * @deprecated Returns hardcoded mock alerts - NOT real data
+   * TODO: Implement with actual database queries
+   */
   async getSystemAlerts(): Promise<SystemAlert[]> {
-    // This would typically query the database for active alerts
-    // For now, we'll return mock data
+    // WARNING: Returns hardcoded mock data
     return [
       {
         id: 'alert-1',
@@ -342,9 +358,12 @@ export class AdminSystemService {
     ];
   }
 
+  /**
+   * @deprecated Returns hardcoded mock activity - NOT real audit data
+   * TODO: Implement with actual audit log queries
+   */
   async getRecentActivity(): Promise<any[]> {
-    // This would typically query the audit log
-    // For now, we'll return mock data
+    // WARNING: Returns hardcoded mock data
     return [
       {
         id: 'audit-1',

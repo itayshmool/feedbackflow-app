@@ -1,4 +1,13 @@
 // backend/src/modules/feedback/controllers/feedback.controller.ts
+/**
+ * @deprecated NOT USED IN PRODUCTION
+ * 
+ * This controller uses FeedbackService which relies on stub models.
+ * Production feedback endpoints are implemented directly in
+ * real-database-server.ts with actual SQL queries.
+ * 
+ * Only kept for legacy test compatibility.
+ */
 
 import { Request, Response, NextFunction } from 'express';
 import { FeedbackService } from '../services/feedback.service.js';

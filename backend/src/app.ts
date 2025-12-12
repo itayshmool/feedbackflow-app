@@ -1,3 +1,17 @@
+/**
+ * @deprecated NOT USED IN PRODUCTION
+ * 
+ * This Express app is dead code. Production uses real-database-server.ts
+ * which has its own Express app with inline route implementations.
+ * 
+ * This file is only imported by:
+ * - server.ts (also dead code)
+ * - Legacy tests in tests/integration/templates/
+ * 
+ * The feedback module routes here use stub models that return empty data.
+ * Real feedback functionality is in real-database-server.ts with actual SQL.
+ */
+
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'

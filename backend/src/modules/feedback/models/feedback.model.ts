@@ -1,4 +1,16 @@
 // backend/src/modules/feedback/models/feedback.model.ts
+/**
+ * @deprecated STUB IMPLEMENTATION - NOT USED IN PRODUCTION
+ * 
+ * This model contains placeholder methods that return empty/null values.
+ * Production feedback functionality is implemented directly in
+ * real-database-server.ts with actual SQL queries.
+ * 
+ * Methods like findById(), find(), update(), delete() are stubs
+ * that don't actually query the database.
+ * 
+ * Only kept for legacy test compatibility.
+ */
 
 import { Pool, PoolClient } from 'pg';
 import { FeedbackModel, FeedbackFilters, FeedbackStatus } from '../types/feedback.types.js';

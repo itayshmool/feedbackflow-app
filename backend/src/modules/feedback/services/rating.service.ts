@@ -1,4 +1,10 @@
 // backend/src/modules/feedback/services/rating.service.ts
+/**
+ * @deprecated STUB IMPLEMENTATION - NOT USED IN PRODUCTION
+ * 
+ * Methods return empty arrays/void. Production rating functionality
+ * is implemented in real-database-server.ts with actual SQL queries.
+ */
 
 import { Pool, PoolClient } from 'pg';
 import { RatingModel, CreateRatingRequest, UpdateRatingRequest } from '../types/feedback.types.js';

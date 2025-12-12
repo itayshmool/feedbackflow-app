@@ -1,4 +1,12 @@
 // backend/src/modules/feedback/routes/feedback.routes.ts
+/**
+ * @deprecated NOT USED IN PRODUCTION
+ * 
+ * These routes are registered in app.ts which is dead code.
+ * Production routes are defined directly in real-database-server.ts.
+ * 
+ * Only kept for legacy test compatibility.
+ */
 
 import { Router } from 'express';
 import { FeedbackController } from '../controllers/feedback.controller.js';
