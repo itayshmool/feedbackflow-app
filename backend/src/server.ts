@@ -1,4 +1,16 @@
 // backend/src/server.ts
+/**
+ * @deprecated NOT USED IN PRODUCTION
+ * 
+ * This file is dead code. Production uses real-database-server.ts directly.
+ * 
+ * Entry points:
+ * - npm run dev  → src/real-database-server.ts
+ * - npm start    → dist/real-database-server.js
+ * 
+ * This file exists but is never executed by any npm script.
+ * Safe to remove, but kept for reference.
+ */
 
 import 'dotenv/config'
 import app from './app.js'
