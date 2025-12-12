@@ -45,6 +45,7 @@ import { createHierarchyRoutes } from './modules/hierarchy/routes/hierarchy.rout
 import profileRoutes from './modules/auth/routes/profile.routes.js'
 import settingsRoutes from './modules/auth/routes/settings.routes.js'
 import { Logger } from './shared/utils/logger.js'
+import { errorHandler, notFoundHandler } from './shared/middleware/error.middleware.js'
 
 const app = express()
 app.use(helmet())
@@ -201,5 +202,15 @@ eventEmitter.on('admin:organization_updated', (data) => analyticsService.calcula
 eventEmitter.on('admin:organization_deleted', (data) => analyticsService.calculateMetrics('system'))
 eventEmitter.on('admin:system_settings_updated', (data) => analyticsService.calculateMetrics('system'))
 eventEmitter.on('admin:maintenance_mode_changed', (data) => analyticsService.calculateMetrics('system'))
+
+// ==============================
+// Error Handling (MUST BE LAST)
+// ==============================
+
+// 404 handler for undefined routes
+app.use(notFoundHandler)
+
+// Global error handler - catches all errors and prevents information leakage
+app.use(errorHandler)
 
 export default app
