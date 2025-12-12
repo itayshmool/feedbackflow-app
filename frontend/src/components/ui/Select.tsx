@@ -34,15 +34,15 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
             {label}
           </label>
         )}
-        <select
-          className={cn(baseClasses, variantClasses[variant], className)}
-          ref={ref}
-          onChange={handleChange}
-          value={value}
-          {...props}
-        >
-          {children}
-        </select>
+      <select
+        className={cn(baseClasses, variantClasses[variant], className)}
+        ref={ref}
+        onChange={handleChange}
+        value={value}
+        {...props}
+      >
+        {children}
+      </select>
         {error && (
           <p className="mt-1 text-sm text-red-600">{error}</p>
         )}

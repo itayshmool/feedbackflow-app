@@ -4575,8 +4575,8 @@ app.post('/api/v1/hierarchy', async (req, res) => {
     // Then insert the new relationship
     const result = await query(
       `INSERT INTO organizational_hierarchy 
-       (organization_id, manager_id, employee_id, level, is_direct_report, is_active, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, true, NOW(), NOW())
+      (organization_id, manager_id, employee_id, level, is_direct_report, is_active, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, true, NOW(), NOW())
        RETURNING id, organization_id, manager_id, employee_id, level, is_direct_report, is_active, created_at, updated_at`,
       [organizationId, managerId, employeeId, Number(hierarchyLevel) || 1, Boolean(isDirectReport)]
     );
@@ -5024,6 +5024,7 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
         fr.giver_id as "giverId",
         fr.recipient_id as "recipientId",
         fr.cycle_id as "cycleId",
+        fc.name as "cycleName",
         fr.content,
         fr.rating,
         fr.color_classification as "colorClassification",
@@ -5042,6 +5043,7 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
       JOIN feedback_requests frr ON fr.request_id = frr.id
       LEFT JOIN users giver ON fr.giver_id = giver.id
       LEFT JOIN users recipient ON fr.recipient_id = recipient.id
+      LEFT JOIN feedback_cycles fc ON fr.cycle_id = fc.id
       WHERE ${whereConditions.join(' AND ')}
       ORDER BY fr.created_at DESC
       LIMIT $${++paramCount} OFFSET $${++paramCount}
@@ -5086,6 +5088,10 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
       return {
         id: row.id,
         cycleId: row.cycleId,
+        cycle: row.cycleId ? {
+          id: row.cycleId,
+          name: row.cycleName
+        } : null,
         fromUserId: row.giverId,
         fromUserEmail: row.giverEmail,
         toUserId: row.recipientId,
@@ -5662,77 +5668,77 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
     try {
       await client.query('BEGIN');
 
-      // Create feedback request in database
+    // Create feedback request in database
       requestResult = await client.query(
-        `INSERT INTO feedback_requests 
-         (cycle_id, requester_id, recipient_id, feedback_type, status, message, due_date, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-         RETURNING id, cycle_id, requester_id, recipient_id, feedback_type, status, message, due_date, created_at, updated_at`,
-        [
-          cycleIdToUse,
-          currentUserId,
-          targetUserId,
-          dbFeedbackType,
-          'draft', // Mark as draft when feedback is first created
-          content?.overallComment || comment || '',
-          new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
-        ]
-      );
+      `INSERT INTO feedback_requests 
+       (cycle_id, requester_id, recipient_id, feedback_type, status, message, due_date, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+       RETURNING id, cycle_id, requester_id, recipient_id, feedback_type, status, message, due_date, created_at, updated_at`,
+      [
+        cycleIdToUse,
+        currentUserId,
+        targetUserId,
+        dbFeedbackType,
+        'draft', // Mark as draft when feedback is first created
+        content?.overallComment || comment || '',
+        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+      ]
+    );
 
       requestId = requestResult.rows[0].id;
 
-      // Create structured content object for database storage
-      const structuredContent = {
-        overallComment: content?.overallComment || comment || '',
-        strengths: content?.strengths || [],
-        areasForImprovement: content?.areasForImprovement || [],
-        specificExamples: content?.specificExamples || [],
-        recommendations: content?.recommendations || [],
-        confidential: content?.confidential || false
-      };
+    // Create structured content object for database storage
+    const structuredContent = {
+      overallComment: content?.overallComment || comment || '',
+      strengths: content?.strengths || [],
+      areasForImprovement: content?.areasForImprovement || [],
+      specificExamples: content?.specificExamples || [],
+      recommendations: content?.recommendations || [],
+      confidential: content?.confidential || false
+    };
 
-      // Create feedback response in database
+    // Create feedback response in database
       responseResult = await client.query(
-        `INSERT INTO feedback_responses 
-         (request_id, giver_id, recipient_id, cycle_id, content, rating, is_anonymous, is_approved, color_classification, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-         RETURNING id, request_id, giver_id, recipient_id, cycle_id, content, rating, is_anonymous, is_approved, color_classification, created_at, updated_at`,
-        [
-          requestId,
-          currentUserId,
-          targetUserId,
-          cycleIdToUse,
-          JSON.stringify(structuredContent), // Store structured content as JSON
-          rating || (ratings && ratings.length > 0 ? ratings[0].score || ratings[0].rating : null),
-          false, // is_anonymous
-          true,  // is_approved (auto-approve for now)
-          colorClassification || null // Internal triage color (green/yellow/red)
-        ]
-      );
+      `INSERT INTO feedback_responses 
+       (request_id, giver_id, recipient_id, cycle_id, content, rating, is_anonymous, is_approved, color_classification, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+       RETURNING id, request_id, giver_id, recipient_id, cycle_id, content, rating, is_anonymous, is_approved, color_classification, created_at, updated_at`,
+      [
+        requestId,
+        currentUserId,
+        targetUserId,
+        cycleIdToUse,
+        JSON.stringify(structuredContent), // Store structured content as JSON
+        rating || (ratings && ratings.length > 0 ? ratings[0].score || ratings[0].rating : null),
+        false, // is_anonymous
+        true,  // is_approved (auto-approve for now)
+        colorClassification || null // Internal triage color (green/yellow/red)
+      ]
+    );
 
       responseId = responseResult.rows[0].id;
 
       // Save development goals to database (within the same transaction)
-      if (goals && goals.length > 0) {
-        console.log('💾 Saving', goals.length, 'development goals to database');
-        for (const goal of goals) {
+    if (goals && goals.length > 0) {
+      console.log('💾 Saving', goals.length, 'development goals to database');
+      for (const goal of goals) {
           const goalResult = await client.query(
-            `INSERT INTO feedback_goals 
-             (feedback_response_id, title, description, category, priority, target_date, status, progress)
-             VALUES ($1, $2, $3, $4, $5, $6, 'not_started', 0)
-             RETURNING id, feedback_response_id, title, description, category, priority, target_date, status, progress, created_at, updated_at`,
-            [
-              responseId,
-              goal.title,
-              goal.description || '',
-              goal.category || 'development',
-              goal.priority || 'medium',
-              goal.targetDate ? new Date(goal.targetDate) : null
-            ]
-          );
-          savedGoals.push(goalResult.rows[0]);
-        }
-        console.log('✅ Saved', savedGoals.length, 'development goals');
+          `INSERT INTO feedback_goals 
+           (feedback_response_id, title, description, category, priority, target_date, status, progress)
+           VALUES ($1, $2, $3, $4, $5, $6, 'not_started', 0)
+           RETURNING id, feedback_response_id, title, description, category, priority, target_date, status, progress, created_at, updated_at`,
+          [
+            responseId,
+            goal.title,
+            goal.description || '',
+            goal.category || 'development',
+            goal.priority || 'medium',
+            goal.targetDate ? new Date(goal.targetDate) : null
+          ]
+        );
+        savedGoals.push(goalResult.rows[0]);
+      }
+      console.log('✅ Saved', savedGoals.length, 'development goals');
       }
 
       // Commit the transaction
@@ -6068,6 +6074,77 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error updating feedback:', error);
     res.status(500).json({ success: false, error: 'Failed to update feedback' });
+  }
+});
+
+// ==================
+// GOALS API ROUTES
+// ==================
+
+// PUT /api/v1/goals/:id - Update goal (toggle completed status)
+app.put('/api/v1/goals/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { completed } = req.body;
+    const status = completed ? 'completed' : 'not_started';
+    
+    // Get user context from authentication
+    const currentUserEmail = (req as any).user?.email;
+    if (!currentUserEmail) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+
+    // Get current user
+    const userResult = await query(
+      `SELECT id FROM users WHERE email = $1`,
+      [currentUserEmail]
+    );
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    const currentUserId = userResult.rows[0].id;
+
+    // Verify the goal belongs to feedback the user received
+    const goalCheck = await query(
+      `SELECT fg.id, fr.recipient_id 
+       FROM feedback_goals fg
+       JOIN feedback_responses fr ON fg.feedback_response_id = fr.id
+       WHERE fg.id = $1`,
+      [id]
+    );
+    
+    if (goalCheck.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Goal not found' });
+    }
+    
+    if (goalCheck.rows[0].recipient_id !== currentUserId) {
+      return res.status(403).json({ success: false, error: 'You can only update goals assigned to you' });
+    }
+    
+    // Update the goal status
+    const result = await query(
+      `UPDATE feedback_goals 
+       SET status = $1, updated_at = NOW() 
+       WHERE id = $2 
+       RETURNING id, title, description, target_date, status, created_at, updated_at`,
+      [status, id]
+    );
+    
+    res.json({ 
+      success: true, 
+      data: {
+        id: result.rows[0].id,
+        title: result.rows[0].title,
+        description: result.rows[0].description,
+        targetDate: result.rows[0].target_date,
+        status: result.rows[0].status,
+        createdAt: result.rows[0].created_at,
+        updatedAt: result.rows[0].updated_at
+      }
+    });
+  } catch (error) {
+    console.error('Error updating goal:', error);
+    res.status(500).json({ success: false, error: 'Failed to update goal' });
   }
 });
 

@@ -4,6 +4,7 @@ import { useFeedbackStore } from '../../stores/feedbackStore';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { Select } from '../../components/ui/Select';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   MessageSquare, 
@@ -12,8 +13,10 @@ import {
   Activity,
   FileText,
   Calendar,
-  User
+  User,
+  Filter
 } from 'lucide-react';
+import api from '../../lib/api';
 
 const EmployeeDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -28,6 +31,7 @@ const EmployeeDashboard: React.FC = () => {
   } = useFeedbackStore();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'my-feedback' | 'goals'>('overview');
+  const [goalsCycleFilter, setGoalsCycleFilter] = useState<string>('');
   
   // Check if user is a manager (managers see "Feedback Given" stat)
   const isManager = user?.roles?.includes('manager');
@@ -179,47 +183,76 @@ const EmployeeDashboard: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Technical Skills</span>
-                  <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">In Progress</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-blue-500 h-2 rounded-full transition-all duration-500" style={{ width: '65%' }}></div>
-                </div>
-              </div>
+            {(() => {
+              const allGoals = recentFeedback?.flatMap(feedback => 
+                (feedback.goals || []).map(goal => ({
+                  ...goal,
+                  feedbackFrom: feedback.fromUser?.name || 'Manager',
+                  cycleName: feedback.cycle?.name,
+                }))
+              ) || [];
+              const displayGoals = allGoals.slice(0, 3); // Show max 3 in overview
               
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Communication</span>
-                  <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">On Track</span>
+              return (
+                <div className="space-y-3">
+                  {displayGoals.length > 0 ? (
+                    <>
+                      {displayGoals.map((goal) => (
+                        <div key={goal.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                          <div className={`mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                            goal.status === 'completed' 
+                              ? 'bg-green-500 border-green-500' 
+                              : 'border-gray-300'
+                          }`}>
+                            {goal.status === 'completed' && (
+                              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className={`text-sm font-medium ${goal.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                                {goal.title}
+                              </p>
+                              {goal.cycleName && (
+                                <span className="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded text-xs whitespace-nowrap flex-shrink-0">
+                                  {goal.cycleName}
+                                </span>
+                              )}
+                            </div>
+                            {goal.targetDate && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Target: {new Date(goal.targetDate).toLocaleDateString()}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {allGoals.length > 3 && (
+                        <p className="text-xs text-gray-500 text-center">
+                          +{allGoals.length - 3} more goals
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-4 text-gray-500">
+                      <Target className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                      <p className="text-sm">No goals yet</p>
+                    </div>
+                  )}
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full mt-2"
+                    onClick={() => setActiveTab('goals')}
+                  >
+                    <Target className="w-4 h-4 mr-2" />
+                    View All Goals
+                  </Button>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-green-500 h-2 rounded-full transition-all duration-500" style={{ width: '80%' }}></div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Project Delivery</span>
-                  <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full">Needs Attention</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-yellow-500 h-2 rounded-full transition-all duration-500" style={{ width: '45%' }}></div>
-                </div>
-              </div>
-
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full mt-4"
-                onClick={() => setActiveTab('goals')}
-              >
-                <Target className="w-4 h-4 mr-2" />
-                View All Goals
-              </Button>
-            </div>
+              );
+            })()}
           </CardContent>
         </Card>
       </div>
@@ -328,24 +361,146 @@ const EmployeeDashboard: React.FC = () => {
     </div>
   );
 
-  const renderGoals = () => (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">My Development Goals</h2>
-        <Button>
-          <Target className="w-4 h-4 mr-2" />
-          Add New Goal
-        </Button>
-      </div>
+  const renderGoals = () => {
+    // Extract all goals from received feedback with cycle info
+    const allGoals = recentFeedback?.flatMap(feedback => 
+      (feedback.goals || []).map(goal => ({
+        ...goal,
+        feedbackFrom: feedback.fromUser?.name || 'Manager',
+        cycleName: feedback.cycle?.name || 'No Cycle',
+        cycleId: feedback.cycle?.id || '',
+      }))
+    ) || [];
 
-      <div className="text-center py-16 text-gray-500">
-        <Target className="w-20 h-20 mx-auto mb-4 text-gray-400" />
-        <p className="text-lg mb-4">Track your career development</p>
-        <p className="text-sm text-gray-600 mb-6">Set and monitor your professional growth goals</p>
-        <Button size="lg">Create Your First Goal</Button>
+    // Get unique cycles for filter dropdown (include "No Cycle" option)
+    const uniqueCycles = Array.from(
+      new Map(allGoals.map(g => [g.cycleId || 'no-cycle', { id: g.cycleId || 'no-cycle', name: g.cycleName || 'No Cycle' }])).values()
+    );
+
+    // Filter goals by selected cycle
+    const filteredGoals = goalsCycleFilter 
+      ? goalsCycleFilter === 'no-cycle'
+        ? allGoals.filter(g => !g.cycleId)
+        : allGoals.filter(g => g.cycleId === goalsCycleFilter)
+      : allGoals;
+
+    const toggleGoalComplete = async (goalId: string, currentStatus: string) => {
+      const completed = currentStatus !== 'completed';
+      try {
+        await api.put(`/goals/${goalId}`, { completed });
+        // Refresh feedback to get updated goals
+        if (user?.id) {
+          fetchFeedbackList({ toUserId: user.id }, 1, 10);
+        }
+      } catch (error) {
+        console.error('Failed to update goal:', error);
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h2 className="text-2xl font-bold text-gray-900">My Development Goals</h2>
+          
+          {/* Cycle Filter */}
+          {allGoals.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-gray-500" />
+              <Select
+                value={goalsCycleFilter}
+                onChange={(e) => setGoalsCycleFilter(e.target.value)}
+                className="w-48"
+              >
+                <option value="">All Cycles ({allGoals.length})</option>
+                {uniqueCycles.map(cycle => (
+                  <option key={cycle.id} value={cycle.id}>
+                    {cycle.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
+        </div>
+
+        {isFeedbackLoading ? (
+          <div className="flex justify-center py-12">
+            <LoadingSpinner />
+          </div>
+        ) : filteredGoals.length > 0 ? (
+          <div className="space-y-4">
+            {filteredGoals.map((goal) => (
+              <Card 
+                key={goal.id}
+                className={`transition-all duration-200 ${goal.status === 'completed' ? 'bg-gray-50' : ''}`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-4">
+                    <input
+                      type="checkbox"
+                      checked={goal.status === 'completed'}
+                      onChange={() => toggleGoalComplete(goal.id, goal.status)}
+                      className="mt-1 h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between">
+                        <h3 className={`text-base font-medium ${goal.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                          {goal.title}
+                        </h3>
+                        {goal.cycleName && (
+                          <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-xs ml-2 whitespace-nowrap">
+                            {goal.cycleName}
+                          </span>
+                        )}
+                      </div>
+                      {goal.description && (
+                        <p className={`text-sm mt-1 ${goal.status === 'completed' ? 'text-gray-400' : 'text-gray-600'}`}>
+                          {goal.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
+                        {goal.targetDate && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            Target: {new Date(goal.targetDate).toLocaleDateString()}
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1">
+                          <User className="w-4 h-4" />
+                          From: {goal.feedbackFrom}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : allGoals.length > 0 ? (
+          <Card>
+            <CardContent className="py-12">
+              <div className="text-center text-gray-500">
+                <Filter className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <p className="text-lg mb-2">No goals in this cycle</p>
+                <Button variant="outline" size="sm" onClick={() => setGoalsCycleFilter('')}>
+                  Show All Cycles
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="py-16">
+              <div className="text-center text-gray-500">
+                <Target className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                <p className="text-lg mb-2">No goals yet</p>
+                <p className="text-sm text-gray-600">Goals from your feedback will appear here</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">

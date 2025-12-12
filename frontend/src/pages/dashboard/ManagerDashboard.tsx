@@ -428,7 +428,7 @@ const ManagerDashboard: React.FC = () => {
                       ({daysRemaining(selectedCycle.endDate)} days left)
                     </span>
                   </span>
-                </div>
+              </div>
                 
                 {/* Team Progress */}
                 <div>
@@ -466,8 +466,8 @@ const ManagerDashboard: React.FC = () => {
                       {reminderPreview.pendingRecipients.map(r => 
                         r.detail ? `${r.name} (${r.detail})` : r.name
                       ).join(', ')}
-                    </p>
-                  </div>
+                </p>
+              </div>
                 )}
                 
                 {/* Send Reminder Button */}
@@ -491,7 +491,7 @@ const ManagerDashboard: React.FC = () => {
                         ? 'All your managers have given feedback to their teams!' 
                         : 'All team members have acknowledged their feedback!'}
                     </span>
-                  </div>
+            </div>
                 )}
               </div>
             )}
