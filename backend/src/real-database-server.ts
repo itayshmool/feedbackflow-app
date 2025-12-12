@@ -23,6 +23,7 @@ import { generateAIContent, parseAIJsonResponse, getAIConfig } from './services/
 import { sanitizeFeedbackContent, sanitizeGoal, sanitizeString } from './shared/utils/sanitize.js';
 import { rateLimit } from './shared/middleware/rate-limit.middleware.js';
 import { validateSortColumn, validateSortOrder } from './shared/utils/sql-security.js';
+import { csrfProtection, setCsrfToken, clearCsrfToken, csrfTokenHandler } from './shared/middleware/csrf.middleware.js';
 
 // Rate limiters for auth endpoints (prevents credential stuffing/brute force)
 const authRateLimit = rateLimit({
@@ -133,13 +134,17 @@ app.use(cors({
     }
   },
   credentials: true, // Enable cookies to be sent cross-origin
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token'],
   exposedHeaders: ['Content-Disposition']
 }));
 // Request body size limits to prevent DoS attacks and memory exhaustion
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
+
+// CSRF Protection - validates token on state-changing requests (POST, PUT, DELETE, PATCH)
+// Uses Double Submit Cookie pattern: cookie + header must match
+app.use(csrfProtection);
 
 // Test database connection on startup
 testConnection().then((connected) => {
@@ -168,6 +173,10 @@ app.get('/api/v1/health', (req, res) => {
     version: '1.0.0'
   });
 });
+
+// CSRF token endpoint - returns current token or generates new one
+// Frontend should call this on app initialization
+app.get('/api/v1/csrf-token', csrfTokenHandler);
 
 // Configure multer for template file uploads - use memory storage to store in database
 const upload = multer({
@@ -883,12 +892,17 @@ app.post('/api/v1/auth/login/mock', authRateLimit, async (req, res) => {
     res.cookie('authToken', accessToken, getAccessTokenCookieOptions(req));
     res.cookie('refreshToken', refreshToken, getRefreshTokenCookieOptions(req));
     
+    // Set CSRF token for subsequent requests
+    const csrfToken = setCsrfToken(req, res);
+    console.log('🛡️ LOGIN: Set CSRF token');
+    
     res.json({
       success: true,
       data: {
         user: user,
         token: accessToken,
-        expiresIn: '15m'
+        expiresIn: '15m',
+        csrfToken: csrfToken // Also return in response for SPA initialization
       }
     });
   } catch (error) {
@@ -1074,6 +1088,10 @@ app.post('/api/v1/auth/login/google', authRateLimit, async (req, res) => {
     console.log('🔐 GOOGLE LOGIN: Setting cookies for', email);
     res.cookie('authToken', accessToken, getAccessTokenCookieOptions(req));
     res.cookie('refreshToken', refreshToken, getRefreshTokenCookieOptions(req));
+    
+    // Set CSRF token for subsequent requests
+    const csrfToken = setCsrfToken(req, res);
+    console.log('🛡️ GOOGLE LOGIN: Set CSRF token');
 
     // Check if user is super_admin (no org scope needed)
     const isSuperAdmin = userRoles.includes('super_admin');
@@ -1095,7 +1113,8 @@ app.post('/api/v1/auth/login/google', authRateLimit, async (req, res) => {
           adminOrganizationSlug: isSuperAdmin ? null : user.admin_organization_slug,
           isSuperAdmin: isSuperAdmin,
         },
-        token: accessToken
+        token: accessToken,
+        csrfToken: csrfToken // Also return in response for SPA initialization
       }
     });
   } catch (error) {
@@ -1122,10 +1141,12 @@ app.post('/api/v1/auth/logout', sessionRateLimit, async (req, res) => {
       }
     }
     
-    // Clear both authentication cookies
+    // Clear all authentication and security cookies
     console.log('🚪 LOGOUT: Clearing cookies');
     res.clearCookie('authToken', getAccessTokenCookieOptions(req));
     res.clearCookie('refreshToken', getRefreshTokenCookieOptions(req));
+    clearCsrfToken(res);
+    console.log('🛡️ LOGOUT: Cleared CSRF token');
     
     res.json({
       success: true,
