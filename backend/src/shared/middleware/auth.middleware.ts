@@ -87,8 +87,16 @@ async function authenticateTokenAsync(req: Request, res: Response, next: NextFun
   
   try {
     // Handle mock tokens (format: mock-jwt-token-EMAIL-TIMESTAMP)
-    // TODO: In production, only allow real JWT tokens
+    // SECURITY: Reject mock tokens in production
     if (token.startsWith('mock-jwt-token-')) {
+      if (process.env.NODE_ENV === 'production') {
+        console.warn('🚫 Mock token rejected in production environment');
+        return res.status(401).json({
+          success: false,
+          error: 'Mock tokens are not allowed in production'
+        });
+      }
+      
       const parts = token.split('-');
       if (parts.length >= 4) {
         // Extract email from token (everything between 'mock-jwt-token-' and last '-TIMESTAMP')
