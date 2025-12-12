@@ -6,7 +6,9 @@ import { DatabaseOrganizationService } from './services/DatabaseOrganizationServ
 
 const app = express();
 app.use(cors({ origin: 'http://localhost:3006', credentials: true }));
-app.use(express.json());
+// Request body size limits to prevent DoS attacks and memory exhaustion
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
 
 const PORT = process.env.PORT || 5000;

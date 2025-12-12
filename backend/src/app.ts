@@ -89,7 +89,9 @@ app.use(cors({
   credentials: true
 }))
 app.use(cookieParser())
-app.use(express.json())
+// Request body size limits to prevent DoS attacks and memory exhaustion
+app.use(express.json({ limit: '1mb' }))
+app.use(express.urlencoded({ extended: true, limit: '1mb' }))
 
 // Initialize database connection (placeholder)
 const db = new Pool({
