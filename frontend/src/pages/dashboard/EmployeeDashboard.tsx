@@ -266,14 +266,65 @@ const EmployeeDashboard: React.FC = () => {
         </Link>
       </div>
 
-      <div className="text-center py-16 text-gray-500">
-        <MessageSquare className="w-20 h-20 mx-auto mb-4 text-gray-400" />
-        <p className="text-lg mb-4">Your complete feedback history</p>
-        <p className="text-sm text-gray-600 mb-6">All feedback you've received and given will be displayed here</p>
-        <Link to="/feedback">
-          <Button size="lg">View Detailed Feedback</Button>
-        </Link>
-      </div>
+      {isFeedbackLoading ? (
+        <div className="flex justify-center py-12">
+          <LoadingSpinner />
+        </div>
+      ) : recentFeedback && recentFeedback.length > 0 ? (
+        <div className="space-y-4">
+          {recentFeedback.map((feedback) => (
+            <Card 
+              key={feedback.id} 
+              className="hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => navigate(`/feedback?view=${feedback.id}`)}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <User className="w-4 h-4 text-gray-400" />
+                      <span className="font-medium text-gray-900">
+                        From: {feedback.fromUser?.name || 'Unknown'}
+                      </span>
+                      <span className={`px-2 py-0.5 text-xs rounded-full ${
+                        feedback.status === 'completed' 
+                          ? 'bg-green-100 text-green-700'
+                          : feedback.status === 'submitted'
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {feedback.status === 'completed' ? 'Acknowledged' : 
+                         feedback.status === 'submitted' ? 'Waiting for Acknowledgement' : 
+                         feedback.status}
+                      </span>
+                    </div>
+                    <p className="text-gray-600 text-sm line-clamp-2">
+                      {feedback.content?.overallComment || feedback.content || 'No comment provided'}
+                    </p>
+                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {new Date(feedback.createdAt).toLocaleDateString()}
+                      </span>
+                      {feedback.cycle?.name && (
+                        <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded">
+                          {feedback.cycle.name}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-16 text-gray-500">
+          <MessageSquare className="w-20 h-20 mx-auto mb-4 text-gray-400" />
+          <p className="text-lg mb-4">No feedback received yet</p>
+          <p className="text-sm text-gray-600 mb-6">Feedback you receive will appear here</p>
+        </div>
+      )}
     </div>
   );
 
