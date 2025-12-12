@@ -14,7 +14,7 @@ import {
   Calendar,
   User
 } from 'lucide-react';
-import api from '../../services/api';
+import api from '../../lib/api';
 
 const EmployeeDashboard: React.FC = () => {
   const navigate = useNavigate();
