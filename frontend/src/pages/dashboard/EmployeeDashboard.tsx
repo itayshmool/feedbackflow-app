@@ -4,6 +4,7 @@ import { useFeedbackStore } from '../../stores/feedbackStore';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { Select } from '../../components/ui/Select';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   MessageSquare, 
@@ -12,7 +13,8 @@ import {
   Activity,
   FileText,
   Calendar,
-  User
+  User,
+  Filter
 } from 'lucide-react';
 import api from '../../lib/api';
 
@@ -29,6 +31,7 @@ const EmployeeDashboard: React.FC = () => {
   } = useFeedbackStore();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'my-feedback' | 'goals'>('overview');
+  const [goalsCycleFilter, setGoalsCycleFilter] = useState<string>('');
   
   // Check if user is a manager (managers see "Feedback Given" stat)
   const isManager = user?.roles?.includes('manager');
@@ -185,6 +188,7 @@ const EmployeeDashboard: React.FC = () => {
                 (feedback.goals || []).map(goal => ({
                   ...goal,
                   feedbackFrom: feedback.fromUser?.name || 'Manager',
+                  cycleName: feedback.cycle?.name,
                 }))
               ) || [];
               const displayGoals = allGoals.slice(0, 3); // Show max 3 in overview
@@ -195,7 +199,7 @@ const EmployeeDashboard: React.FC = () => {
                     <>
                       {displayGoals.map((goal) => (
                         <div key={goal.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                          <div className={`mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center ${
+                          <div className={`mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
                             goal.status === 'completed' 
                               ? 'bg-green-500 border-green-500' 
                               : 'border-gray-300'
@@ -207,9 +211,16 @@ const EmployeeDashboard: React.FC = () => {
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-medium ${goal.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
-                              {goal.title}
-                            </p>
+                            <div className="flex items-start justify-between gap-2">
+                              <p className={`text-sm font-medium ${goal.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                                {goal.title}
+                              </p>
+                              {goal.cycleName && (
+                                <span className="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded text-xs whitespace-nowrap flex-shrink-0">
+                                  {goal.cycleName}
+                                </span>
+                              )}
+                            </div>
                             {goal.targetDate && (
                               <p className="text-xs text-gray-500 mt-1">
                                 Target: {new Date(goal.targetDate).toLocaleDateString()}
@@ -351,13 +362,25 @@ const EmployeeDashboard: React.FC = () => {
   );
 
   const renderGoals = () => {
-    // Extract all goals from received feedback
+    // Extract all goals from received feedback with cycle info
     const allGoals = recentFeedback?.flatMap(feedback => 
       (feedback.goals || []).map(goal => ({
         ...goal,
         feedbackFrom: feedback.fromUser?.name || 'Manager',
+        cycleName: feedback.cycle?.name || 'No Cycle',
+        cycleId: feedback.cycle?.id || '',
       }))
     ) || [];
+
+    // Get unique cycles for filter dropdown
+    const uniqueCycles = Array.from(
+      new Map(allGoals.map(g => [g.cycleId, { id: g.cycleId, name: g.cycleName }])).values()
+    ).filter(c => c.id); // Filter out empty cycle ids
+
+    // Filter goals by selected cycle
+    const filteredGoals = goalsCycleFilter 
+      ? allGoals.filter(g => g.cycleId === goalsCycleFilter)
+      : allGoals;
 
     const toggleGoalComplete = async (goalId: string, currentStatus: string) => {
       const completed = currentStatus !== 'completed';
@@ -374,15 +397,36 @@ const EmployeeDashboard: React.FC = () => {
 
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold text-gray-900">My Development Goals</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h2 className="text-2xl font-bold text-gray-900">My Development Goals</h2>
+          
+          {/* Cycle Filter */}
+          {uniqueCycles.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-gray-500" />
+              <Select
+                value={goalsCycleFilter}
+                onChange={(e) => setGoalsCycleFilter(e.target.value)}
+                className="w-48"
+              >
+                <option value="">All Cycles</option>
+                {uniqueCycles.map(cycle => (
+                  <option key={cycle.id} value={cycle.id}>
+                    {cycle.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
+        </div>
 
         {isFeedbackLoading ? (
           <div className="flex justify-center py-12">
             <LoadingSpinner />
           </div>
-        ) : allGoals.length > 0 ? (
+        ) : filteredGoals.length > 0 ? (
           <div className="space-y-4">
-            {allGoals.map((goal) => (
+            {filteredGoals.map((goal) => (
               <Card 
                 key={goal.id}
                 className={`transition-all duration-200 ${goal.status === 'completed' ? 'bg-gray-50' : ''}`}
@@ -396,9 +440,16 @@ const EmployeeDashboard: React.FC = () => {
                       className="mt-1 h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                     />
                     <div className="flex-1">
-                      <h3 className={`text-base font-medium ${goal.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
-                        {goal.title}
-                      </h3>
+                      <div className="flex items-start justify-between">
+                        <h3 className={`text-base font-medium ${goal.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                          {goal.title}
+                        </h3>
+                        {goal.cycleName && (
+                          <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-xs ml-2 whitespace-nowrap">
+                            {goal.cycleName}
+                          </span>
+                        )}
+                      </div>
                       {goal.description && (
                         <p className={`text-sm mt-1 ${goal.status === 'completed' ? 'text-gray-400' : 'text-gray-600'}`}>
                           {goal.description}
@@ -422,6 +473,18 @@ const EmployeeDashboard: React.FC = () => {
               </Card>
             ))}
           </div>
+        ) : allGoals.length > 0 ? (
+          <Card>
+            <CardContent className="py-12">
+              <div className="text-center text-gray-500">
+                <Filter className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <p className="text-lg mb-2">No goals in this cycle</p>
+                <Button variant="outline" size="sm" onClick={() => setGoalsCycleFilter('')}>
+                  Show All Cycles
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         ) : (
           <Card>
             <CardContent className="py-16">
