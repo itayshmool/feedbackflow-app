@@ -180,47 +180,68 @@ const EmployeeDashboard: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Technical Skills</span>
-                  <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">In Progress</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-blue-500 h-2 rounded-full transition-all duration-500" style={{ width: '65%' }}></div>
-                </div>
-              </div>
+            {(() => {
+              const allGoals = recentFeedback?.flatMap(feedback => 
+                (feedback.goals || []).map(goal => ({
+                  ...goal,
+                  feedbackFrom: feedback.fromUser?.name || 'Manager',
+                }))
+              ) || [];
+              const displayGoals = allGoals.slice(0, 3); // Show max 3 in overview
               
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Communication</span>
-                  <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">On Track</span>
+              return (
+                <div className="space-y-3">
+                  {displayGoals.length > 0 ? (
+                    <>
+                      {displayGoals.map((goal) => (
+                        <div key={goal.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                          <div className={`mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center ${
+                            goal.status === 'completed' 
+                              ? 'bg-green-500 border-green-500' 
+                              : 'border-gray-300'
+                          }`}>
+                            {goal.status === 'completed' && (
+                              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-medium ${goal.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                              {goal.title}
+                            </p>
+                            {goal.targetDate && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Target: {new Date(goal.targetDate).toLocaleDateString()}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {allGoals.length > 3 && (
+                        <p className="text-xs text-gray-500 text-center">
+                          +{allGoals.length - 3} more goals
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-4 text-gray-500">
+                      <Target className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                      <p className="text-sm">No goals yet</p>
+                    </div>
+                  )}
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full mt-2"
+                    onClick={() => setActiveTab('goals')}
+                  >
+                    <Target className="w-4 h-4 mr-2" />
+                    View All Goals
+                  </Button>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-green-500 h-2 rounded-full transition-all duration-500" style={{ width: '80%' }}></div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Project Delivery</span>
-                  <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full">Needs Attention</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-yellow-500 h-2 rounded-full transition-all duration-500" style={{ width: '45%' }}></div>
-                </div>
-              </div>
-
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full mt-4"
-                onClick={() => setActiveTab('goals')}
-              >
-                <Target className="w-4 h-4 mr-2" />
-                View All Goals
-              </Button>
-            </div>
+              );
+            })()}
           </CardContent>
         </Card>
       </div>
@@ -360,48 +381,57 @@ const EmployeeDashboard: React.FC = () => {
             <LoadingSpinner />
           </div>
         ) : allGoals.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {allGoals.map((goal) => (
-              <div 
+              <Card 
                 key={goal.id}
-                className={`flex items-start gap-3 p-4 bg-white rounded-lg border ${
-                  goal.status === 'completed' ? 'bg-gray-50' : ''
-                }`}
+                className={`transition-all duration-200 ${goal.status === 'completed' ? 'bg-gray-50' : ''}`}
               >
-                <input
-                  type="checkbox"
-                  checked={goal.status === 'completed'}
-                  onChange={() => toggleGoalComplete(goal.id, goal.status)}
-                  className="mt-1 h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                />
-                <div className="flex-1">
-                  <h3 className={`font-medium ${goal.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
-                    {goal.title}
-                  </h3>
-                  {goal.description && (
-                    <p className={`text-sm mt-1 ${goal.status === 'completed' ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {goal.description}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                    {goal.targetDate && (
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        Target: {new Date(goal.targetDate).toLocaleDateString()}
-                      </span>
-                    )}
-                    <span>From: {goal.feedbackFrom}</span>
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-4">
+                    <input
+                      type="checkbox"
+                      checked={goal.status === 'completed'}
+                      onChange={() => toggleGoalComplete(goal.id, goal.status)}
+                      className="mt-1 h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                    />
+                    <div className="flex-1">
+                      <h3 className={`text-base font-medium ${goal.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                        {goal.title}
+                      </h3>
+                      {goal.description && (
+                        <p className={`text-sm mt-1 ${goal.status === 'completed' ? 'text-gray-400' : 'text-gray-600'}`}>
+                          {goal.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
+                        {goal.targetDate && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            Target: {new Date(goal.targetDate).toLocaleDateString()}
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1">
+                          <User className="w-4 h-4" />
+                          From: {goal.feedbackFrom}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         ) : (
-          <div className="text-center py-16 text-gray-500">
-            <Target className="w-20 h-20 mx-auto mb-4 text-gray-400" />
-            <p className="text-lg mb-4">No goals yet</p>
-            <p className="text-sm text-gray-600">Goals from your feedback will appear here</p>
-          </div>
+          <Card>
+            <CardContent className="py-16">
+              <div className="text-center text-gray-500">
+                <Target className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                <p className="text-lg mb-2">No goals yet</p>
+                <p className="text-sm text-gray-600">Goals from your feedback will appear here</p>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     );
