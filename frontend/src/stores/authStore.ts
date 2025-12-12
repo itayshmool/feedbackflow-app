@@ -120,6 +120,11 @@ export const useAuthStore = create<AuthState>()(
         // Clear token
         setApiToken(null)
         
+        // Clear welcome banner flags so they show again on next login
+        sessionStorage.removeItem('employee-welcomed')
+        sessionStorage.removeItem('manager-welcomed')
+        sessionStorage.removeItem('admin-welcomed')
+        
         set({
           user: null,
           token: null,

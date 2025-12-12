@@ -73,28 +73,40 @@ const AdminDashboard: React.FC = () => {
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
+  // Show welcome banner only once per session
+  const [showWelcome] = useState(() => {
+    const welcomed = sessionStorage.getItem('admin-welcomed');
+    if (!welcomed) {
+      sessionStorage.setItem('admin-welcomed', 'true');
+      return true;
+    }
+    return false;
+  });
+
   const renderOverview = () => (
     <div className="space-y-6">
-      {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white shadow-lg transform transition-all duration-200 hover:shadow-xl">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.name}!</h1>
-            <p className="text-blue-100 text-lg">
-              Manage your FeedbackFlow platform and organizations
-            </p>
+      {/* Welcome Section - Only show once per session */}
+      {showWelcome && (
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white shadow-lg transform transition-all duration-200 hover:shadow-xl">
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.name}!</h1>
+              <p className="text-blue-100 text-lg">
+                Manage your FeedbackFlow platform and organizations
+              </p>
+            </div>
+            <Button
+              onClick={() => setShowSetupWizard(true)}
+              variant="secondary"
+              size="sm"
+              className="backdrop-blur-sm transition-all duration-200"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              New Organization
+            </Button>
           </div>
-          <Button
-            onClick={() => setShowSetupWizard(true)}
-            variant="secondary"
-            size="sm"
-            className="backdrop-blur-sm transition-all duration-200"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Organization
-          </Button>
         </div>
-      </div>
+      )}
 
       {/* Stats Cards */}
       {organizationStats && (
