@@ -32,6 +32,7 @@ const EmployeeDashboard: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'overview' | 'my-feedback' | 'goals'>('overview');
   const [goalsCycleFilter, setGoalsCycleFilter] = useState<string>('');
+  const [goalsStatusFilter, setGoalsStatusFilter] = useState<string>('');
   
   // Check if user is a manager (managers see "Feedback Given" stat)
   const isManager = user?.roles?.includes('manager');
@@ -379,12 +380,26 @@ const EmployeeDashboard: React.FC = () => {
       new Map(allGoals.map(g => [g.cycleId || 'no-cycle', { id: g.cycleId || 'no-cycle', name: g.cycleName || 'No Cycle' }])).values()
     );
 
-    // Filter goals by selected cycle
-    const filteredGoals = goalsCycleFilter 
-      ? goalsCycleFilter === 'no-cycle'
-        ? allGoals.filter(g => !g.cycleId)
-        : allGoals.filter(g => g.cycleId === goalsCycleFilter)
-      : allGoals;
+    // Filter goals by selected cycle and status
+    let filteredGoals = allGoals;
+    
+    // Apply cycle filter
+    if (goalsCycleFilter) {
+      filteredGoals = goalsCycleFilter === 'no-cycle'
+        ? filteredGoals.filter(g => !g.cycleId)
+        : filteredGoals.filter(g => g.cycleId === goalsCycleFilter);
+    }
+    
+    // Apply status filter
+    if (goalsStatusFilter) {
+      filteredGoals = goalsStatusFilter === 'completed'
+        ? filteredGoals.filter(g => g.status === 'completed')
+        : filteredGoals.filter(g => g.status !== 'completed');
+    }
+
+    // Count for filter badges
+    const completedCount = allGoals.filter(g => g.status === 'completed').length;
+    const pendingCount = allGoals.filter(g => g.status !== 'completed').length;
 
     const toggleGoalComplete = async (goalId: string, currentStatus: string) => {
       const completed = currentStatus !== 'completed';
@@ -404,14 +419,14 @@ const EmployeeDashboard: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <h2 className="text-2xl font-bold text-gray-900">My Development Goals</h2>
           
-          {/* Cycle Filter */}
+          {/* Filters */}
           {allGoals.length > 0 && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-3">
               <Filter className="w-4 h-4 text-gray-500" />
               <Select
                 value={goalsCycleFilter}
                 onChange={(e) => setGoalsCycleFilter(e.target.value)}
-                className="w-48"
+                className="w-44"
               >
                 <option value="">All Cycles ({allGoals.length})</option>
                 {uniqueCycles.map(cycle => (
@@ -419,6 +434,15 @@ const EmployeeDashboard: React.FC = () => {
                     {cycle.name}
                   </option>
                 ))}
+              </Select>
+              <Select
+                value={goalsStatusFilter}
+                onChange={(e) => setGoalsStatusFilter(e.target.value)}
+                className="w-40"
+              >
+                <option value="">All Status</option>
+                <option value="pending">Pending ({pendingCount})</option>
+                <option value="completed">Completed ({completedCount})</option>
               </Select>
             </div>
           )}
@@ -482,9 +506,16 @@ const EmployeeDashboard: React.FC = () => {
             <CardContent className="py-12">
               <div className="text-center text-gray-500">
                 <Filter className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                <p className="text-lg mb-2">No goals in this cycle</p>
-                <Button variant="outline" size="sm" onClick={() => setGoalsCycleFilter('')}>
-                  Show All Cycles
+                <p className="text-lg mb-2">No goals match the selected filters</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    setGoalsCycleFilter('');
+                    setGoalsStatusFilter('');
+                  }}
+                >
+                  Clear Filters
                 </Button>
               </div>
             </CardContent>
