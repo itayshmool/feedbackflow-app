@@ -128,7 +128,7 @@ const EmployeeDashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Recent Activity & Quick Actions */}
+      {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Feedback Received */}
         <Card className="transform transition-all duration-200 hover:shadow-lg">
@@ -258,36 +258,6 @@ const EmployeeDashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <Card className="transform transition-all duration-200 hover:shadow-lg">
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className={`grid grid-cols-1 gap-4 ${isManager ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
-            {isManager && (
-              <Link to="/feedback/give">
-                <Button variant="outline" className="w-full h-24 flex-col space-y-2 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200">
-                  <MessageSquare className="w-6 h-6 text-blue-600" />
-                  <span className="font-medium">Give Feedback</span>
-                </Button>
-              </Link>
-            )}
-            <Link to="/feedback">
-              <Button variant="outline" className="w-full h-24 flex-col space-y-2 hover:bg-green-50 hover:border-green-300 transition-all duration-200">
-                <FileText className="w-6 h-6 text-green-600" />
-                <span className="font-medium">View Feedback</span>
-              </Button>
-            </Link>
-            <Link to="/profile">
-              <Button variant="outline" className="w-full h-24 flex-col space-y-2 hover:bg-orange-50 hover:border-orange-300 transition-all duration-200">
-                <User className="w-6 h-6 text-orange-600" />
-                <span className="font-medium">My Profile</span>
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 
