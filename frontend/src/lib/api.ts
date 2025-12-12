@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 interface ExtendedAxiosRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
   _retryCount?: number;
+  _csrfRetry?: boolean; // Track if we've already retried after CSRF refresh
 }
 
 // Track if we're currently refreshing to prevent multiple simultaneous refresh calls
@@ -27,6 +28,58 @@ const processQueue = (error: Error | null) => {
   failedQueue = []
 }
 
+// CSRF Token Management
+const CSRF_COOKIE_NAME = 'csrf-token'
+const CSRF_HEADER_NAME = 'X-CSRF-Token'
+
+/**
+ * Read CSRF token from cookie
+ * The server sets this as a non-httpOnly cookie so JavaScript can read it
+ */
+function getCsrfTokenFromCookie(): string | null {
+  const cookies = document.cookie.split(';')
+  for (const cookie of cookies) {
+    const [name, value] = cookie.trim().split('=')
+    if (name === CSRF_COOKIE_NAME) {
+      return decodeURIComponent(value)
+    }
+  }
+  return null
+}
+
+/**
+ * Fetch a fresh CSRF token from the server
+ * Call this if the CSRF cookie is missing (e.g., after page reload)
+ */
+async function fetchCsrfToken(): Promise<string | null> {
+  try {
+    // Use a basic fetch to avoid interceptor loops
+    const response = await fetch(
+      (import.meta.env.VITE_API_URL || '/api/v1') + '/csrf-token',
+      { credentials: 'include' }
+    )
+    if (response.ok) {
+      const data = await response.json()
+      console.log('[CSRF] Fetched new token from server')
+      return data.csrfToken
+    }
+  } catch (e) {
+    console.error('[CSRF] Failed to fetch token:', e)
+  }
+  return null
+}
+
+/**
+ * Get CSRF token, fetching from server if not in cookie
+ */
+async function ensureCsrfToken(): Promise<string | null> {
+  let token = getCsrfTokenFromCookie()
+  if (!token) {
+    token = await fetchCsrfToken()
+  }
+  return token
+}
+
 // Create axios instance
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api/v1',
@@ -39,7 +92,7 @@ export const api = axios.create({
 
 // Request interceptor
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
     // Get token from localStorage (persisted by zustand)
     // This ensures token is included even on initial page load before store hydrates
     let token: string | null = null
@@ -69,6 +122,24 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`
     } else {
       console.warn('[API] No auth token available for request to:', config.url)
+    }
+    
+    // Add CSRF token for state-changing requests (POST, PUT, DELETE, PATCH)
+    const method = config.method?.toUpperCase()
+    if (method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+      // Skip CSRF for login endpoints (no token exists yet)
+      const isLoginEndpoint = config.url?.includes('/auth/login') || 
+                              config.url?.includes('/auth/register')
+      
+      if (!isLoginEndpoint) {
+        const csrfToken = getCsrfTokenFromCookie()
+        if (csrfToken) {
+          config.headers[CSRF_HEADER_NAME] = csrfToken
+          console.log('[API] Added CSRF token to request')
+        } else {
+          console.warn('[API] No CSRF token available for state-changing request to:', config.url)
+        }
+      }
     }
     
     console.log('[API] Request to', config.url, '- Auth:', token ? 'present' : 'missing')
@@ -163,6 +234,24 @@ api.interceptors.response.use(
           break
           
         case 403:
+          // Check if it's a CSRF error - try to refresh token and retry
+          if ((data.error === 'CSRF token missing' || data.error === 'CSRF token invalid') 
+              && originalRequest && !originalRequest._csrfRetry) {
+            originalRequest._csrfRetry = true
+            console.log('[API] CSRF error, attempting to refresh token...')
+            
+            const newToken = await fetchCsrfToken()
+            if (newToken) {
+              // Retry the request with the new token
+              originalRequest.headers[CSRF_HEADER_NAME] = newToken
+              return api(originalRequest)
+            }
+            
+            // If we couldn't get a new token, show error and suggest refresh
+            toast.error('Security token expired. Please refresh the page.')
+            break
+          }
+          
           // Extract specific permission error from backend (e.g., privilege escalation, role restrictions)
           toast.error(data.error || data.message || 'You do not have permission to perform this action.')
           break
@@ -214,6 +303,11 @@ api.interceptors.response.use(
 
 // API endpoints
 export const endpoints = {
+  // CSRF
+  csrf: {
+    token: '/csrf-token',
+  },
+  
   // Auth
   auth: {
     login: '/auth/login/mock',
@@ -313,6 +407,25 @@ try {
   }
 } catch (e) {
   console.error('[API] Failed to initialize auth token:', e)
+}
+
+// CSRF Token utilities
+export const csrfUtils = {
+  /**
+   * Get the current CSRF token from cookie
+   */
+  getToken: getCsrfTokenFromCookie,
+  
+  /**
+   * Fetch a fresh CSRF token from the server
+   * Useful after login or if the token is missing
+   */
+  fetchToken: fetchCsrfToken,
+  
+  /**
+   * Ensure a CSRF token exists, fetching if necessary
+   */
+  ensureToken: ensureCsrfToken,
 }
 
 export default api
