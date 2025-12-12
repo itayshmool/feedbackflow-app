@@ -308,6 +308,7 @@ export interface FeedbackStats {
   received: number;
   pending: number;
   drafts: number;
+  acknowledged: number;
   averageRating: number;
   completionRate: number;
 }

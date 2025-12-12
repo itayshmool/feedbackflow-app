@@ -332,7 +332,9 @@ const EmployeeDashboard: React.FC = () => {
                       </span>
                     </div>
                     <p className="text-gray-600 text-sm line-clamp-2">
-                      {feedback.content?.overallComment || feedback.content || 'No comment provided'}
+                      {typeof feedback.content === 'string' 
+                        ? feedback.content 
+                        : feedback.content?.overallComment || 'No comment provided'}
                     </p>
                     <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                       <span className="flex items-center gap-1">
