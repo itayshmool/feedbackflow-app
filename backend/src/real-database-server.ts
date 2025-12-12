@@ -20,6 +20,20 @@ import { JwtService } from './modules/auth/services/jwt.service.js';
 import dbConfig from './config/real-database.js';
 import { generateAIContent, parseAIJsonResponse, getAIConfig } from './services/ai-provider.service.js';
 import { sanitizeFeedbackContent, sanitizeGoal, sanitizeString } from './shared/utils/sanitize.js';
+import { rateLimit } from './shared/middleware/rate-limit.middleware.js';
+
+// Rate limiters for auth endpoints (prevents credential stuffing/brute force)
+const authRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: process.env.NODE_ENV === 'production' ? 10 : 100, // Strict in production, lenient in dev/test
+  message: 'Too many authentication attempts, please try again later'
+});
+
+const sessionRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 60, // 60 requests per 15 minutes per IP
+  message: 'Too many requests, please try again later'
+});
 
 // Initialize JWT service for token generation
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -710,7 +724,7 @@ app.delete('/api/v1/admin/organizations/:id', authenticateToken, async (req, res
 });
 
 // Authentication endpoints
-app.post('/api/v1/auth/login/mock', async (req, res) => {
+app.post('/api/v1/auth/login/mock', authRateLimit, async (req, res) => {
   try {
     // Check if mock login is enabled via environment variable
     // Set ENABLE_MOCK_LOGIN=true in environment to allow mock login
@@ -863,7 +877,7 @@ app.post('/api/v1/auth/login/mock', async (req, res) => {
 });
 
 // Google OAuth login endpoint
-app.post('/api/v1/auth/login/google', async (req, res) => {
+app.post('/api/v1/auth/login/google', authRateLimit, async (req, res) => {
   try {
     const { idToken } = req.body;
     
@@ -1048,7 +1062,7 @@ app.post('/api/v1/auth/login/google', async (req, res) => {
   }
 });
 
-app.post('/api/v1/auth/logout', async (req, res) => {
+app.post('/api/v1/auth/logout', sessionRateLimit, async (req, res) => {
   try {
     // Clear authentication cookie with same options used when setting
     const cookieOptions = getCookieOptions(req);
@@ -1068,7 +1082,7 @@ app.post('/api/v1/auth/logout', async (req, res) => {
   }
 });
 
-app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
+app.get('/api/v1/auth/me', sessionRateLimit, authenticateToken, async (req, res) => {
   try {
     // authenticateToken middleware has already verified the token from cookie
     // and populated req.user
