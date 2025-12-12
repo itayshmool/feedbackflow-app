@@ -16,8 +16,18 @@ import { TeamModelClass } from './modules/admin/models/team.model.js';
 import { CSVParser } from './shared/utils/csv-parser.js';
 import { authenticateToken } from './shared/middleware/auth.middleware.js';
 import { getCookieOptions } from './shared/utils/cookie-helper.js';
+import { JwtService } from './modules/auth/services/jwt.service.js';
 import dbConfig from './config/real-database.js';
 import { generateAIContent, parseAIJsonResponse, getAIConfig } from './services/ai-provider.service.js';
+
+// Initialize JWT service for token generation
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET === 'changeme') {
+  console.error('❌ JWT_SECRET environment variable is not set or uses insecure default');
+  console.error('Generate one with: openssl rand -base64 32');
+  process.exit(1);
+}
+const jwtService = new JwtService(JWT_SECRET);
 
 // Transform database data to frontend format
 const transformOrganizationForFrontend = (dbOrg: any) => ({
@@ -820,19 +830,24 @@ app.post('/api/v1/auth/login/mock', async (req, res) => {
       }
     }
     
-    // Mock JWT token with email embedded
-    const mockToken = `mock-jwt-token-${email}-${Date.now()}`;
+    // Generate real JWT token
+    const token = jwtService.sign({
+      sub: user.id,
+      email: user.email,
+      name: user.name,
+      roles: user.roles,
+    });
     
     // Set authentication cookie (automatically overwrites existing cookie)
     const cookieOptions = getCookieOptions(req);
     console.log('🔐 LOGIN: Setting cookie for', email, 'with options:', cookieOptions);
-    res.cookie('authToken', mockToken, cookieOptions);
+    res.cookie('authToken', token, cookieOptions);
     
     res.json({
       success: true,
       data: {
         user: user,
-        token: mockToken,
+        token: token,
         expiresIn: '24h'
       }
     });
@@ -984,8 +999,13 @@ app.post('/api/v1/auth/login/google', async (req, res) => {
       };
     }
 
-    // Generate token (same format as mock login for compatibility)
-    const token = `mock-jwt-token-${email}-${Date.now()}`;
+    // Generate real JWT token
+    const token = jwtService.sign({
+      sub: user.id,
+      email: user.email,
+      name: user.name,
+      roles: Array.isArray(user.roles) ? user.roles : [user.roles || 'employee'],
+    });
 
     // Set cookie
     const cookieOptions = getCookieOptions(req);
