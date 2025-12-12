@@ -1,4 +1,5 @@
 import { Request } from 'express'
+import { ACCESS_TOKEN_MAX_AGE_MS, REFRESH_TOKEN_MAX_AGE_MS } from '../../modules/auth/services/jwt.service.js'
 
 export function getCookieDomain(hostname: string): string | undefined {
   // localhost - don't set domain
@@ -20,7 +21,14 @@ export function getCookieDomain(hostname: string): string | undefined {
   return undefined
 }
 
-export function getCookieOptions(req: Request) {
+export type TokenType = 'access' | 'refresh'
+
+/**
+ * Get cookie options for authentication tokens
+ * @param req - Express request object
+ * @param tokenType - Type of token ('access' for short-lived, 'refresh' for long-lived)
+ */
+export function getCookieOptions(req: Request, tokenType: TokenType = 'access') {
   const hostname = req.hostname || req.get('host')?.split(':')[0] || 'localhost'
   const isProduction = process.env.NODE_ENV === 'production'
   const isLocalhost = hostname === 'localhost' || hostname.startsWith('127.0.0.1')
@@ -32,18 +40,35 @@ export function getCookieOptions(req: Request) {
   // we need sameSite: 'none' with secure: true in production
   const sameSite = isProduction && !isLocalhost ? 'none' as const : 'lax' as const
 
+  // Different maxAge based on token type
+  const maxAge = tokenType === 'access' ? ACCESS_TOKEN_MAX_AGE_MS : REFRESH_TOKEN_MAX_AGE_MS
+
   const options = {
     httpOnly: true,
     secure: isProduction && !isLocalhost,  // Must be true when sameSite is 'none'
     sameSite,
-    maxAge: 24 * 60 * 60 * 1000,
+    maxAge,
     path: '/',  // Explicit path required for clearCookie to work properly
     domain: getCookieDomain(hostname)
   }
   
   // DEBUG: Log cookie options
-  console.log('🍪 Cookie options:', { hostname, domain: options.domain, path: options.path, sameSite: options.sameSite })
+  const maxAgeDisplay = tokenType === 'access' ? '15m' : '7d'
+  console.log(`🍪 Cookie options (${tokenType}, ${maxAgeDisplay}):`, { hostname, domain: options.domain, path: options.path, sameSite: options.sameSite })
   
   return options
 }
 
+/**
+ * Get cookie options for access token (15 minutes)
+ */
+export function getAccessTokenCookieOptions(req: Request) {
+  return getCookieOptions(req, 'access')
+}
+
+/**
+ * Get cookie options for refresh token (7 days)
+ */
+export function getRefreshTokenCookieOptions(req: Request) {
+  return getCookieOptions(req, 'refresh')
+}

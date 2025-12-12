@@ -15,8 +15,9 @@ import { DepartmentModelClass } from './modules/admin/models/department.model.js
 import { TeamModelClass } from './modules/admin/models/team.model.js';
 import { CSVParser } from './shared/utils/csv-parser.js';
 import { authenticateToken } from './shared/middleware/auth.middleware.js';
-import { getCookieOptions } from './shared/utils/cookie-helper.js';
+import { getCookieOptions, getAccessTokenCookieOptions, getRefreshTokenCookieOptions } from './shared/utils/cookie-helper.js';
 import { JwtService } from './modules/auth/services/jwt.service.js';
+import { RefreshTokenModel } from './modules/auth/models/refresh-token.model.js';
 import dbConfig from './config/real-database.js';
 import { generateAIContent, parseAIJsonResponse, getAIConfig } from './services/ai-provider.service.js';
 import { sanitizeFeedbackContent, sanitizeGoal, sanitizeString } from './shared/utils/sanitize.js';
@@ -43,6 +44,7 @@ if (!JWT_SECRET || JWT_SECRET === 'changeme') {
   process.exit(1);
 }
 const jwtService = new JwtService(JWT_SECRET);
+const refreshTokenModel = new RefreshTokenModel();
 
 // Transform database data to frontend format
 const transformOrganizationForFrontend = (dbOrg: any) => ({
@@ -845,25 +847,45 @@ app.post('/api/v1/auth/login/mock', authRateLimit, async (req, res) => {
       }
     }
     
-    // Generate real JWT token
-    const token = jwtService.sign({
+    // Generate access token (short-lived - 15 minutes)
+    const accessToken = jwtService.signAccessToken({
       sub: user.id,
       email: user.email,
       name: user.name,
       roles: user.roles,
     });
     
-    // Set authentication cookie (automatically overwrites existing cookie)
-    const cookieOptions = getCookieOptions(req);
-    console.log('🔐 LOGIN: Setting cookie for', email, 'with options:', cookieOptions);
-    res.cookie('authToken', token, cookieOptions);
+    // Generate refresh token (long-lived - 7 days)
+    const refreshToken = jwtService.signRefreshToken({
+      sub: user.id,
+      email: user.email,
+    });
+    
+    // Store refresh token hash in database
+    try {
+      const tokenHash = jwtService.hashToken(refreshToken);
+      await refreshTokenModel.create({
+        userId: user.id,
+        tokenHash,
+        userAgent: req.get('user-agent'),
+        ipAddress: req.ip,
+      });
+    } catch (dbErr) {
+      console.error('Failed to store refresh token:', dbErr);
+      // Continue with login even if refresh token storage fails
+    }
+    
+    // Set authentication cookies
+    console.log('🔐 LOGIN: Setting cookies for', email);
+    res.cookie('authToken', accessToken, getAccessTokenCookieOptions(req));
+    res.cookie('refreshToken', refreshToken, getRefreshTokenCookieOptions(req));
     
     res.json({
       success: true,
       data: {
         user: user,
-        token: token,
-        expiresIn: '24h'
+        token: accessToken,
+        expiresIn: '15m'
       }
     });
   } catch (error) {
@@ -1014,21 +1036,41 @@ app.post('/api/v1/auth/login/google', authRateLimit, async (req, res) => {
       };
     }
 
-    // Generate real JWT token
-    const token = jwtService.sign({
+    // Ensure roles is always an array
+    const userRoles = Array.isArray(user.roles) ? user.roles : (user.roles ? [user.roles] : ['employee']);
+
+    // Generate access token (short-lived - 15 minutes)
+    const accessToken = jwtService.signAccessToken({
       sub: user.id,
       email: user.email,
       name: user.name,
-      roles: Array.isArray(user.roles) ? user.roles : [user.roles || 'employee'],
+      roles: userRoles,
     });
+    
+    // Generate refresh token (long-lived - 7 days)
+    const refreshToken = jwtService.signRefreshToken({
+      sub: user.id,
+      email: user.email,
+    });
+    
+    // Store refresh token hash in database
+    try {
+      const tokenHash = jwtService.hashToken(refreshToken);
+      await refreshTokenModel.create({
+        userId: user.id,
+        tokenHash,
+        userAgent: req.get('user-agent'),
+        ipAddress: req.ip,
+      });
+    } catch (dbErr) {
+      console.error('Failed to store refresh token:', dbErr);
+      // Continue with login even if refresh token storage fails
+    }
 
-    // Set cookie
-    const cookieOptions = getCookieOptions(req);
-    console.log('🔐 GOOGLE LOGIN: Setting cookie for', email);
-    res.cookie('authToken', token, cookieOptions);
-
-    // Ensure roles is always an array
-    const userRoles = Array.isArray(user.roles) ? user.roles : (user.roles ? [user.roles] : ['employee']);
+    // Set cookies
+    console.log('🔐 GOOGLE LOGIN: Setting cookies for', email);
+    res.cookie('authToken', accessToken, getAccessTokenCookieOptions(req));
+    res.cookie('refreshToken', refreshToken, getRefreshTokenCookieOptions(req));
 
     // Check if user is super_admin (no org scope needed)
     const isSuperAdmin = userRoles.includes('super_admin');
@@ -1050,7 +1092,7 @@ app.post('/api/v1/auth/login/google', authRateLimit, async (req, res) => {
           adminOrganizationSlug: isSuperAdmin ? null : user.admin_organization_slug,
           isSuperAdmin: isSuperAdmin,
         },
-        token
+        token: accessToken
       }
     });
   } catch (error) {
@@ -1064,10 +1106,23 @@ app.post('/api/v1/auth/login/google', authRateLimit, async (req, res) => {
 
 app.post('/api/v1/auth/logout', sessionRateLimit, async (req, res) => {
   try {
-    // Clear authentication cookie with same options used when setting
-    const cookieOptions = getCookieOptions(req);
-    console.log('🚪 LOGOUT: Clearing cookie with options:', cookieOptions);
-    res.clearCookie('authToken', cookieOptions);
+    // Revoke refresh token in database if present
+    const refreshToken = req.cookies?.refreshToken;
+    if (refreshToken) {
+      try {
+        const tokenHash = jwtService.hashToken(refreshToken);
+        await refreshTokenModel.revoke(tokenHash);
+        console.log('🚪 LOGOUT: Revoked refresh token');
+      } catch (err) {
+        console.error('🚪 LOGOUT: Failed to revoke refresh token:', err);
+        // Continue with logout even if revocation fails
+      }
+    }
+    
+    // Clear both authentication cookies
+    console.log('🚪 LOGOUT: Clearing cookies');
+    res.clearCookie('authToken', getAccessTokenCookieOptions(req));
+    res.clearCookie('refreshToken', getRefreshTokenCookieOptions(req));
     
     res.json({
       success: true,
@@ -1078,6 +1133,103 @@ app.post('/api/v1/auth/logout', sessionRateLimit, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Logout failed'
+    });
+  }
+});
+
+// Refresh access token using refresh token
+app.post('/api/v1/auth/refresh', sessionRateLimit, async (req, res) => {
+  try {
+    const refreshToken = req.cookies?.refreshToken;
+    if (!refreshToken) {
+      return res.status(401).json({
+        success: false,
+        error: 'Refresh token required',
+        code: 'REFRESH_TOKEN_MISSING'
+      });
+    }
+
+    // Verify JWT refresh token
+    let payload;
+    try {
+      payload = jwtService.verifyRefreshToken(refreshToken);
+    } catch (err) {
+      console.log('🔐 Refresh token JWT verification failed:', err);
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid refresh token',
+        code: 'REFRESH_TOKEN_INVALID'
+      });
+    }
+
+    // Verify token exists in database and is not revoked
+    const tokenHash = jwtService.hashToken(refreshToken);
+    const storedToken = await refreshTokenModel.findValidToken(tokenHash);
+    if (!storedToken) {
+      console.log('🔐 Refresh token not found in database or revoked');
+      return res.status(401).json({
+        success: false,
+        error: 'Refresh token revoked or expired',
+        code: 'REFRESH_TOKEN_REVOKED'
+      });
+    }
+
+    // Update last accessed time
+    await refreshTokenModel.updateLastAccessed(tokenHash);
+
+    // Get fresh user data from database
+    const userQuery = `
+      SELECT 
+        u.id,
+        u.email,
+        u.name,
+        u.avatar_url,
+        COALESCE(
+          JSON_AGG(DISTINCT r.name) FILTER (WHERE r.name IS NOT NULL),
+          '[]'
+        ) as roles
+      FROM users u
+      LEFT JOIN user_roles ur ON u.id = ur.user_id AND ur.is_active = true
+      LEFT JOIN roles r ON ur.role_id = r.id
+      WHERE u.email = $1
+      GROUP BY u.id, u.email, u.name, u.avatar_url
+    `;
+    
+    const result = await query(userQuery, [payload.email]);
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not found',
+        code: 'USER_NOT_FOUND'
+      });
+    }
+
+    const user = result.rows[0];
+
+    // Issue new access token only (keep same refresh token)
+    const accessToken = jwtService.signAccessToken({
+      sub: user.id,
+      email: user.email,
+      name: user.name,
+      picture: user.avatar_url,
+      roles: user.roles || [],
+    });
+
+    res.cookie('authToken', accessToken, getAccessTokenCookieOptions(req));
+    
+    console.log(`🔐 Refreshed access token for user ${user.email}`);
+
+    res.json({
+      success: true,
+      message: 'Token refreshed',
+      expiresIn: '15m'
+    });
+  } catch (error) {
+    console.error('Error in token refresh:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Token refresh failed'
     });
   }
 });

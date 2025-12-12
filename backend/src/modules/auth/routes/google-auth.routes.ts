@@ -41,6 +41,10 @@ export function createGoogleAuthRoutes(controller: GoogleAuthController): Router
   // Get current authenticated user
   router.get('/me', sessionRateLimit, controller.me);
 
+  // Refresh access token using refresh token
+  // Rate limited but more generous than login (users will call this frequently)
+  router.post('/refresh', sessionRateLimit, controller.refresh);
+
   // Logout
   router.post('/logout', sessionRateLimit, controller.logout);
 
