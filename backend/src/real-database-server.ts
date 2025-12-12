@@ -22,6 +22,7 @@ import dbConfig from './config/real-database.js';
 import { generateAIContent, parseAIJsonResponse, getAIConfig } from './services/ai-provider.service.js';
 import { sanitizeFeedbackContent, sanitizeGoal, sanitizeString } from './shared/utils/sanitize.js';
 import { rateLimit } from './shared/middleware/rate-limit.middleware.js';
+import { validateSortColumn, validateSortOrder } from './shared/utils/sql-security.js';
 
 // Rate limiters for auth endpoints (prevents credential stuffing/brute force)
 const authRateLimit = rateLimit({
@@ -2047,6 +2048,10 @@ app.get('/api/v1/admin/users', authenticateToken, async (req, res) => {
       sortOrder = 'desc'
     } = req.query;
 
+    // SECURITY: Validate sort parameters to prevent SQL injection
+    const safeSortBy = validateSortColumn('users', String(sortBy));
+    const safeSortOrder = validateSortOrder(String(sortOrder));
+
     const offset = (Number(page) - 1) * Number(limit);
     
     // Build WHERE clause
@@ -2172,7 +2177,7 @@ app.get('/api/v1/admin/users', authenticateToken, async (req, res) => {
       ${whereClause}
       GROUP BY u.id, u.email, u.name, u.avatar_url, u.is_active, u.email_verified, 
                u.last_login_at, u.created_at, u.updated_at, u.organization_id, u.department, u.position
-      ORDER BY u.${sortBy} ${String(sortOrder).toUpperCase()}
+      ORDER BY u.${safeSortBy} ${safeSortOrder}
       LIMIT $${mainQueryParams.length - 1} OFFSET $${mainQueryParams.length}
     `;
     

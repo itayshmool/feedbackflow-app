@@ -1,4 +1,5 @@
 import { query } from '../../../config/real-database';
+import { validateSortColumn, validateSortOrder } from '../../../shared/utils/sql-security';
 
 export interface TemplateDocument {
   id: string;
@@ -319,6 +320,10 @@ export class TemplateDocumentModel {
       ...restFilters
     } = filters;
 
+    // SECURITY: Validate sort parameters to prevent SQL injection
+    const safeSortBy = validateSortColumn('feedback_template_documents', sortBy);
+    const safeSortOrder = validateSortOrder(sortOrder);
+
     // Build WHERE clause
     let whereConditions: string[] = ['archived_at IS NULL'];
     const params: any[] = [];
@@ -363,13 +368,13 @@ export class TemplateDocumentModel {
     );
     const total = parseInt(countResult.rows[0].total);
 
-    // Get paginated results
+    // Get paginated results with validated ORDER BY
     paramCount++;
     const offset = (page - 1) * limit;
     const result = await query(
       `SELECT * FROM feedback_template_documents 
        WHERE ${whereClause} 
-       ORDER BY ${sortBy} ${sortOrder.toUpperCase()} 
+       ORDER BY ${safeSortBy} ${safeSortOrder} 
        LIMIT $${paramCount} OFFSET $${paramCount + 1}`,
       [...params, limit, offset]
     );

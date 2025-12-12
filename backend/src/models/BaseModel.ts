@@ -1,4 +1,10 @@
 import { pool, query } from '../config/real-database.js';
+import { 
+  validateSortColumn, 
+  validateSortOrder, 
+  isValidFieldName,
+  validateWhereColumns 
+} from '../shared/utils/sql-security.js';
 
 export interface BaseEntity {
   id: string;
@@ -62,14 +68,18 @@ export abstract class BaseModel<T extends BaseEntity> {
       sortOrder = 'desc'
     } = options;
 
+    // SECURITY: Validate sort parameters to prevent SQL injection
+    const safeSortBy = validateSortColumn(this.tableName, sortBy);
+    const safeSortOrder = validateSortOrder(sortOrder);
+
     // Get total count
     const countResult = await query(`SELECT COUNT(*) FROM ${this.tableName}`);
     const total = parseInt(countResult.rows[0].count);
 
-    // Get paginated data
+    // Get paginated data with validated ORDER BY
     const result = await query(
       `SELECT * FROM ${this.tableName} 
-       ORDER BY ${sortBy} ${sortOrder.toUpperCase()} 
+       ORDER BY ${safeSortBy} ${safeSortOrder} 
        LIMIT $1 OFFSET $2`,
       [limit, offset]
     );
@@ -97,14 +107,24 @@ export abstract class BaseModel<T extends BaseEntity> {
       sortOrder = 'desc'
     } = options;
 
-    const hasConditions = Object.keys(conditions).length > 0;
+    // SECURITY: Validate sort parameters to prevent SQL injection
+    const safeSortBy = validateSortColumn(this.tableName, sortBy);
+    const safeSortOrder = validateSortOrder(sortOrder);
+
+    // SECURITY: Validate WHERE column names
+    if (!validateWhereColumns(conditions, this.tableName)) {
+      throw new Error('Invalid column names in query conditions');
+    }
+
+    // Only use keys that pass field name validation
+    const safeKeys = Object.keys(conditions).filter(isValidFieldName);
+    const hasConditions = safeKeys.length > 0;
+    
     const whereClause = hasConditions 
-      ? Object.keys(conditions)
-          .map((key, index) => `${key} = $${index + 1}`)
-          .join(' AND ')
+      ? safeKeys.map((key, index) => `${key} = $${index + 1}`).join(' AND ')
       : '1=1'; // Always true condition when no filters
 
-    const values = Object.values(conditions);
+    const values = safeKeys.map(key => conditions[key]);
 
     // Get total count
     const countResult = await query(
@@ -113,11 +133,11 @@ export abstract class BaseModel<T extends BaseEntity> {
     );
     const total = parseInt(countResult.rows[0].count);
 
-    // Get paginated data
+    // Get paginated data with validated ORDER BY
     const result = await query(
       `SELECT * FROM ${this.tableName} 
        WHERE ${whereClause}
-       ORDER BY ${sortBy} ${sortOrder.toUpperCase()} 
+       ORDER BY ${safeSortBy} ${safeSortOrder} 
        LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
       [...values, limit, offset]
     );
@@ -135,7 +155,18 @@ export abstract class BaseModel<T extends BaseEntity> {
 
   // Create new record
   async create(data: Partial<T>): Promise<T> {
-    const fields = Object.keys(data).filter(key => key !== 'id' && key !== 'created_at' && key !== 'updated_at');
+    // SECURITY: Filter to valid field names only to prevent SQL injection
+    const fields = Object.keys(data).filter(key => 
+      key !== 'id' && 
+      key !== 'created_at' && 
+      key !== 'updated_at' &&
+      isValidFieldName(key)
+    );
+    
+    if (fields.length === 0) {
+      throw new Error('No valid fields provided for insert');
+    }
+    
     const values = fields.map(key => data[key as keyof T]);
     const placeholders = fields.map((_, index) => `$${index + 1}`).join(', ');
 
@@ -152,7 +183,20 @@ export abstract class BaseModel<T extends BaseEntity> {
   // Update record
   async update(id: string, data: Partial<T>): Promise<T | null> {
     const mappedData = this.mapFieldsToDb(data);
-    const fields = Object.keys(mappedData).filter(key => key !== 'id' && key !== 'created_at' && key !== 'updated_at');
+    
+    // SECURITY: Filter to valid field names only to prevent SQL injection
+    const fields = Object.keys(mappedData).filter(key => 
+      key !== 'id' && 
+      key !== 'created_at' && 
+      key !== 'updated_at' &&
+      isValidFieldName(key)
+    );
+    
+    if (fields.length === 0) {
+      // No valid fields to update, return existing record
+      return this.findById(id);
+    }
+    
     const values = fields.map(key => mappedData[key]);
     const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
 
@@ -194,11 +238,20 @@ export abstract class BaseModel<T extends BaseEntity> {
       return parseInt(result.rows[0].count);
     }
 
-    const whereClause = Object.keys(conditions)
+    // SECURITY: Validate and filter column names
+    const safeKeys = Object.keys(conditions).filter(isValidFieldName);
+    
+    if (safeKeys.length === 0) {
+      // No valid keys, return total count
+      const result = await query(`SELECT COUNT(*) FROM ${this.tableName}`);
+      return parseInt(result.rows[0].count);
+    }
+
+    const whereClause = safeKeys
       .map((key, index) => `${key} = $${index + 1}`)
       .join(' AND ');
 
-    const values = Object.values(conditions);
+    const values = safeKeys.map(key => conditions[key]);
 
     const result = await query(
       `SELECT COUNT(*) FROM ${this.tableName} WHERE ${whereClause}`,

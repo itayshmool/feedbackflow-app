@@ -2,6 +2,12 @@
 
 import { query as dbQuery } from '../../../config/real-database.js';
 import { User, UserRole, Role, UserFilters, PaginationOptions } from '../types/user.types';
+import { 
+  validateSortColumn, 
+  validateSortOrder, 
+  isValidFieldName,
+  sanitizeUpdateFields 
+} from '../../../shared/utils/sql-security.js';
 
 export class UserModel {
   private tableName = 'users';
@@ -12,6 +18,10 @@ export class UserModel {
     options: PaginationOptions = {}
   ): Promise<{ data: User[]; pagination: any }> {
     const { limit = 10, offset = 0, sortBy = 'created_at', sortOrder = 'desc' } = options;
+    
+    // SECURITY: Validate sort parameters to prevent SQL injection
+    const safeSortBy = validateSortColumn('users', sortBy);
+    const safeSortOrder = validateSortOrder(sortOrder);
     
     // Build WHERE clause - separate user-level filters from role/org filters
     // Role/org filters determine WHICH users to return, but we still want ALL roles for those users
@@ -154,7 +164,7 @@ export class UserModel {
       ${whereClause}
       GROUP BY u.id, u.email, u.name, u.avatar_url, u.is_active, u.email_verified, 
                u.last_login_at, u.created_at, u.updated_at, u.organization_id, u.department, u.position
-      ORDER BY u.${sortBy} ${sortOrder.toUpperCase()}
+      ORDER BY u.${safeSortBy} ${safeSortOrder}
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
 
@@ -302,7 +312,16 @@ export class UserModel {
   }
 
   async bulkUpdateUsers(userIds: string[], updates: Partial<User>): Promise<number> {
-    const setClause = Object.keys(updates)
+    // SECURITY: Filter to allowed update fields only to prevent SQL injection
+    const safeUpdates = sanitizeUpdateFields(updates, 'users');
+    
+    if (Object.keys(safeUpdates).length === 0) {
+      console.warn('[UserModel] No valid fields for bulk update');
+      return 0;
+    }
+    
+    const fields = Object.keys(safeUpdates);
+    const setClause = fields
       .map((key, index) => `${key} = $${index + 2}`)
       .join(', ');
 
@@ -312,7 +331,7 @@ export class UserModel {
       WHERE id = ANY($1)
     `;
 
-    const values = [userIds, ...Object.values(updates)];
+    const values = [userIds, ...Object.values(safeUpdates)];
     const result = await dbQuery(query, values);
     return result.rowCount || 0;
   }
@@ -391,11 +410,21 @@ export class UserModel {
   }
 
   async findWhere(conditions: Record<string, any>): Promise<{ data: User[]; pagination: any }> {
-    const whereClause = Object.keys(conditions)
-      .map((key, index) => `${key} = $${index + 1}`)
-      .join(' AND ');
+    // SECURITY: Validate and filter column names to prevent SQL injection
+    const safeConditions = Object.fromEntries(
+      Object.entries(conditions).filter(([key]) => isValidFieldName(key))
+    );
     
-    const values = Object.values(conditions);
+    if (Object.keys(safeConditions).length === 0 && Object.keys(conditions).length > 0) {
+      throw new Error('Invalid column names in query conditions');
+    }
+    
+    const safeKeys = Object.keys(safeConditions);
+    const whereClause = safeKeys.length > 0
+      ? safeKeys.map((key, index) => `${key} = $${index + 1}`).join(' AND ')
+      : '1=1';
+    
+    const values = Object.values(safeConditions);
     const query = `SELECT * FROM ${this.tableName} WHERE ${whereClause}`;
     const result = await dbQuery(query, values);
     
@@ -406,8 +435,20 @@ export class UserModel {
   }
 
   async create(data: Partial<User>): Promise<User> {
-    const fields = Object.keys(data).map(key => key.replace(/([A-Z])/g, '_$1').toLowerCase());
-    const values = Object.values(data);
+    // SECURITY: Validate and filter field names to prevent SQL injection
+    const safeData = Object.fromEntries(
+      Object.entries(data).filter(([key]) => {
+        const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+        return isValidFieldName(snakeKey);
+      })
+    );
+    
+    if (Object.keys(safeData).length === 0) {
+      throw new Error('No valid fields provided for insert');
+    }
+    
+    const fields = Object.keys(safeData).map(key => key.replace(/([A-Z])/g, '_$1').toLowerCase());
+    const values = Object.values(safeData);
     const placeholders = fields.map((_, index) => `$${index + 1}`).join(', ');
     
     const query = `
@@ -421,8 +462,21 @@ export class UserModel {
   }
 
   async update(id: string, data: Partial<User>): Promise<User | null> {
-    const fields = Object.keys(data).map(key => key.replace(/([A-Z])/g, '_$1').toLowerCase());
-    const values = Object.values(data);
+    // SECURITY: Validate and filter field names to prevent SQL injection
+    const safeData = Object.fromEntries(
+      Object.entries(data).filter(([key]) => {
+        const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+        return isValidFieldName(snakeKey);
+      })
+    );
+    
+    const fields = Object.keys(safeData).map(key => key.replace(/([A-Z])/g, '_$1').toLowerCase());
+    const values = Object.values(safeData);
+    
+    if (fields.length === 0) {
+      return this.findById(id);
+    }
+    
     const setClause = fields.map((field, index) => `${field} = $${index + 2}`).join(', ');
     
     const query = `
