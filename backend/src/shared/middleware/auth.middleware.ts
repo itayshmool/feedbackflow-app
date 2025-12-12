@@ -2,7 +2,15 @@ import { Request, Response, NextFunction } from 'express';
 import { JwtService } from '../../modules/auth/services/jwt.service.js';
 import { query } from '../../config/real-database.js';
 
-const jwtService = new JwtService(process.env.JWT_SECRET || 'changeme');
+// Fail fast if JWT_SECRET is not properly configured
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET === 'changeme') {
+  throw new Error(
+    'JWT_SECRET environment variable must be set to a secure random value. ' +
+    'Generate one with: openssl rand -base64 32'
+  );
+}
+const jwtService = new JwtService(JWT_SECRET);
 
 // Type for admin organization assignment
 interface AdminOrganization {
