@@ -1,5 +1,6 @@
 import { BaseModel, BaseEntity, PaginationOptions, PaginatedResult } from './BaseModel.js';
 import { query } from '../config/real-database.js';
+import { validateSortColumn, validateSortOrder } from '../shared/utils/sql-security.js';
 
 export interface Organization extends BaseEntity {
   name: string;
@@ -149,6 +150,10 @@ export class OrganizationModel extends BaseModel<Organization> {
       search
     } = filters;
 
+    // SECURITY: Validate sort parameters to prevent SQL injection
+    const safeSortBy = validateSortColumn('organizations', sortBy);
+    const safeSortOrder = validateSortOrder(sortOrder);
+
     let whereConditions: string[] = [];
     let params: any[] = [];
     let paramIndex = 1;
@@ -195,11 +200,11 @@ export class OrganizationModel extends BaseModel<Organization> {
     );
     const total = parseInt(countResult.rows[0].count);
 
-    // Get paginated data
+    // Get paginated data with validated ORDER BY
     const result = await query(
       `SELECT * FROM organizations 
        ${whereClause}
-       ORDER BY ${sortBy} ${sortOrder.toUpperCase()} 
+       ORDER BY ${safeSortBy} ${safeSortOrder} 
        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
       [...params, limit, offset]
     );

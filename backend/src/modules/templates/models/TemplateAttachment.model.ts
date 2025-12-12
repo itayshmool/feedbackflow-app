@@ -1,4 +1,5 @@
 import { query, transaction } from '../../../config/database.js';
+import { validateSortColumn, validateSortOrder } from '../../../shared/utils/sql-security.js';
 
 export interface TemplateAttachment {
   id: string;
@@ -144,6 +145,10 @@ export class TemplateAttachmentModel {
       sortOrder = 'desc',
     } = filters;
 
+    // SECURITY: Validate sort parameters to prevent SQL injection
+    const safeSortBy = validateSortColumn('feedback_template_attachments', sortBy);
+    const safeSortOrder = validateSortOrder(sortOrder);
+
     let whereConditions: string[] = [];
     let queryParams: any[] = [];
     let paramIndex = 1;
@@ -173,7 +178,8 @@ export class TemplateAttachmentModel {
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
-    const orderClause = `ORDER BY ${sortBy} ${sortOrder.toUpperCase()}`;
+    // Use validated sort parameters
+    const orderClause = `ORDER BY ${safeSortBy} ${safeSortOrder}`;
     const limitClause = `LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     queryParams.push(limit, (page - 1) * limit);
 
