@@ -19,6 +19,7 @@ import { getCookieOptions } from './shared/utils/cookie-helper.js';
 import { JwtService } from './modules/auth/services/jwt.service.js';
 import dbConfig from './config/real-database.js';
 import { generateAIContent, parseAIJsonResponse, getAIConfig } from './services/ai-provider.service.js';
+import { sanitizeFeedbackContent, sanitizeGoal, sanitizeString } from './shared/utils/sanitize.js';
 
 // Initialize JWT service for token generation
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -5708,14 +5709,15 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
       requestId = requestResult.rows[0].id;
 
     // Create structured content object for database storage
-    const structuredContent = {
+    // Apply XSS sanitization to prevent stored XSS attacks
+    const structuredContent = sanitizeFeedbackContent({
       overallComment: content?.overallComment || comment || '',
       strengths: content?.strengths || [],
       areasForImprovement: content?.areasForImprovement || [],
       specificExamples: content?.specificExamples || [],
       recommendations: content?.recommendations || [],
       confidential: content?.confidential || false
-    };
+    });
 
     // Create feedback response in database
       responseResult = await client.query(
@@ -5742,6 +5744,8 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
     if (goals && goals.length > 0) {
       console.log('💾 Saving', goals.length, 'development goals to database');
       for (const goal of goals) {
+          // Sanitize goal content to prevent XSS
+          const sanitizedGoal = sanitizeGoal(goal);
           const goalResult = await client.query(
           `INSERT INTO feedback_goals 
            (feedback_response_id, title, description, category, priority, target_date, status, progress)
@@ -5749,10 +5753,10 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
            RETURNING id, feedback_response_id, title, description, category, priority, target_date, status, progress, created_at, updated_at`,
           [
             responseId,
-            goal.title,
-            goal.description || '',
-            goal.category || 'development',
-            goal.priority || 'medium',
+            sanitizedGoal.title,
+            sanitizedGoal.description,
+            sanitizedGoal.category,
+            sanitizedGoal.priority,
             goal.targetDate ? new Date(goal.targetDate) : null
           ]
         );
@@ -5809,12 +5813,13 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
       content: {
         id: `content-${responseId}`,
         feedbackId: responseId,
-        overallComment: content?.overallComment || comment || '',
-        strengths: content?.strengths || [],
-        areasForImprovement: content?.areasForImprovement || [],
-        specificExamples: content?.specificExamples || [],
-        recommendations: content?.recommendations || [],
-        confidential: content?.confidential || false,
+        // Use sanitized content to prevent XSS in API response
+        overallComment: structuredContent.overallComment,
+        strengths: structuredContent.strengths,
+        areasForImprovement: structuredContent.areasForImprovement,
+        specificExamples: structuredContent.specificExamples,
+        recommendations: structuredContent.recommendations,
+        confidential: structuredContent.confidential,
         createdAt: responseResult.rows[0].created_at,
         updatedAt: responseResult.rows[0].updated_at
       },
@@ -5964,14 +5969,15 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
     // Merge updates with existing content - only overwrite if explicitly provided
     // Using nullish coalescing (??) so that undefined/null preserves existing,
     // but explicit values (including empty string, 0, false) overwrite
-    const structuredContent = {
+    // Apply XSS sanitization to any new content to prevent stored XSS attacks
+    const structuredContent = sanitizeFeedbackContent({
       overallComment: updates.content?.overallComment ?? existingContent.overallComment ?? '',
       strengths: updates.content?.strengths ?? existingContent.strengths ?? [],
       areasForImprovement: updates.content?.areasForImprovement ?? existingContent.areasForImprovement ?? [],
       specificExamples: updates.content?.specificExamples ?? existingContent.specificExamples ?? [],
       recommendations: updates.content?.recommendations ?? existingContent.recommendations ?? [],
       confidential: updates.content?.confidential ?? existingContent.confidential ?? false
-    };
+    });
     
     // Merge rating and color_classification with existing values
     const finalRating = updates.rating ?? updates.ratings?.[0]?.score ?? existing.rating;
@@ -6767,12 +6773,14 @@ app.post('/api/v1/feedback/:feedbackId/comments', authenticateToken, async (req,
     // For now, we'll store comments in the feedback_responses content field as JSON
     // In a real implementation, you'd have a separate comments table
     const commentId = `comment-${Date.now()}`;
+    // Sanitize comment content to prevent XSS
+    const sanitizedContent = sanitizeString(content);
     const newComment = {
       id: commentId,
       feedbackId: feedbackId,
       userId: currentUserId,
       parentCommentId,
-      content,
+      content: sanitizedContent,
       isPrivate,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
