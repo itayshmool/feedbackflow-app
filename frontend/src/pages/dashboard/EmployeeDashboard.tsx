@@ -372,14 +372,16 @@ const EmployeeDashboard: React.FC = () => {
       }))
     ) || [];
 
-    // Get unique cycles for filter dropdown
+    // Get unique cycles for filter dropdown (include "No Cycle" option)
     const uniqueCycles = Array.from(
-      new Map(allGoals.map(g => [g.cycleId, { id: g.cycleId, name: g.cycleName }])).values()
-    ).filter(c => c.id); // Filter out empty cycle ids
+      new Map(allGoals.map(g => [g.cycleId || 'no-cycle', { id: g.cycleId || 'no-cycle', name: g.cycleName || 'No Cycle' }])).values()
+    );
 
     // Filter goals by selected cycle
     const filteredGoals = goalsCycleFilter 
-      ? allGoals.filter(g => g.cycleId === goalsCycleFilter)
+      ? goalsCycleFilter === 'no-cycle'
+        ? allGoals.filter(g => !g.cycleId)
+        : allGoals.filter(g => g.cycleId === goalsCycleFilter)
       : allGoals;
 
     const toggleGoalComplete = async (goalId: string, currentStatus: string) => {
@@ -401,7 +403,7 @@ const EmployeeDashboard: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900">My Development Goals</h2>
           
           {/* Cycle Filter */}
-          {uniqueCycles.length > 0 && (
+          {allGoals.length > 0 && (
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-gray-500" />
               <Select
@@ -409,7 +411,7 @@ const EmployeeDashboard: React.FC = () => {
                 onChange={(e) => setGoalsCycleFilter(e.target.value)}
                 className="w-48"
               >
-                <option value="">All Cycles</option>
+                <option value="">All Cycles ({allGoals.length})</option>
                 {uniqueCycles.map(cycle => (
                   <option key={cycle.id} value={cycle.id}>
                     {cycle.name}

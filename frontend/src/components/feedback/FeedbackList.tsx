@@ -300,22 +300,22 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
               </button>
             )}
           </div>
-          <div className="flex gap-2">
-            {showFilters && (
-              <Button
-                variant="outline"
-                onClick={() => setShowFilterPanel(!showFilterPanel)}
-                icon={Filter}
-              >
-                Filters
-              </Button>
-            )}
-            <Button variant="outline" onClick={handleExport} icon={Download}>
-              Export
+        <div className="flex gap-2">
+          {showFilters && (
+            <Button
+              variant="outline"
+              onClick={() => setShowFilterPanel(!showFilterPanel)}
+              icon={Filter}
+            >
+              Filters
             </Button>
-            {onGiveFeedback && (
-              <Button onClick={onGiveFeedback}>Give Feedback</Button>
-            )}
+          )}
+          <Button variant="outline" onClick={handleExport} icon={Download}>
+            Export
+          </Button>
+          {onGiveFeedback && (
+            <Button onClick={onGiveFeedback}>Give Feedback</Button>
+          )}
           </div>
         </div>
       </div>
@@ -326,46 +326,46 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
           {isManager ? (
             // Manager tabs: Received, Given, Drafts, All
             <>
-              <button
-                className={`px-4 py-2 font-medium transition-colors ${
-                  activeTab === 'received'
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-                onClick={() => setActiveTab('received')}
-              >
-                Received ({feedbackStats?.received || 0})
-              </button>
-              <button
-                className={`px-4 py-2 font-medium transition-colors ${
-                  activeTab === 'given'
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-                onClick={() => setActiveTab('given')}
-              >
-                Given ({feedbackStats?.given || 0})
-              </button>
-              <button
-                className={`px-4 py-2 font-medium transition-colors ${
-                  activeTab === 'drafts'
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-                onClick={() => setActiveTab('drafts')}
-              >
-                Drafts ({feedbackStats?.drafts || 0})
-              </button>
-              <button
-                className={`px-4 py-2 font-medium transition-colors ${
-                  activeTab === 'all'
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-                onClick={() => setActiveTab('all')}
-              >
-                All ({(feedbackStats?.given || 0) + (feedbackStats?.received || 0) + (feedbackStats?.drafts || 0)})
-              </button>
+          <button
+            className={`px-4 py-2 font-medium transition-colors ${
+              activeTab === 'received'
+                ? 'border-b-2 border-blue-500 text-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+            onClick={() => setActiveTab('received')}
+          >
+            Received ({feedbackStats?.received || 0})
+          </button>
+          <button
+            className={`px-4 py-2 font-medium transition-colors ${
+              activeTab === 'given'
+                ? 'border-b-2 border-blue-500 text-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+            onClick={() => setActiveTab('given')}
+          >
+            Given ({feedbackStats?.given || 0})
+          </button>
+          <button
+            className={`px-4 py-2 font-medium transition-colors ${
+              activeTab === 'drafts'
+                ? 'border-b-2 border-blue-500 text-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+            onClick={() => setActiveTab('drafts')}
+          >
+            Drafts ({feedbackStats?.drafts || 0})
+          </button>
+          <button
+            className={`px-4 py-2 font-medium transition-colors ${
+              activeTab === 'all'
+                ? 'border-b-2 border-blue-500 text-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+            onClick={() => setActiveTab('all')}
+          >
+            All ({(feedbackStats?.given || 0) + (feedbackStats?.received || 0) + (feedbackStats?.drafts || 0)})
+          </button>
             </>
           ) : (
             // Employee tabs: Waiting for Acknowledgement, Acknowledged, All Received
@@ -444,9 +444,9 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
           {(cycleFilter || statusFilter || typeFilter) && (
             <div className="flex justify-end mt-4">
               <Button variant="outline" size="sm" onClick={handleClearFilters} icon={RotateCcw}>
-                Clear Filters
-              </Button>
-            </div>
+              Clear Filters
+            </Button>
+          </div>
           )}
         </Card>
       )}

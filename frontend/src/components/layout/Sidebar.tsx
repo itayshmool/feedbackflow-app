@@ -135,32 +135,32 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
                 // Only show "Team Feedback" if user has managers reporting to them
                 .filter(item => item.href !== '/team-feedback' || hasManagerReports)
                 .map((item) => {
-                  const Icon = item.icon
-                  return (
-                    <NavLink
-                      key={item.name}
-                      to={item.href}
-                      onClick={handleNavClick}
-                      className={({ isActive }) =>
-                        cn(
-                          'group flex items-center px-3 py-3 text-sm font-medium rounded-md transition-colors',
-                          isActive
-                            ? 'bg-primary-100 text-primary-900'
-                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                        )
-                      }
-                    >
-                      <Icon
-                        className={cn(
-                          'mr-3 flex-shrink-0 h-5 w-5',
-                          'text-gray-400 group-hover:text-gray-500'
-                        )}
-                        aria-hidden="true"
-                      />
-                      {item.name}
-                    </NavLink>
-                  )
-                })}
+                const Icon = item.icon
+                return (
+                  <NavLink
+                    key={item.name}
+                    to={item.href}
+                    onClick={handleNavClick}
+                    className={({ isActive }) =>
+                      cn(
+                        'group flex items-center px-3 py-3 text-sm font-medium rounded-md transition-colors',
+                        isActive
+                          ? 'bg-primary-100 text-primary-900'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      )
+                    }
+                  >
+                    <Icon
+                      className={cn(
+                        'mr-3 flex-shrink-0 h-5 w-5',
+                        'text-gray-400 group-hover:text-gray-500'
+                      )}
+                      aria-hidden="true"
+                    />
+                    {item.name}
+                  </NavLink>
+                )
+              })}
             </>
           )}
           
