@@ -368,7 +368,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
               </button>
             </>
           ) : (
-            // Employee tabs: Waiting for Ack, Acknowledged, All Received
+            // Employee tabs: Waiting for Acknowledgement, Acknowledged, All Received
             <>
               <button
                 className={`px-4 py-2 font-medium transition-colors ${
@@ -378,7 +378,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
                 }`}
                 onClick={() => setActiveTab('waiting')}
               >
-                Waiting for Ack ({feedbackStats?.pending || 0})
+                Waiting for Acknowledgement ({feedbackStats?.pending || 0})
               </button>
               <button
                 className={`px-4 py-2 font-medium transition-colors ${

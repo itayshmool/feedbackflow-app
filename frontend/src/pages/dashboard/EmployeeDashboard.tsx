@@ -113,7 +113,7 @@ const EmployeeDashboard: React.FC = () => {
                 <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600" />
               </div>
               <div className="ml-3 sm:ml-4 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Waiting for Ack</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Waiting for Acknowledgement</p>
                 <p className="text-xl sm:text-2xl font-bold text-gray-900">
                   {isFeedbackLoading ? '...' : feedbackStats?.pending || 0}
                 </p>
