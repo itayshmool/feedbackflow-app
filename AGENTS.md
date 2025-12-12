@@ -143,11 +143,9 @@ cd backend && npm run build
 
 | Task | Command | Notes |
 |------|---------|-------|
-| **Backend Dev** | `cd backend && npm run dev` | Nodemon auto-restart |
+| **Backend Dev** | `cd backend && npm run dev` | Nodemon auto-restart (PostgreSQL required) |
 | **Backend Build** | `cd backend && npm run build` | Compile TypeScript to dist/ |
 | **Backend Start** | `cd backend && npm start` | Production mode |
-| **Backend Mock DB** | `cd backend && node dist/mock-database-server.js` | In-memory database |
-| **Backend Real DB** | `cd backend && tsx src/real-database-server.ts` | PostgreSQL required |
 | | | |
 | **Frontend Dev** | `cd frontend && npm run dev` | Vite dev server (port 3003) |
 | **Frontend Build** | `cd frontend && npm run build` | Production build |

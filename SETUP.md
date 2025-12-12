@@ -35,8 +35,7 @@ cd ..
 ```bash
 # Terminal 1: Start Backend
 cd backend
-npm run build
-node dist/mock-database-server.js
+npm run dev  # Or: npm run build && npm start
 
 # Terminal 2: Start Frontend
 cd frontend
@@ -138,11 +137,8 @@ npm run dev
 # Run tests
 npm test
 
-# Start mock database server
-node dist/mock-database-server.js
-
-# Start simple server
-node dist/simple-server.js
+# Start production server
+node dist/real-database-server.js
 ```
 
 ### Frontend Commands
@@ -216,7 +212,7 @@ npm run build
 ```bash
 # Backend with debug logs
 cd backend
-DEBUG=* node dist/mock-database-server.js
+DEBUG=* npm run dev
 
 # Frontend with debug
 cd frontend

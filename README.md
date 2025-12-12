@@ -423,8 +423,7 @@ npm run test:feedback    # Test specific module
 npm run test:integration # Integration tests only
 
 # Utilities
-node dist/mock-database-server.js    # Start with mock DB
-node dist/real-database-server.js    # Start with real DB
+node dist/real-database-server.js    # Start server (production build)
 tsx src/test-migrations.ts           # Test database migrations
 ```
 
