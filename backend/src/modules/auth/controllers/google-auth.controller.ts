@@ -1,12 +1,15 @@
 // backend/src/modules/auth/controllers/google-auth.controller.ts
 
 import { Request, Response, NextFunction } from 'express';
-import { GoogleOAuthService } from '../services/google-oauth.service';
-import { JwtService } from '../services/jwt.service';
-import { UserService } from '../services/user.service';
-import { getCookieOptions } from '../../../shared/utils/cookie-helper.js';
+import { GoogleOAuthService } from '../services/google-oauth.service.js';
+import { JwtService } from '../services/jwt.service.js';
+import { UserService } from '../services/user.service.js';
+import { RefreshTokenModel } from '../models/refresh-token.model.js';
+import { getAccessTokenCookieOptions, getRefreshTokenCookieOptions } from '../../../shared/utils/cookie-helper.js';
 
 export class GoogleAuthController {
+  private refreshTokenModel = new RefreshTokenModel();
+
   constructor(
     private googleService: GoogleOAuthService,
     private jwtService: JwtService,
@@ -32,6 +35,41 @@ export class GoogleAuthController {
     };
   }
 
+  /**
+   * Issue both access token (15 min) and refresh token (7 days) for a user
+   */
+  private async issueTokens(req: Request, res: Response, user: { id: string; email: string; name?: string; picture?: string; roles: string[] }) {
+    // Generate access token (short-lived - 15 minutes)
+    const accessToken = this.jwtService.signAccessToken({
+      sub: user.id,
+      email: user.email,
+      name: user.name,
+      picture: user.picture,
+      roles: user.roles,
+    });
+
+    // Generate refresh token (long-lived - 7 days)
+    const refreshToken = this.jwtService.signRefreshToken({
+      sub: user.id,
+      email: user.email,
+    });
+
+    // Store refresh token hash in database for revocation capability
+    const tokenHash = this.jwtService.hashToken(refreshToken);
+    await this.refreshTokenModel.create({
+      userId: user.id,
+      tokenHash,
+      userAgent: req.get('user-agent'),
+      ipAddress: req.ip,
+    });
+
+    // Set cookies
+    res.cookie('authToken', accessToken, getAccessTokenCookieOptions(req));
+    res.cookie('refreshToken', refreshToken, getRefreshTokenCookieOptions(req));
+
+    console.log(`🔐 Issued tokens for user ${user.email}: access (15m), refresh (7d)`);
+  }
+
   login = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { idToken } = req.body as { idToken: string };
@@ -47,19 +85,10 @@ export class GoogleAuthController {
         picture: payload.picture || undefined,
       });
 
-      const token = this.jwtService.sign({
-        sub: user.id,
-        email: user.email,
-        name: user.name,
-        picture: user.picture,
-        roles: user.roles,
-      });
+      // Issue both access and refresh tokens
+      await this.issueTokens(req, res, user);
 
-      // Set cookie with dynamic domain
-      const cookieOptions = getCookieOptions(req);
-      res.cookie('authToken', token, cookieOptions);
-
-      // Return only user (NO TOKEN)
+      // Return only user (NO TOKEN in response body)
       const transformedUser = this.transformUser(user);
       res.json({ user: transformedUser });
     } catch (err) {
@@ -79,7 +108,68 @@ export class GoogleAuthController {
         picture: 'https://via.placeholder.com/150',
       });
 
-      const token = this.jwtService.sign({
+      // Issue both access and refresh tokens
+      await this.issueTokens(req, res, user);
+
+      // Return only user (NO TOKEN in response body)
+      const transformedUser = this.transformUser(user);
+      res.json({ user: transformedUser });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * Refresh access token using refresh token
+   * Returns new access token (refresh token stays the same)
+   */
+  refresh = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const refreshToken = req.cookies?.refreshToken;
+      if (!refreshToken) {
+        return res.status(401).json({ 
+          message: 'Refresh token required',
+          code: 'REFRESH_TOKEN_MISSING'
+        });
+      }
+
+      // Verify JWT refresh token
+      let payload;
+      try {
+        payload = this.jwtService.verifyRefreshToken(refreshToken);
+      } catch (err) {
+        console.log('🔐 Refresh token JWT verification failed:', err);
+        return res.status(401).json({ 
+          message: 'Invalid refresh token',
+          code: 'REFRESH_TOKEN_INVALID'
+        });
+      }
+
+      // Verify token exists in database and is not revoked
+      const tokenHash = this.jwtService.hashToken(refreshToken);
+      const storedToken = await this.refreshTokenModel.findValidToken(tokenHash);
+      if (!storedToken) {
+        console.log('🔐 Refresh token not found in database or revoked');
+        return res.status(401).json({ 
+          message: 'Refresh token revoked or expired',
+          code: 'REFRESH_TOKEN_REVOKED'
+        });
+      }
+
+      // Update last accessed time
+      await this.refreshTokenModel.updateLastAccessed(tokenHash);
+
+      // Get fresh user data from database
+      const user = await this.userService.findByEmail(payload.email);
+      if (!user) {
+        return res.status(401).json({ 
+          message: 'User not found',
+          code: 'USER_NOT_FOUND'
+        });
+      }
+
+      // Issue new access token only (keep same refresh token)
+      const accessToken = this.jwtService.signAccessToken({
         sub: user.id,
         email: user.email,
         name: user.name,
@@ -87,13 +177,15 @@ export class GoogleAuthController {
         roles: user.roles,
       });
 
-      // Set cookie with dynamic domain
-      const cookieOptions = getCookieOptions(req);
-      res.cookie('authToken', token, cookieOptions);
+      res.cookie('authToken', accessToken, getAccessTokenCookieOptions(req));
+      
+      console.log(`🔐 Refreshed access token for user ${user.email}`);
 
-      // Return only user (NO TOKEN)
-      const transformedUser = this.transformUser(user);
-      res.json({ user: transformedUser });
+      res.json({ 
+        success: true,
+        message: 'Token refreshed',
+        expiresIn: '15m'
+      });
     } catch (err) {
       next(err);
     }
@@ -125,18 +217,33 @@ export class GoogleAuthController {
         return res.status(401).json({ message: 'Invalid token' });
       }
       if (err instanceof Error && err.name === 'TokenExpiredError') {
-        return res.status(401).json({ message: 'Token expired' });
+        return res.status(401).json({ 
+          message: 'Token expired',
+          code: 'ACCESS_TOKEN_EXPIRED'
+        });
       }
       next(err);
     }
   };
 
-  // Logout - clear cookie
-  logout = (req: Request, res: Response) => {
-    const cookieOptions = getCookieOptions(req);
-    res.clearCookie('authToken', cookieOptions);
+  // Logout - clear cookies and revoke refresh token
+  logout = async (req: Request, res: Response) => {
+    // Revoke refresh token in database if present
+    const refreshToken = req.cookies?.refreshToken;
+    if (refreshToken) {
+      try {
+        const tokenHash = this.jwtService.hashToken(refreshToken);
+        await this.refreshTokenModel.revoke(tokenHash);
+        console.log('🔐 Revoked refresh token on logout');
+      } catch (err) {
+        console.error('🔐 Failed to revoke refresh token:', err);
+        // Continue with logout even if revocation fails
+      }
+    }
+
+    // Clear both cookies
+    res.clearCookie('authToken', getAccessTokenCookieOptions(req));
+    res.clearCookie('refreshToken', getRefreshTokenCookieOptions(req));
     res.json({ message: 'Logged out successfully' });
   };
 }
-
-

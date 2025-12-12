@@ -1,7 +1,31 @@
 // frontend/src/lib/api.ts
 
-import axios from 'axios'
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import toast from 'react-hot-toast'
+
+// Extend AxiosRequestConfig to track retry state
+interface ExtendedAxiosRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+  _retryCount?: number;
+}
+
+// Track if we're currently refreshing to prevent multiple simultaneous refresh calls
+let isRefreshing = false
+let failedQueue: Array<{
+  resolve: (value?: unknown) => void
+  reject: (error?: unknown) => void
+}> = []
+
+const processQueue = (error: Error | null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error)
+    } else {
+      prom.resolve()
+    }
+  })
+  failedQueue = []
+}
 
 // Create axios instance
 export const api = axios.create({
@@ -55,21 +79,83 @@ api.interceptors.request.use(
   }
 )
 
-// Response interceptor
+// Response interceptor with automatic token refresh
 api.interceptors.response.use(
   (response) => {
     return response
   },
-  (error) => {
-    const { response } = error
+  async (error: AxiosError) => {
+    const originalRequest = error.config as ExtendedAxiosRequestConfig
+    const response = error.response
     
     if (response) {
-      const { status, data } = response
+      const { status, data } = response as { status: number; data: any }
       
+      // Handle 401 - try to refresh token
+      if (status === 401 && originalRequest && !originalRequest._retry) {
+        // Don't retry refresh endpoint itself or login endpoints
+        const isAuthEndpoint = originalRequest.url?.includes('/auth/refresh') || 
+                               originalRequest.url?.includes('/auth/login') ||
+                               originalRequest.url?.includes('/auth/logout')
+        
+        if (isAuthEndpoint) {
+          // Auth endpoint failed - redirect to login
+          if (!window.location.pathname.includes('/login')) {
+            window.location.href = '/login'
+            toast.error('Session expired. Please login again.')
+          }
+          return Promise.reject(error)
+        }
+
+        // Check if we're already refreshing
+        if (isRefreshing) {
+          // Wait for the refresh to complete
+          return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject })
+          })
+            .then(() => {
+              // Retry the original request after refresh completes
+              return api(originalRequest)
+            })
+            .catch(err => {
+              return Promise.reject(err)
+            })
+        }
+
+        originalRequest._retry = true
+        isRefreshing = true
+
+        console.log('[API] Access token expired, attempting refresh...')
+
+        try {
+          // Attempt to refresh the token
+          await api.post('/auth/refresh')
+          console.log('[API] Token refreshed successfully')
+          
+          // Process queued requests
+          processQueue(null)
+          
+          // Retry the original request
+          return api(originalRequest)
+        } catch (refreshError) {
+          console.log('[API] Token refresh failed, redirecting to login')
+          processQueue(refreshError as Error)
+          
+          // Refresh failed - redirect to login
+          if (!window.location.pathname.includes('/login')) {
+            window.location.href = '/login'
+            toast.error('Session expired. Please login again.')
+          }
+          return Promise.reject(refreshError)
+        } finally {
+          isRefreshing = false
+        }
+      }
+      
+      // Handle other error codes
       switch (status) {
         case 401:
-          // Unauthorized - cookie expired or invalid
-          // Only redirect if not already on login page to prevent loops
+          // Already handled above, this is for cases where retry already happened
           if (!window.location.pathname.includes('/login')) {
             window.location.href = '/login'
             toast.error('Session expired. Please login again.')
@@ -133,6 +219,7 @@ export const endpoints = {
     login: '/auth/login/mock',
     me: '/auth/me',
     refresh: '/auth/refresh',
+    logout: '/auth/logout',
   },
   
   // Cycles
