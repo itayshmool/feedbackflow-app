@@ -325,11 +325,8 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
       toast.success('Feedback saved as draft');
       onSuccess?.();
       onClose?.();
-    } else {
-      // Show error from store
-      const errorMsg = useFeedbackStore.getState().createError;
-      toast.error(errorMsg || 'Failed to save feedback');
     }
+    // Error toast is shown by api.ts interceptor
   };
 
   const handleSubmit = async () => {
@@ -384,14 +381,10 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         toast.success('Feedback submitted successfully');
         onSuccess?.();
         onClose?.();
-      } else {
-        toast.error('Failed to submit feedback');
       }
-    } else {
-      // Show error from store
-      const errorMsg = useFeedbackStore.getState().createError;
-      toast.error(errorMsg || 'Failed to create feedback');
+      // Error toast for submit failure is shown by api.ts interceptor
     }
+    // Error toast for create failure is shown by api.ts interceptor
   };
 
   if (isLoadingDirectReports) {

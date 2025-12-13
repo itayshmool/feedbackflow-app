@@ -85,7 +85,7 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
       setIsEditMode(false);
     } catch (error: any) {
       console.error('Failed to save feedback:', error);
-      toast.error(error?.response?.data?.error || 'Failed to save feedback');
+      // Toast is shown by api.ts interceptor
     } finally {
       setIsSaving(false);
     }
