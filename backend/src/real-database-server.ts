@@ -970,6 +970,15 @@ app.post('/api/v1/auth/login/google', authRateLimit, async (req, res) => {
 
     const email = payload.email;
     const name = payload.name || email.split('@')[0];
+    const picture = payload.picture;
+    
+    // Debug: Log Google profile info
+    console.log('🔐 GOOGLE LOGIN: Profile info from Google:', {
+      email,
+      name,
+      picture: picture || 'NOT PROVIDED',
+      hasProfileScope: !!payload.picture
+    });
 
     // Restrict to @wix.com organization (all environments)
     const allowedDomain = process.env.ALLOWED_EMAIL_DOMAIN || 'wix.com';
@@ -1031,22 +1040,29 @@ app.post('/api/v1/auth/login/google', authRateLimit, async (req, res) => {
       
       if (userResult.rows.length > 0) {
         user = userResult.rows[0];
+        console.log('🔐 GOOGLE LOGIN: Existing user found:', { userId: user.id, currentAvatar: user.avatar_url || 'NONE' });
         
         // Update avatar_url from Google profile (if provided and user doesn't have custom avatar)
-        if (payload.picture && (!user.avatar_url || user.avatar_url.startsWith('http'))) {
+        // Custom avatars use local path like /api/v1/users/{id}/avatar
+        const hasCustomAvatar = user.avatar_url && !user.avatar_url.startsWith('http');
+        if (picture && !hasCustomAvatar) {
+          console.log('🔐 GOOGLE LOGIN: Updating avatar to:', picture);
           await query(
             `UPDATE users SET avatar_url = $2, last_login_at = NOW() WHERE id = $1`,
-            [user.id, payload.picture]
+            [user.id, picture]
           );
-          user.avatar_url = payload.picture;
+          user.avatar_url = picture;
+        } else {
+          console.log('🔐 GOOGLE LOGIN: Skipping avatar update. Picture from Google:', picture || 'NONE', '| Has custom avatar:', hasCustomAvatar);
         }
       } else {
         // Create new user from Google account
+        console.log('🔐 GOOGLE LOGIN: Creating new user with avatar:', picture || 'NONE');
         const insertResult = await query(
           `INSERT INTO users (email, name, avatar_url, role, is_active, email_verified, created_at, updated_at)
            VALUES ($1, $2, $3, 'employee', true, true, NOW(), NOW())
            RETURNING *`,
-          [email, name, payload.picture]
+          [email, name, picture]
         );
         const newUser = insertResult.rows[0];
         
@@ -1122,6 +1138,10 @@ app.post('/api/v1/auth/login/google', authRateLimit, async (req, res) => {
     // Check if user is super_admin (no org scope needed)
     const isSuperAdmin = userRoles.includes('super_admin');
     
+    // Final picture to return (prefer saved avatar, fallback to Google picture)
+    const finalPicture = user.avatar_url || picture;
+    console.log('🔐 GOOGLE LOGIN: Returning picture:', finalPicture || 'NONE');
+    
     res.json({
       success: true,
       data: {
@@ -1129,7 +1149,7 @@ app.post('/api/v1/auth/login/google', authRateLimit, async (req, res) => {
           id: user.id,
           email: user.email,
           name: user.name,
-          picture: user.avatar_url || payload.picture,
+          picture: finalPicture,
           roles: userRoles,
           organizationId: user.organization_id,
           organizationName: user.organization_name,
