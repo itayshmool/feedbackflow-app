@@ -6,10 +6,11 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { GoogleLogin } from '@react-oauth/google'
-import { Mail, Lock, Eye, EyeOff, ShieldCheck, HelpCircle, MessageSquare, BarChart3 } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, ShieldCheck, HelpCircle } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
+import { GrowthPulseLogoIcon } from '@/components/ui/GrowthPulseLogo'
 import toast from 'react-hot-toast'
 
 const loginSchema = z.object({
@@ -19,49 +20,40 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>
 
-// GrowthPulse Logo
+// GrowthPulse Logo (Mobile)
 const Logo = () => (
-  <div className="flex items-center justify-center gap-3">
-    <div className="h-14 w-14 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center shadow-lg shadow-primary-500/25 transform hover:scale-105 transition-transform duration-200">
-      <span className="text-white font-bold text-2xl tracking-tight">GP</span>
+  <div className="flex items-center justify-center">
+    <GrowthPulseLogoIcon size={64} className="drop-shadow-lg" />
+  </div>
+)
+
+// Decorative Growth Shape (top-left) - teal colored to match logo
+const GrowthShape = () => (
+  <div className="absolute -top-20 -left-20 w-[400px] h-[400px] opacity-[0.08] pointer-events-none hidden lg:block">
+    <div className="relative w-full h-full">
+      {/* Main organic shape */}
+      <div className="absolute inset-0 bg-teal-500 rounded-full blur-3xl" />
+      {/* Smaller accent */}
+      <div className="absolute top-1/2 left-1/2 w-32 h-32 bg-teal-400 rounded-full blur-2xl opacity-60" />
     </div>
   </div>
 )
 
-// Decorative Conversation Bubble Shape (top-left)
-const ConversationBubbleShape = () => (
-  <div className="absolute -top-20 -left-20 w-[400px] h-[400px] opacity-[0.07] pointer-events-none hidden lg:block">
+// Decorative Pulse Shape (bottom-right)
+const PulseShape = () => (
+  <div className="absolute -bottom-16 -right-16 w-[350px] h-[300px] opacity-[0.06] pointer-events-none hidden lg:block">
     <div className="relative w-full h-full">
-      {/* Main bubble */}
-      <div className="absolute inset-0 bg-primary-500 rounded-full blur-3xl" />
-      {/* Smaller accent bubble */}
-      <div className="absolute top-1/2 left-1/2 w-32 h-32 bg-primary-400 rounded-full blur-2xl opacity-60" />
-      {/* Chat icon hint */}
-      <MessageSquare 
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 text-primary-600 opacity-30" 
-        strokeWidth={1}
-      />
-    </div>
-  </div>
-)
-
-// Decorative Dashboard/Metrics Shape (bottom-right)
-const DashboardMetricsShape = () => (
-  <div className="absolute -bottom-16 -right-16 w-[350px] h-[300px] opacity-[0.05] pointer-events-none hidden lg:block">
-    <div className="relative w-full h-full">
-      {/* Stacked bars representing metrics */}
-      <div className="absolute bottom-0 right-0 flex items-end gap-3">
-        <div className="w-12 h-32 bg-primary-500 rounded-t-lg blur-sm" />
-        <div className="w-12 h-48 bg-primary-600 rounded-t-lg blur-sm" />
-        <div className="w-12 h-40 bg-primary-500 rounded-t-lg blur-sm" />
-        <div className="w-12 h-56 bg-primary-600 rounded-t-lg blur-sm" />
-        <div className="w-12 h-36 bg-primary-500 rounded-t-lg blur-sm" />
-      </div>
-      {/* Chart icon hint */}
-      <BarChart3 
-        className="absolute bottom-1/3 right-1/3 w-20 h-20 text-primary-600 opacity-40" 
-        strokeWidth={1}
-      />
+      {/* Pulse wave visualization */}
+      <svg className="absolute bottom-0 right-0 w-full h-full" viewBox="0 0 300 200" fill="none">
+        <path
+          d="M0 150 L60 150 L90 80 L120 180 L150 60 L180 160 L210 100 L240 150 L300 150"
+          stroke="#2196F3"
+          strokeWidth="8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          opacity="0.4"
+        />
+      </svg>
     </div>
   </div>
 )
@@ -136,52 +128,55 @@ export default function LoginPage() {
           LEFT SIDE - Branding & Abstract Background (Desktop only)
           ═══════════════════════════════════════════════════════════════ */}
       <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative overflow-hidden">
-        {/* Gradient background */}
+        {/* Gradient background - teal/green tones to match logo */}
         <div 
           className="absolute inset-0"
           style={{
             background: `
-              radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.08), transparent 55%),
-              radial-gradient(circle at 80% 70%, rgba(59, 130, 246, 0.06), transparent 50%),
+              radial-gradient(circle at 20% 30%, rgba(38, 166, 154, 0.08), transparent 55%),
+              radial-gradient(circle at 80% 70%, rgba(33, 150, 243, 0.06), transparent 50%),
               #F5F7FB
             `
           }}
         />
         
         {/* Decorative shapes */}
-        <ConversationBubbleShape />
-        <DashboardMetricsShape />
+        <GrowthShape />
+        <PulseShape />
         
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
           {/* Logo & Brand */}
           <div className="mb-12">
             <div className="flex items-center gap-4 mb-8">
-              <div className="h-16 w-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center shadow-xl shadow-primary-500/20">
-                <span className="text-white font-bold text-3xl tracking-tight">GP</span>
+              <GrowthPulseLogoIcon size={72} className="drop-shadow-xl" />
+              <div className="flex flex-col">
+                <span className="text-3xl font-bold tracking-tight">
+                  <span className="text-gray-800">GROWTH</span>
+                  <span className="text-gray-500 font-normal">PULSE</span>
+                </span>
               </div>
-              <span className="text-2xl font-bold text-gray-800 tracking-tight">GrowthPulse</span>
             </div>
             
             {/* Tagline */}
             <h1 className="text-4xl xl:text-5xl font-bold text-gray-900 leading-tight mb-6">
-              Empower your team
+              Nurture growth,
               <br />
-              <span className="text-primary-600">with meaningful feedback</span>
+              <span className="text-teal-600">measure progress</span>
             </h1>
             
             <p className="text-lg text-gray-600 max-w-md leading-relaxed">
-              Streamline performance reviews, foster growth, and build stronger teams 
-              with actionable insights.
+              Cultivate your team's potential with continuous feedback cycles 
+              and real-time performance insights.
             </p>
           </div>
           
           {/* Feature highlights */}
           <div className="space-y-4">
             {[
-              { icon: '📊', text: 'Real-time analytics & insights' },
-              { icon: '🔄', text: 'Seamless feedback cycles' },
-              { icon: '🎯', text: 'Goal tracking & alignment' },
+              { icon: '🌱', text: 'Continuous growth tracking' },
+              { icon: '💓', text: 'Real-time performance pulse' },
+              { icon: '🎯', text: 'Goal alignment & progress' },
             ].map((feature, idx) => (
               <div 
                 key={idx}
@@ -205,7 +200,7 @@ export default function LoginPage() {
           className="absolute inset-0 lg:hidden"
           style={{
             background: `
-              radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.06), transparent 40%),
+              radial-gradient(circle at 50% 0%, rgba(38, 166, 154, 0.06), transparent 40%),
               #F8FAFC
             `
           }}

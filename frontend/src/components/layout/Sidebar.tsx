@@ -19,6 +19,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useHierarchyStore } from '@/stores/hierarchyStore'
 import { useNotificationStore } from '@/stores/notificationStore'
 import { cn } from '@/lib/utils'
+import { GrowthPulseLogoIcon } from '@/components/ui/GrowthPulseLogo'
 
 // Section header component
 const SectionHeader = ({ children }: { children: React.ReactNode }) => (
@@ -157,12 +158,12 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
       <div className="flex items-center justify-between flex-shrink-0 px-4">
         <div className="flex items-center">
           <div className="flex-shrink-0">
-            <div className="h-8 w-8 bg-primary-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">GP</span>
-            </div>
+            <GrowthPulseLogoIcon size={36} />
           </div>
-          <div className="ml-3">
-            <h1 className="text-lg font-semibold text-gray-900">GrowthPulse</h1>
+          <div className="ml-2">
+            <h1 className="text-base font-bold text-gray-800 tracking-tight">
+              GROWTH<span className="font-normal text-gray-500">PULSE</span>
+            </h1>
           </div>
         </div>
         {/* Close button - mobile only */}
