@@ -8563,11 +8563,6 @@ app.get('/api/v1/analytics/team-completion', authenticateToken, async (req, res)
   }
 });
 
-// Test endpoint
-app.get('/api/v1/test', (req, res) => {
-  res.json({ success: true, message: 'Test endpoint working' });
-});
-
 // GET /api/v1/team/employee/:employeeId/history - Get feedback history for a specific team member
 app.get('/api/v1/team/employee/:employeeId/history', authenticateToken, async (req, res) => {
   try {
