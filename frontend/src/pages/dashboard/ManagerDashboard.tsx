@@ -660,12 +660,12 @@ const ManagerDashboard: React.FC = () => {
         <div 
           className={`
             relative flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl mb-2 
-            transition-all duration-300 ease-out
+            transition-all duration-200 ease-out
             ${isCurrentUser 
-              ? 'bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 border-2 border-emerald-300 shadow-lg shadow-emerald-100' 
+              ? 'bg-white border-l-4 border-l-emerald-500 border border-emerald-200 shadow-md' 
               : isDirectReport
-                ? 'bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md hover:scale-[1.01] cursor-pointer'
-                : 'bg-gray-50 border border-gray-100 opacity-75'
+                ? 'bg-white border border-gray-200 hover:border-primary-400 hover:shadow-lg hover:bg-primary-50/30 hover:-translate-y-0.5 cursor-pointer group'
+                : 'bg-gray-50/80 border border-gray-100'
             }
           `}
           style={{ marginLeft: `${indentPx}px` }}
@@ -706,13 +706,14 @@ const ManagerDashboard: React.FC = () => {
             relative w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0
             bg-gradient-to-br ${getAvatarGradient(level, isCurrentUser)}
             shadow-md ring-2 ring-white
+            ${isDirectReport && !isCurrentUser ? 'group-hover:ring-primary-200 group-hover:shadow-lg transition-all duration-200' : ''}
           `}>
             <span className="text-base sm:text-lg font-bold text-white drop-shadow-sm">
               {node.name.charAt(0).toUpperCase()}
             </span>
-            {/* Manager badge */}
+            {/* Manager badge - improved contrast */}
             {hasChildren && (
-              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 sm:w-5 sm:h-5 bg-amber-400 rounded-full flex items-center justify-center ring-2 ring-white">
+              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 sm:w-5 sm:h-5 bg-indigo-500 rounded-full flex items-center justify-center ring-2 ring-white shadow-sm">
                 <Users className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
               </div>
             )}
@@ -721,42 +722,42 @@ const ManagerDashboard: React.FC = () => {
           {/* Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h4 className={`font-semibold text-sm sm:text-base ${isCurrentUser ? 'text-emerald-800' : 'text-gray-900'}`}>
+              <h4 className={`font-semibold text-sm sm:text-base ${isCurrentUser ? 'text-emerald-700' : 'text-gray-900'} ${isDirectReport && !isCurrentUser ? 'group-hover:text-primary-700 transition-colors' : ''}`}>
                 {node.name}
               </h4>
               {isCurrentUser && (
-                <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">
+                <span className="text-xs px-2.5 py-0.5 bg-emerald-500 text-white rounded-full font-medium shadow-sm">
                   You
                 </span>
               )}
               {isDirectReport && !isCurrentUser && (
-                <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium">
+                <span className="text-xs px-2 py-0.5 bg-primary-100 text-primary-700 rounded-full font-medium group-hover:bg-primary-200 transition-colors">
                   Direct
                 </span>
               )}
               {hasChildren && (
-                <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-medium hidden sm:inline-flex items-center gap-1">
+                <span className="text-xs px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full font-medium hidden sm:inline-flex items-center gap-1.5 border border-slate-200">
                   <Users className="w-3 h-3" />
                   {node.directReports.length} {node.directReports.length === 1 ? 'report' : 'reports'}
                 </span>
               )}
             </div>
-            <p className="text-xs sm:text-sm text-gray-500 truncate mt-0.5">
+            <p className={`text-xs sm:text-sm text-gray-500 truncate mt-0.5 ${isDirectReport && !isCurrentUser ? 'group-hover:text-gray-600 transition-colors' : ''}`}>
               {node.position || 'Team Member'}
               {node.department && <span className="hidden sm:inline text-gray-400"> • {node.department}</span>}
             </p>
           </div>
           
-          {/* Clickable indicator for direct reports */}
+          {/* Clickable indicator for direct reports - enhanced hover */}
           {isDirectReport && !isCurrentUser && (
-            <div className="flex items-center text-gray-400">
-              <ChevronRight className="w-5 h-5" />
+            <div className="flex items-center text-gray-300 group-hover:text-primary-500 transition-colors">
+              <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
             </div>
           )}
           
-          {/* Mobile team count */}
+          {/* Mobile team count - improved contrast */}
           {hasChildren && (
-            <span className="sm:hidden text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded-full font-medium">
+            <span className="sm:hidden text-xs px-2 py-1 bg-slate-100 text-slate-700 rounded-full font-medium border border-slate-200">
               {node.directReports.length}
             </span>
           )}
