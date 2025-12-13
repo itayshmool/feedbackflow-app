@@ -20,6 +20,7 @@ interface FeedbackListProps {
   showFilters?: boolean;
   initialTab?: 'received' | 'given' | 'all' | 'drafts' | 'waiting' | 'acknowledged';
   initialStatus?: string;
+  initialColorFilter?: string; // 'green' | 'yellow' | 'red'
   isManager?: boolean;
 }
 
@@ -30,6 +31,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
   showFilters = true,
   initialTab = 'all',
   initialStatus,
+  initialColorFilter,
   isManager = true, // Default to manager view for backwards compatibility
 }) => {
   const {
@@ -57,7 +59,8 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
   const [statusFilter, setStatusFilter] = useState<FeedbackStatus | ''>(initialStatus as FeedbackStatus || '');
   const [typeFilter, setTypeFilter] = useState<ReviewType | ''>('');
   const [cycleFilter, setCycleFilter] = useState<string>('');
-  const [showFilterPanel, setShowFilterPanel] = useState(!!initialStatus); // Auto-show filter panel if status is pre-set
+  const [colorFilter, setColorFilter] = useState<string>(initialColorFilter || '');
+  const [showFilterPanel, setShowFilterPanel] = useState(!!initialStatus || !!initialColorFilter); // Auto-show filter panel if filters pre-set
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
 
   // Check if content is long enough to need truncation (~3 lines worth)
@@ -80,7 +83,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
   // Auto-apply dropdown filters when they change
   useEffect(() => {
     loadFeedback();
-  }, [statusFilter, typeFilter, cycleFilter]);
+  }, [statusFilter, typeFilter, cycleFilter, colorFilter]);
 
   // Handle search on Enter key
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -141,6 +144,10 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
       newFilters.cycleId = cycleFilter;
     }
 
+    if (colorFilter) {
+      newFilters.colorClassification = colorFilter;
+    }
+
     fetchFeedbackList(newFilters, pagination.page, pagination.limit);
   };
 
@@ -152,6 +159,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
     setSearchQuery('');
     setStatusFilter('');
     setTypeFilter('');
+    setColorFilter('');
     setCycleFilter('');
     clearFilters();
     loadFeedback();
@@ -412,7 +420,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
       {/* Filter Panel - Dropdowns auto-apply on change */}
       {showFilters && showFilterPanel && (
         <Card className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Select
               label="Cycle"
               value={cycleFilter}
@@ -444,8 +452,18 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
               <option value={ReviewType.MANAGER_REVIEW}>Manager Review</option>
               <option value={ReviewType.PROJECT_REVIEW}>Project Review</option>
             </Select>
+            <Select
+              label="Color"
+              value={colorFilter}
+              onChange={(e) => setColorFilter(e.target.value)}
+            >
+              <option value="">All Colors</option>
+              <option value="green">🟢 Exceeds Expectations</option>
+              <option value="yellow">🟡 Meets Expectations</option>
+              <option value="red">🔴 Needs Improvement</option>
+            </Select>
           </div>
-          {(cycleFilter || statusFilter || typeFilter) && (
+          {(cycleFilter || statusFilter || typeFilter || colorFilter) && (
             <div className="flex justify-end mt-4">
               <Button variant="outline" size="sm" onClick={handleClearFilters} icon={RotateCcw}>
               Clear Filters

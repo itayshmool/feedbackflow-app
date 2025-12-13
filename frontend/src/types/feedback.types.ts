@@ -269,6 +269,7 @@ export interface FeedbackFilters {
   toUserEmail?: string;
   reviewType?: ReviewType;
   status?: FeedbackStatus;
+  colorClassification?: string; // 'green' | 'yellow' | 'red'
   dateFrom?: string;
   dateTo?: string;
   search?: string;
