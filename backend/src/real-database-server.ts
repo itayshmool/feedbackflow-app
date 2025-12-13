@@ -4005,7 +4005,8 @@ app.put('/api/v1/settings', authenticateToken, async (req, res) => {
 });
 
 // POST /api/v1/settings/reset - Reset settings to defaults
-app.post('/api/v1/settings/reset', async (req, res) => {
+// SECURITY: Requires authentication
+app.post('/api/v1/settings/reset', authenticateToken, async (req, res) => {
   try {
     const defaultSettings = {
       id: 'settings-1',
@@ -4061,7 +4062,8 @@ app.post('/api/v1/settings/reset', async (req, res) => {
 });
 
 // POST /api/v1/settings/password - Change password
-app.post('/api/v1/settings/password', async (req, res) => {
+// SECURITY: Requires authentication
+app.post('/api/v1/settings/password', authenticateToken, async (req, res) => {
   try {
     const { currentPassword, newPassword, confirmPassword } = req.body;
     
@@ -4091,7 +4093,8 @@ app.post('/api/v1/settings/password', async (req, res) => {
 });
 
 // POST /api/v1/settings/export - Export user data
-app.post('/api/v1/settings/export', async (req, res) => {
+// SECURITY: Requires authentication
+app.post('/api/v1/settings/export', authenticateToken, async (req, res) => {
   try {
     const { format, includeFeedback, includeProfile, includeActivity } = req.body;
     
@@ -4112,7 +4115,8 @@ app.post('/api/v1/settings/export', async (req, res) => {
 });
 
 // POST /api/v1/settings/delete-account - Delete user account
-app.post('/api/v1/settings/delete-account', async (req, res) => {
+// SECURITY: Requires authentication
+app.post('/api/v1/settings/delete-account', authenticateToken, async (req, res) => {
   try {
     const { password, reason, confirmDeletion } = req.body;
     
