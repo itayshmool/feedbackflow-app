@@ -896,23 +896,70 @@ const ManagerDashboard: React.FC = () => {
   };
 
   const renderAnalytics = () => {
-    // Color chart data (excluding unclassified since color is required)
+    // Color chart data with short names for external labels
     const colorChartData = colorDistribution ? [
-      { name: 'Exceeds Expectations', value: colorDistribution.green, color: '#22c55e' },
-      { name: 'Meets Expectations', value: colorDistribution.yellow, color: '#eab308' },
-      { name: 'Needs Improvement', value: colorDistribution.red, color: '#ef4444' }
+      { name: 'Exceeds Expectations', shortName: 'Exceeds', value: colorDistribution.green, color: '#22c55e', filterValue: 'green' },
+      { name: 'Meets Expectations', shortName: 'Meets', value: colorDistribution.yellow, color: '#eab308', filterValue: 'yellow' },
+      { name: 'Needs Improvement', shortName: 'Needs Imp.', value: colorDistribution.red, color: '#ef4444', filterValue: 'red' }
     ].filter(item => item.value > 0) : [];
 
+    // Handle clicking on a pie segment to filter feedback
+    const handlePieClick = (data: any) => {
+      if (data && data.filterValue) {
+        navigate(`/feedback?colorFilter=${data.filterValue}`);
+      }
+    };
+
+    // Custom label showing count + short name outside the pie
     const RADIAN = Math.PI / 180;
-    const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
-      const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, value, shortName }: any) => {
+      const radius = outerRadius + 25;
       const x = cx + radius * Math.cos(-midAngle * RADIAN);
       const y = cy + radius * Math.sin(-midAngle * RADIAN);
-      return percent > 0.05 ? (
-        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-sm font-medium">
-          {`${(percent * 100).toFixed(0)}%`}
+      
+      return (
+        <text 
+          x={x} 
+          y={y} 
+          textAnchor={x > cx ? 'start' : 'end'} 
+          dominantBaseline="central" 
+          className="text-xs font-semibold"
+          fill="#374151"
+        >
+          {value} {shortName}
         </text>
-      ) : null;
+      );
+    };
+
+    // Custom legend with counts and percentages - clickable to filter
+    const renderCustomLegend = (props: any) => {
+      const { payload } = props;
+      const total = colorDistribution?.total || 0;
+      
+      return (
+        <div className="flex flex-wrap justify-center gap-3 mt-2">
+          {payload.map((entry: any, index: number) => {
+            const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;
+            return (
+              <button
+                key={`legend-${index}`}
+                onClick={() => handlePieClick(entry.payload)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer group border border-transparent hover:border-gray-200"
+              >
+                <div 
+                  className="w-3 h-3 rounded-full flex-shrink-0" 
+                  style={{ backgroundColor: entry.color }}
+                />
+                <span className="text-sm text-gray-700 group-hover:text-gray-900">
+                  <span className="font-semibold">{entry.payload.value}</span>
+                  {' '}{entry.payload.shortName}
+                  <span className="text-gray-400 ml-1">({percentage}%)</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      );
     };
 
     return (
@@ -969,29 +1016,53 @@ const ManagerDashboard: React.FC = () => {
                   <LoadingSpinner />
                 </div>
               ) : colorDistribution && colorDistribution.total > 0 ? (
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={colorChartData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={renderCustomizedLabel}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {colorChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        formatter={(value: number) => [`${value} feedback${value !== 1 ? 's' : ''}`, '']}
-                      />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
+                <div>
+                  <div className="h-56">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={colorChartData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={true}
+                          label={renderCustomizedLabel}
+                          outerRadius={65}
+                          fill="#8884d8"
+                          dataKey="value"
+                          onClick={handlePieClick}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {colorChartData.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={entry.color}
+                              stroke="#fff"
+                              strokeWidth={2}
+                              style={{ cursor: 'pointer' }}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(value: number, name: string) => {
+                            const percentage = colorDistribution.total > 0 
+                              ? ((value / colorDistribution.total) * 100).toFixed(0) 
+                              : 0;
+                            return [`${value} feedback (${percentage}%)`, name];
+                          }}
+                          contentStyle={{
+                            backgroundColor: 'white',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                          }}
+                        />
+                        <Legend content={renderCustomLegend} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <p className="text-xs text-gray-500 text-center mt-1">
+                    Click segment or legend to filter feedback by color
+                  </p>
                 </div>
               ) : (
                 <div className="h-64 flex items-center justify-center text-gray-500">
@@ -999,22 +1070,6 @@ const ManagerDashboard: React.FC = () => {
                     <BarChart3 className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                     <p>No feedback data available</p>
                     <p className="text-sm mt-1">Feedback with color classifications will appear here</p>
-                  </div>
-                </div>
-              )}
-              {colorDistribution && colorDistribution.total > 0 && (
-                <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                    <span>Green: {colorDistribution.green}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                    <span>Yellow: {colorDistribution.yellow}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                    <span>Red: {colorDistribution.red}</span>
                   </div>
                 </div>
               )}

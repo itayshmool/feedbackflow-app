@@ -24,6 +24,7 @@ export default function FeedbackPage() {
   const recipientEmail = searchParams.get('recipient');
   const recipientName = searchParams.get('name');
   const statusParam = searchParams.get('status'); // For filtering by status
+  const colorFilterParam = searchParams.get('colorFilter'); // For filtering by color classification
 
   // Determine initial view based on action param or view param
   const initialView = actionParam === 'give' ? 'give' : viewParam ? 'detail' : 'list';
@@ -158,6 +159,7 @@ export default function FeedbackPage() {
             showFilters={true}
             initialTab={initialTab as any}
             initialStatus={statusParam || undefined}
+            initialColorFilter={colorFilterParam || undefined}
             isManager={!!isManager}
           />
         )}
