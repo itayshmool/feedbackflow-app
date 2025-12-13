@@ -1367,6 +1367,7 @@ app.get('/api/v1/auth/me', sessionRateLimit, authenticateToken, async (req, res)
       id: user.id,
       email: user.email,
       name: user.name,
+      picture: user.avatar_url,
       avatarUrl: user.avatar_url,
       isActive: user.is_active,
       emailVerified: user.email_verified,
