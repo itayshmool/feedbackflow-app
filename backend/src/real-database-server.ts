@@ -1042,15 +1042,19 @@ app.post('/api/v1/auth/login/google', authRateLimit, async (req, res) => {
         user = userResult.rows[0];
         console.log('🔐 GOOGLE LOGIN: Existing user found:', { userId: user.id, currentAvatar: user.avatar_url || 'NONE' });
         
-        // Update avatar_url from Google profile if provided
-        // Always update to Google picture - users can upload custom avatar later if they want
-        if (picture) {
+        // Only update avatar if user has no avatar OR has a Google avatar (not custom uploaded)
+        // Custom uploaded avatars use local paths like /api/v1/users/{id}/avatar
+        const hasCustomAvatar = user.avatar_url && user.avatar_url.startsWith('/api/');
+        
+        if (picture && !hasCustomAvatar) {
           console.log('🔐 GOOGLE LOGIN: Updating avatar to:', picture);
           await query(
             `UPDATE users SET avatar_url = $2, last_login_at = NOW() WHERE id = $1`,
             [user.id, picture]
           );
           user.avatar_url = picture;
+        } else if (hasCustomAvatar) {
+          console.log('🔐 GOOGLE LOGIN: Keeping custom uploaded avatar:', user.avatar_url);
         } else {
           console.log('🔐 GOOGLE LOGIN: No picture from Google, keeping current avatar');
         }
