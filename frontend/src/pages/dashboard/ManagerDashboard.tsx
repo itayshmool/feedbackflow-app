@@ -21,6 +21,7 @@ import {
   Target,
   ChevronRight,
   ChevronDown,
+  ChevronUp,
   User,
   Sparkles,
   RefreshCw,
@@ -163,6 +164,8 @@ const ManagerDashboard: React.FC = () => {
     pendingRecipients: { id: string; name: string; detail?: string }[];
     isManagerOfManagers: boolean;
   } | null>(null);
+  const [showAllPending, setShowAllPending] = useState(false);
+  const [sendingReminderId, setSendingReminderId] = useState<string | null>(null); // Track which individual reminder is being sent
 
   // Function to fetch analytics data
   const fetchAnalyticsData = async (cycleId?: string) => {
@@ -341,6 +344,35 @@ const ManagerDashboard: React.FC = () => {
     }
   };
 
+  // Send reminder to a specific recipient
+  const handleSendIndividualReminder = async (recipientId: string, recipientName: string) => {
+    if (!selectedCycleId || !reminderPreview) return;
+    
+    setSendingReminderId(recipientId);
+    try {
+      const response = await api.post('/notifications/cycle-reminder', {
+        cycleId: selectedCycleId,
+        recipientId: recipientId // Send to specific person
+      });
+      
+      if (response.data.success) {
+        alert(`Reminder sent to ${recipientName}`);
+        // Refresh the reminder preview
+        const previewResponse = await api.get('/notifications/cycle-reminder-preview', { 
+          params: { cycleId: selectedCycleId } 
+        });
+        if (previewResponse.data.success) {
+          setReminderPreview(previewResponse.data.data);
+        }
+      }
+    } catch (error: any) {
+      console.error('Failed to send reminder:', error);
+      // Toast is shown by api.ts interceptor
+    } finally {
+      setSendingReminderId(null);
+    }
+  };
+
   // Show welcome banner only once per session
   const [showWelcome] = useState(() => {
     const welcomed = sessionStorage.getItem('manager-welcomed');
@@ -464,28 +496,81 @@ const ManagerDashboard: React.FC = () => {
                   </div>
                 </div>
                 
-                {/* Pending Recipients (based on reminder type) */}
+                {/* Pending Recipients (based on reminder type) - Clickable Chips */}
                 {reminderPreview && reminderPreview.pendingCount > 0 && (
                   <div className={`border rounded-lg p-3 ${
                     reminderPreview.reminderType === 'acknowledge_feedback' 
                       ? 'bg-blue-50 border-blue-200' 
-                      : 'bg-yellow-50 border-yellow-200'
+                      : 'bg-amber-50 border-amber-200'
                   }`}>
-                    <p className={`text-sm ${
+                    <p className={`text-sm font-medium mb-2.5 ${
                       reminderPreview.reminderType === 'acknowledge_feedback' 
                         ? 'text-blue-800' 
-                        : 'text-yellow-800'
+                        : 'text-amber-800'
                     }`}>
-                      <span className="font-medium">
-                        {reminderPreview.reminderType === 'acknowledge_feedback' 
-                          ? 'Waiting to acknowledge: ' 
-                          : 'Need to give feedback: '}
-                      </span>
-                      {reminderPreview.pendingRecipients.map(r => 
-                        r.detail ? `${r.name} (${r.detail})` : r.name
-                      ).join(', ')}
-                </p>
-              </div>
+                      {reminderPreview.reminderType === 'acknowledge_feedback' 
+                        ? 'Waiting to acknowledge:' 
+                        : 'Need to give feedback to:'}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {(showAllPending 
+                        ? reminderPreview.pendingRecipients 
+                        : reminderPreview.pendingRecipients.slice(0, 3)
+                      ).map((recipient) => (
+                        <button
+                          key={recipient.id}
+                          onClick={() => handleSendIndividualReminder(recipient.id, recipient.name)}
+                          disabled={sendingReminderId === recipient.id}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
+                            ${reminderPreview.reminderType === 'acknowledge_feedback'
+                              ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-900 hover:shadow-md'
+                              : 'bg-amber-100 text-amber-700 hover:bg-amber-200 hover:text-amber-900 hover:shadow-md'
+                            }
+                          `}
+                          title={`Click to send reminder to ${recipient.name}`}
+                        >
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
+                            reminderPreview.reminderType === 'acknowledge_feedback'
+                              ? 'bg-blue-200 text-blue-800'
+                              : 'bg-amber-200 text-amber-800'
+                          }`}>
+                            {sendingReminderId === recipient.id ? (
+                              <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              recipient.name.charAt(0).toUpperCase()
+                            )}
+                          </div>
+                          <span>{recipient.name}</span>
+                          {recipient.detail && (
+                            <span className="text-xs opacity-75">({recipient.detail})</span>
+                          )}
+                          <Bell className={`w-3.5 h-3.5 ${sendingReminderId === recipient.id ? 'animate-pulse' : ''}`} />
+                        </button>
+                      ))}
+                    </div>
+                    {reminderPreview.pendingRecipients.length > 3 && (
+                      <button
+                        onClick={() => setShowAllPending(!showAllPending)}
+                        className={`mt-2.5 text-xs font-medium flex items-center gap-1 transition-colors ${
+                          reminderPreview.reminderType === 'acknowledge_feedback'
+                            ? 'text-blue-600 hover:text-blue-800'
+                            : 'text-amber-600 hover:text-amber-800'
+                        }`}
+                      >
+                        {showAllPending ? (
+                          <>
+                            <ChevronUp className="w-3.5 h-3.5" />
+                            Show less
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="w-3.5 h-3.5" />
+                            Show {reminderPreview.pendingRecipients.length - 3} more
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 )}
                 
                 {/* Send Reminder Button */}
