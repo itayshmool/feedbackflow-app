@@ -15,6 +15,7 @@ import { DepartmentModelClass } from './modules/admin/models/department.model.js
 import { TeamModelClass } from './modules/admin/models/team.model.js';
 import { CSVParser } from './shared/utils/csv-parser.js';
 import { authenticateToken } from './shared/middleware/auth.middleware.js';
+import { requireOrgScopedAdmin, requireOrgAccess } from './shared/middleware/rbac.middleware.js';
 import { getCookieOptions, getAccessTokenCookieOptions, getRefreshTokenCookieOptions } from './shared/utils/cookie-helper.js';
 import { JwtService } from './modules/auth/services/jwt.service.js';
 import { RefreshTokenModel } from './modules/auth/models/refresh-token.model.js';
@@ -4151,9 +4152,23 @@ type HierarchyRelationship = {
 };
 
 // DELETE /api/v1/hierarchy/clear/:organizationId - Clear all relationships for an org (database)
-app.delete('/api/v1/hierarchy/clear/:organizationId', async (req, res) => {
+// SECURITY: Requires authentication + admin/super_admin role for the target organization
+app.delete('/api/v1/hierarchy/clear/:organizationId', authenticateToken, requireOrgAccess(), async (req, res) => {
   try {
     const { organizationId } = req.params;
+    const user = (req as any).user;
+    
+    // Additional authorization check: Only super_admin or org-scoped admin for THIS org can clear hierarchy
+    const userRoles = user?.roles || [];
+    const isSuperAdmin = userRoles.includes('super_admin');
+    const isOrgAdmin = userRoles.includes('admin') && user.adminOrganizationId === organizationId;
+    
+    if (!isSuperAdmin && !isOrgAdmin) {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Admin access required to clear hierarchy for this organization' 
+      });
+    }
     
     // Delete all hierarchy relationships for the organization
     const result = await query(
@@ -4789,7 +4804,8 @@ app.get('/api/v1/hierarchy/search-employees', async (req, res) => {
 
 // POST /api/v1/hierarchy - Create or update hierarchy relationship
 // Uses UPSERT logic: if employee already has a manager in this org, update it
-app.post('/api/v1/hierarchy', async (req, res) => {
+// SECURITY: Requires authentication + org-scoped admin access
+app.post('/api/v1/hierarchy', authenticateToken, requireOrgScopedAdmin(), async (req, res) => {
   try {
     const { organizationId, managerId, employeeId, level, isDirectReport } = req.body;
     const hierarchyLevel = level !== undefined ? level : 1;
@@ -4840,7 +4856,8 @@ app.post('/api/v1/hierarchy', async (req, res) => {
 });
 
 // PUT /api/v1/hierarchy/:id - Update hierarchy relationship
-app.put('/api/v1/hierarchy/:id', async (req, res) => {
+// SECURITY: Requires authentication + org-scoped admin access
+app.put('/api/v1/hierarchy/:id', authenticateToken, requireOrgScopedAdmin(), async (req, res) => {
   try {
     const { id } = req.params;
     const { managerId, level, isDirectReport, isActive } = req.body;
@@ -4912,7 +4929,8 @@ app.put('/api/v1/hierarchy/:id', async (req, res) => {
 });
 
 // DELETE /api/v1/hierarchy/:id - Delete hierarchy relationship
-app.delete('/api/v1/hierarchy/:id', async (req, res) => {
+// SECURITY: Requires authentication + org-scoped admin access
+app.delete('/api/v1/hierarchy/:id', authenticateToken, requireOrgScopedAdmin(), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -4937,7 +4955,8 @@ app.delete('/api/v1/hierarchy/:id', async (req, res) => {
 });
 
 // POST /api/v1/hierarchy/bulk - Bulk update hierarchy relationships
-app.post('/api/v1/hierarchy/bulk', async (req, res) => {
+// SECURITY: Requires authentication + org-scoped admin access
+app.post('/api/v1/hierarchy/bulk', authenticateToken, requireOrgScopedAdmin(), async (req, res) => {
   try {
     const { organizationId, hierarchies } = req.body;
     
@@ -4973,7 +4992,8 @@ app.get('/api/v1/hierarchy/template', async (req, res) => {
 
 // POST /api/v1/hierarchy/bulk/csv - Bulk create relationships from CSV
 // Expected headers row: organization_name,organization_slug,employee_email,manager_email
-app.post('/api/v1/hierarchy/bulk/csv', express.text({ type: [ 'text/csv', 'text/plain', 'application/octet-stream' ] }), async (req, res) => {
+// SECURITY: Requires authentication + org-scoped admin access
+app.post('/api/v1/hierarchy/bulk/csv', authenticateToken, requireOrgScopedAdmin(), express.text({ type: [ 'text/csv', 'text/plain', 'application/octet-stream' ] }), async (req, res) => {
   try {
     const body = (req.body || '').toString();
     if (!body || body.trim().length === 0) {
