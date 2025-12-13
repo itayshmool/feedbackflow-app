@@ -235,6 +235,11 @@ api.interceptors.response.use(
 
       // Handle other error codes
       switch (status) {
+        case 400:
+          // Bad Request - validation/business logic errors from backend
+          toast.error(getErrorMessage(data, 'Invalid request. Please check your input.'))
+          break
+
         case 401:
           // Already handled above, this is for cases where retry already happened
           if (!window.location.pathname.includes('/login')) {
