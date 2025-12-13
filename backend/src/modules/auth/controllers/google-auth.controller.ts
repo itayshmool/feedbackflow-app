@@ -54,10 +54,10 @@ export class GoogleAuthController {
   }
 
   /**
-   * Issue both access token (15 min) and refresh token (7 days) for a user
+   * Issue both access token (6 hours) and refresh token (7 days) for a user
    */
   private async issueTokens(req: Request, res: Response, user: { id: string; email: string; name?: string; picture?: string; roles: string[]; organizationId?: string }) {
-    // Generate access token (short-lived - 15 minutes)
+    // Generate access token (short-lived - 6 hours)
     const accessToken = this.jwtService.signAccessToken({
       sub: user.id,
       email: user.email,
@@ -86,7 +86,7 @@ export class GoogleAuthController {
     res.cookie('authToken', accessToken, getAccessTokenCookieOptions(req));
     res.cookie('refreshToken', refreshToken, getRefreshTokenCookieOptions(req));
 
-    console.log(`🔐 Issued tokens for user ${user.email}: access (15m), refresh (7d)`);
+    console.log(`🔐 Issued tokens for user ${user.email}: access (6h), refresh (7d)`);
   }
 
   login = async (req: Request, res: Response, next: NextFunction) => {
@@ -224,7 +224,7 @@ export class GoogleAuthController {
       res.json({ 
         success: true,
         message: 'Token refreshed',
-        expiresIn: '15m'
+        expiresIn: '6h'
       });
     } catch (err) {
       next(err);

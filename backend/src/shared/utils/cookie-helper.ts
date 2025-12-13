@@ -53,14 +53,14 @@ export function getCookieOptions(req: Request, tokenType: TokenType = 'access') 
   }
   
   // DEBUG: Log cookie options
-  const maxAgeDisplay = tokenType === 'access' ? '15m' : '7d'
+  const maxAgeDisplay = tokenType === 'access' ? '6h' : '7d'
   console.log(`🍪 Cookie options (${tokenType}, ${maxAgeDisplay}):`, { hostname, domain: options.domain, path: options.path, sameSite: options.sameSite })
   
   return options
 }
 
 /**
- * Get cookie options for access token (15 minutes)
+ * Get cookie options for access token (6 hours)
  */
 export function getAccessTokenCookieOptions(req: Request) {
   return getCookieOptions(req, 'access')

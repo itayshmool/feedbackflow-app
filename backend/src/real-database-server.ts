@@ -873,7 +873,7 @@ app.post('/api/v1/auth/login/mock', authRateLimit, async (req, res) => {
       }
     }
     
-    // Generate access token (short-lived - 15 minutes)
+    // Generate access token (short-lived - 6 hours)
     const accessToken = jwtService.signAccessToken({
       sub: user.id,
       email: user.email,
@@ -916,7 +916,7 @@ app.post('/api/v1/auth/login/mock', authRateLimit, async (req, res) => {
       data: {
         user: user,
         token: accessToken,
-        expiresIn: '15m',
+        expiresIn: '6h',
         csrfToken: csrfToken // Also return in response for SPA initialization
       }
     });
@@ -1100,7 +1100,7 @@ app.post('/api/v1/auth/login/google', authRateLimit, async (req, res) => {
     // Ensure roles is always an array
     const userRoles = Array.isArray(user.roles) ? user.roles : (user.roles ? [user.roles] : ['employee']);
 
-    // Generate access token (short-lived - 15 minutes)
+    // Generate access token (short-lived - 6 hours)
     const accessToken = jwtService.signAccessToken({
       sub: user.id,
       email: user.email,
@@ -1298,7 +1298,7 @@ app.post('/api/v1/auth/refresh', sessionRateLimit, async (req, res) => {
     res.json({
       success: true,
       message: 'Token refreshed',
-      expiresIn: '15m'
+      expiresIn: '6h'
     });
   } catch (error) {
     console.error('Error in token refresh:', error);

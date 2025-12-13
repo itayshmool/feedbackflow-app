@@ -24,9 +24,9 @@ export interface RefreshTokenPayload {
 }
 
 // Token expiration constants
-export const ACCESS_TOKEN_EXPIRY = '15m';  // 15 minutes
+export const ACCESS_TOKEN_EXPIRY = '6h';  // 6 hours
 export const REFRESH_TOKEN_EXPIRY = '7d';  // 7 days
-export const ACCESS_TOKEN_MAX_AGE_MS = 15 * 60 * 1000;  // 15 minutes in ms
+export const ACCESS_TOKEN_MAX_AGE_MS = 6 * 60 * 60 * 1000;  // 6 hours in ms
 export const REFRESH_TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;  // 7 days in ms
 
 export class JwtService {
@@ -37,7 +37,7 @@ export class JwtService {
     this.refreshSecret = crypto.createHash('sha256').update(secret + '_refresh').digest('hex');
   }
 
-  // Create access token (short-lived - 15 minutes)
+  // Create access token (short-lived - 6 hours)
   signAccessToken(payload: JwtPayload): string {
     return jwt.sign(payload, this.secret, { expiresIn: ACCESS_TOKEN_EXPIRY });
   }
