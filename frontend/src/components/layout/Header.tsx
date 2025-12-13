@@ -26,28 +26,38 @@ export default function Header({ onMenuToggle }: HeaderProps) {
   }
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
-      <div className="px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Left side - Mobile menu button */}
-          <div className="flex items-center gap-3">
-            {/* Mobile menu button */}
+    <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
+      <div className="px-3 sm:px-6 lg:px-8">
+        {/* h-14 on mobile, h-16 on desktop - preserves desktop height */}
+        <div className="flex justify-between items-center h-14 md:h-16">
+          {/* Left side - Brand on mobile + menu button for advanced options */}
+          <div className="flex items-center gap-2">
+            {/* Mobile: Show compact FF brand */}
+            <div className="flex md:hidden items-center">
+              <div className="h-8 w-8 bg-primary-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">FF</span>
+              </div>
+            </div>
+            
+            {/* Hamburger opens full sidebar drawer for advanced options - mobile only */}
             <Button
               variant="ghost"
               size="sm"
-              className="md:hidden p-2 -ml-2"
+              className="md:hidden p-2"
               onClick={onMenuToggle}
               aria-label="Open menu"
             >
-              <Menu className="h-6 w-6" />
+              <Menu className="h-5 w-5" />
             </Button>
           </div>
 
           {/* Right side - Actions */}
-          <div className="flex items-center space-x-2 sm:space-x-4">
+          <div className="flex items-center space-x-1 sm:space-x-4">
 
-            {/* Notifications */}
-            <NotificationBell />
+            {/* Notifications - hidden on mobile since it's in bottom nav */}
+            <div className="hidden md:block">
+              <NotificationBell />
+            </div>
 
             {/* User menu */}
             <div className="relative">
@@ -55,7 +65,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-2 p-1.5 md:p-2"
               >
                 {avatarUrl ? (
                   <img
