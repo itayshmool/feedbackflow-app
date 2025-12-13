@@ -134,7 +134,7 @@ export default function TeamFeedbackPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Team's Given Feedback</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Manager's Feedback</h1>
         <p className="mt-2 text-gray-600">
           View feedback given by your managers to their direct reports.
         </p>
