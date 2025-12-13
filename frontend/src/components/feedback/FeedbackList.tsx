@@ -11,7 +11,7 @@ import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { HighlightText } from '../ui/HighlightText';
-import { MessageSquare, Calendar, User, Filter, Download, Eye, Edit, Trash2, RotateCcw, Search, X } from 'lucide-react';
+import { MessageSquare, Calendar, User, Filter, Download, Eye, Edit, Trash2, RotateCcw, Search, X, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface FeedbackListProps {
   onSelectFeedback?: (feedback: Feedback, editMode?: boolean) => void;
@@ -58,6 +58,10 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
   const [typeFilter, setTypeFilter] = useState<ReviewType | ''>('');
   const [cycleFilter, setCycleFilter] = useState<string>('');
   const [showFilterPanel, setShowFilterPanel] = useState(!!initialStatus); // Auto-show filter panel if status is pre-set
+  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+
+  // Check if content is long enough to need truncation (~3 lines worth)
+  const isLongContent = (text: string) => text.length > 180;
 
   useEffect(() => {
     loadFeedback();
@@ -523,12 +527,42 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
                     </div>
 
                     {feedback.content?.overallComment && (
-                      <p className="mt-3 text-gray-700 line-clamp-2">
-                        <HighlightText 
-                          text={feedback.content.overallComment} 
-                          highlight={searchQuery}
-                        />
-                      </p>
+                      <div className="mt-3">
+                        <p className={`text-gray-700 ${
+                          expandedCards[feedback.id] ? '' : 'line-clamp-3'
+                        }`}>
+                          <HighlightText 
+                            text={feedback.content.overallComment} 
+                            highlight={searchQuery}
+                          />
+                        </p>
+                        {isLongContent(feedback.content.overallComment) && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              setExpandedCards(prev => ({
+                                ...prev,
+                                [feedback.id]: !prev[feedback.id]
+                              }));
+                            }}
+                            className="mt-2 text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline flex items-center gap-1 transition-colors relative z-10"
+                          >
+                            {expandedCards[feedback.id] ? (
+                              <>
+                                Show less
+                                <ChevronUp className="w-4 h-4" />
+                              </>
+                            ) : (
+                              <>
+                                Read more
+                                <ChevronDown className="w-4 h-4" />
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
                     )}
 
                     <div className="flex items-center gap-6 mt-4">
