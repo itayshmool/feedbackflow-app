@@ -5,12 +5,58 @@ import { EventEmitter } from 'events';
 import { Logger } from '../../../shared/utils/logger.js';
 import { HierarchyNode, HierarchyStats, OrganizationalHierarchy } from '../types/hierarchy.types.js';
 
+// Custom error class for authorization failures
+class ForbiddenError extends Error {
+  statusCode = 403;
+  constructor(message: string) {
+    super(message);
+    this.name = 'ForbiddenError';
+  }
+}
+
 export class HierarchyService {
   constructor(
     private db: Pool,
     private eventEmitter: EventEmitter,
     private logger: Logger
   ) {}
+
+  /**
+   * Validates that a target user belongs to the same organization as the requester.
+   * Super admins can access any user's data.
+   * Throws ForbiddenError if the target user is in a different organization.
+   */
+  async validateUserBelongsToOrg(targetUserId: string, requesterOrgId: string | undefined, requesterRoles: string[] = []): Promise<void> {
+    // Super admins can access any user
+    if (requesterRoles.includes('super_admin')) {
+      return;
+    }
+
+    // If requester has no organization, they cannot access anyone's data
+    if (!requesterOrgId) {
+      throw new ForbiddenError('Access denied: You are not assigned to any organization');
+    }
+
+    // Check if the target user belongs to the requester's organization
+    const query = `
+      SELECT u.organization_id, om.organization_id as member_org_id
+      FROM users u
+      LEFT JOIN organization_members om ON u.id = om.user_id AND om.is_active = true
+      WHERE u.id = $1
+    `;
+    
+    const result = await this.db.query(query, [targetUserId]);
+    
+    if (result.rows.length === 0) {
+      throw new ForbiddenError('Access denied: Target user not found');
+    }
+
+    const targetOrgId = result.rows[0].member_org_id || result.rows[0].organization_id;
+    
+    if (targetOrgId !== requesterOrgId) {
+      throw new ForbiddenError('Access denied: Cannot access users from another organization');
+    }
+  }
 
   /**
    * Get direct reports for a manager

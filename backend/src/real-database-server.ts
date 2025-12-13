@@ -866,6 +866,7 @@ app.post('/api/v1/auth/login/mock', authRateLimit, async (req, res) => {
       email: user.email,
       name: user.name,
       roles: user.roles,
+      organizationId: user.organizationId,
     });
     
     // Generate refresh token (long-lived - 7 days)
@@ -1063,6 +1064,7 @@ app.post('/api/v1/auth/login/google', authRateLimit, async (req, res) => {
       email: user.email,
       name: user.name,
       roles: userRoles,
+      organizationId: user.organizationId,
     });
     
     // Generate refresh token (long-lived - 7 days)
@@ -1239,6 +1241,7 @@ app.post('/api/v1/auth/refresh', sessionRateLimit, async (req, res) => {
       name: user.name,
       picture: user.avatar_url,
       roles: user.roles || [],
+      organizationId: user.organization_id,
     });
 
     res.cookie('authToken', accessToken, getAccessTokenCookieOptions(req));
@@ -4188,7 +4191,8 @@ app.delete('/api/v1/hierarchy/clear/:organizationId', authenticateToken, require
 });
 
 // GET /api/v1/hierarchy/tree/:organizationId - Get organizational hierarchy tree
-app.get('/api/v1/hierarchy/tree/:organizationId', async (req, res) => {
+// SECURITY: Requires authentication + org access validation
+app.get('/api/v1/hierarchy/tree/:organizationId', authenticateToken, requireOrgAccess(), async (req, res) => {
   try {
     const { organizationId } = req.params;
 
@@ -4354,9 +4358,25 @@ app.get('/api/v1/hierarchy/tree/:organizationId', async (req, res) => {
 });
 
 // GET /api/v1/hierarchy/direct-reports/:managerId - Get direct reports for a manager
-app.get('/api/v1/hierarchy/direct-reports/:managerId', async (req, res) => {
+// SECURITY: Requires authentication + validates manager belongs to user's org
+app.get('/api/v1/hierarchy/direct-reports/:managerId', authenticateToken, async (req, res) => {
   try {
     const { managerId } = req.params;
+    const user = (req as any).user;
+    
+    // Validate the manager belongs to the user's organization
+    if (!user.roles?.includes('super_admin')) {
+      const managerOrgResult = await query(
+        `SELECT organization_id FROM users WHERE id = $1`,
+        [managerId]
+      );
+      if (managerOrgResult.rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'Manager not found' });
+      }
+      if (managerOrgResult.rows[0].organization_id !== user.organizationId) {
+        return res.status(403).json({ success: false, error: 'Access denied: Cannot access another organization\'s hierarchy' });
+      }
+    }
     
     // Get direct reports from database
     const result = await query(
@@ -4416,9 +4436,25 @@ app.get('/api/v1/hierarchy/direct-reports/:managerId', async (req, res) => {
 });
 
 // GET /api/v1/hierarchy/manager-chain/:employeeId - Get manager chain for an employee
-app.get('/api/v1/hierarchy/manager-chain/:employeeId', async (req, res) => {
+// SECURITY: Requires authentication + validates employee belongs to user's org
+app.get('/api/v1/hierarchy/manager-chain/:employeeId', authenticateToken, async (req, res) => {
   try {
     const { employeeId } = req.params;
+    const user = (req as any).user;
+    
+    // Validate the employee belongs to the user's organization
+    if (!user.roles?.includes('super_admin')) {
+      const empOrgResult = await query(
+        `SELECT organization_id FROM users WHERE id = $1`,
+        [employeeId]
+      );
+      if (empOrgResult.rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'Employee not found' });
+      }
+      if (empOrgResult.rows[0].organization_id !== user.organizationId) {
+        return res.status(403).json({ success: false, error: 'Access denied: Cannot access another organization\'s hierarchy' });
+      }
+    }
     
     // Mock manager chain based on employee ID
     const mockManagerChains = {
@@ -4613,7 +4649,8 @@ app.get('/api/v1/hierarchy/manager-chain/:employeeId', async (req, res) => {
 });
 
 // GET /api/v1/hierarchy/stats/:organizationId - Get hierarchy statistics
-app.get('/api/v1/hierarchy/stats/:organizationId', async (req, res) => {
+// SECURITY: Requires authentication + org access validation
+app.get('/api/v1/hierarchy/stats/:organizationId', authenticateToken, requireOrgAccess(), async (req, res) => {
   try {
     const { organizationId } = req.params;
     
@@ -4735,9 +4772,18 @@ app.get('/api/v1/hierarchy/stats/:organizationId', async (req, res) => {
 });
 
 // GET /api/v1/hierarchy/search-employees - Search employees for hierarchy assignment
-app.get('/api/v1/hierarchy/search-employees', async (req, res) => {
+// SECURITY: Requires authentication + org access validation  
+app.get('/api/v1/hierarchy/search-employees', authenticateToken, async (req, res) => {
   try {
     const { organizationId, q, exclude, role, type } = req.query;
+    const user = (req as any).user;
+    
+    // Validate user can only search their own organization
+    if (!user.roles?.includes('super_admin')) {
+      if (organizationId && organizationId !== user.organizationId) {
+        return res.status(403).json({ success: false, error: 'Access denied: Cannot search another organization\'s employees' });
+      }
+    }
     
     // Get real employees from database
     let searchQuery = `
@@ -4979,7 +5025,8 @@ app.post('/api/v1/hierarchy/bulk', authenticateToken, requireOrgScopedAdmin(), a
 });
 
 // GET /api/v1/hierarchy/template - Download CSV template for hierarchy import
-app.get('/api/v1/hierarchy/template', async (req, res) => {
+// SECURITY: Requires authentication
+app.get('/api/v1/hierarchy/template', authenticateToken, async (req, res) => {
   try {
     const csv = [
       'organization_name,organization_slug,employee_email,manager_email',
@@ -5140,7 +5187,8 @@ app.post('/api/v1/hierarchy/bulk/csv', authenticateToken, requireOrgScopedAdmin(
 });
 
 // GET /api/v1/hierarchy/validate/:organizationId - Validate hierarchy structure
-app.get('/api/v1/hierarchy/validate/:organizationId', async (req, res) => {
+// SECURITY: Requires authentication + org access validation
+app.get('/api/v1/hierarchy/validate/:organizationId', authenticateToken, requireOrgAccess(), async (req, res) => {
   try {
     const { organizationId } = req.params;
     

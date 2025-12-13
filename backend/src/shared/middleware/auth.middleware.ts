@@ -153,6 +153,7 @@ async function authenticateTokenAsync(req: Request, res: Response, next: NextFun
       email: payload.email,
       name: payload.name,
       roles: effectiveRoles,
+      organizationId: payload.organizationId, // User's organization from JWT
       // Multi-org admin support
       adminOrganizations: adminOrganizations,
       isSuperAdmin: isSuperAdmin,
