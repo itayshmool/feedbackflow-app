@@ -9180,6 +9180,209 @@ GUIDELINES:
   }
 });
 
+// ===========================================
+// QUOTE OF THE DAY - TEST ENDPOINT
+// ===========================================
+
+const QUOTES_LIMIT = 300;
+
+// Categories for random selection to ensure variety
+const QUOTE_CATEGORIES = [
+  'ancient Greek philosopher',
+  'Roman Stoic philosopher',
+  'Renaissance artist or inventor',
+  'Enlightenment thinker',
+  'modern psychologist',
+  'tech entrepreneur or innovator',
+  'civil rights leader',
+  'scientist or physicist',
+  'author or poet',
+  'business leader or CEO',
+  'spiritual leader',
+  'political leader',
+  'athlete or sports coach',
+  'educator or academic',
+  'Eastern philosopher (Chinese, Japanese, Indian)',
+  'self-help author',
+  'military leader or strategist',
+  'economist or management thinker'
+];
+
+// TEST ENDPOINT - generates a fresh quote every time (bypasses cache for testing)
+app.get('/api/v1/test/quote-of-the-day', async (req: any, res: any) => {
+  try {
+    // Pick a random category for variety
+    const randomCategory = QUOTE_CATEGORIES[Math.floor(Math.random() * QUOTE_CATEGORIES.length)];
+    const randomSeed = Math.floor(Math.random() * 10000);
+    
+    console.log(`🧪 TEST: Generating quote (category: ${randomCategory}, seed: ${randomSeed})...`);
+    
+    const prompt = `You are a curator of inspirational wisdom focused on PERSONAL GROWTH.
+
+For this request, focus on a ${randomCategory}.
+
+Pick ONE famous person from this category who has spoken about:
+- Personal growth & self-improvement
+- Learning from failure & resilience
+- Continuous improvement & progress
+- The value of feedback & self-reflection
+- Embracing challenges & change
+
+Then provide ONE real, verified quote from them.
+
+CRITICAL REQUIREMENTS:
+- Must be a ${randomCategory}
+- Must be a REAL person who actually existed
+- Must be a REAL quote they actually said/wrote (no fabrications)
+- Keep the quote concise (1-2 sentences max)
+- Random seed for variety: ${randomSeed}
+
+Return ONLY a JSON object:
+{
+  "author": "Full name of the person",
+  "authorTitle": "Their most known title/role",
+  "quote": "The exact verified quote"
+}`;
+
+    const startTime = Date.now();
+    const aiResponse = await generateAIContent(prompt, { maxTokens: 300 });
+    const aiTime = Date.now() - startTime;
+    
+    const parsed = parseAIJsonResponse(aiResponse.text);
+    
+    console.log(`✅ AI responded in ${aiTime}ms: ${parsed.author}`);
+    
+    const result = {
+      quote: parsed.quote,
+      author: parsed.author,
+      authorTitle: parsed.authorTitle,
+      _debug: {
+        aiResponseTime: `${aiTime}ms`,
+        aiProvider: aiResponse.provider || 'unknown',
+        category: randomCategory
+      }
+    };
+    
+    console.log('🧪 TEST RESULT:', JSON.stringify(result, null, 2));
+    
+    res.json({ success: true, data: result });
+    
+  } catch (error: any) {
+    console.error('🧪 TEST ERROR:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// PRODUCTION ENDPOINT - uses database caching (one quote per day)
+app.get('/api/v1/quote-of-the-day', authenticateToken, async (req: any, res: any) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Check if we already have a quote for today
+    const existingQuote = await query(
+      'SELECT quote, author, author_title FROM daily_quotes WHERE generated_date = $1 LIMIT 1',
+      [today]
+    );
+    
+    if (existingQuote.rows.length > 0) {
+      return res.json({ 
+        success: true, 
+        data: {
+          quote: existingQuote.rows[0].quote,
+          author: existingQuote.rows[0].author,
+          authorTitle: existingQuote.rows[0].author_title
+        }
+      });
+    }
+    
+    // Pick category based on day of year (deterministic for same day)
+    const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+    const categoryIndex = dayOfYear % QUOTE_CATEGORIES.length;
+    const category = QUOTE_CATEGORIES[categoryIndex];
+    
+    const prompt = `You are a curator of inspirational wisdom focused on PERSONAL GROWTH.
+
+For today, focus on a ${category}.
+
+Pick ONE famous person from this category who has spoken about:
+- Personal growth & self-improvement
+- Learning from failure & resilience
+- Continuous improvement & progress
+- The value of feedback & self-reflection
+- Embracing challenges & change
+
+Then provide ONE real, verified quote from them.
+
+CRITICAL REQUIREMENTS:
+- Must be a ${category}
+- Must be a REAL person who actually existed
+- Must be a REAL quote they actually said/wrote (no fabrications)
+- Keep the quote concise (1-2 sentences max)
+
+Return ONLY a JSON object:
+{
+  "author": "Full name of the person",
+  "authorTitle": "Their most known title/role",
+  "quote": "The exact verified quote"
+}`;
+
+    console.log(`🤖 Generating quote of the day (category: ${category})...`);
+    const aiResponse = await generateAIContent(prompt, { maxTokens: 300 });
+    const parsed = parseAIJsonResponse(aiResponse.text);
+    
+    // Enforce the 300 record limit (FIFO - delete oldest)
+    const countResult = await query('SELECT COUNT(*) as count FROM daily_quotes');
+    const currentCount = parseInt(countResult.rows[0].count, 10);
+    
+    if (currentCount >= QUOTES_LIMIT) {
+      const toDelete = currentCount - QUOTES_LIMIT + 1;
+      await query(`
+        DELETE FROM daily_quotes 
+        WHERE id IN (
+          SELECT id FROM daily_quotes 
+          ORDER BY created_at ASC 
+          LIMIT $1
+        )
+      `, [toDelete]);
+      console.log(`🗑️ Deleted ${toDelete} old quote(s) to maintain ${QUOTES_LIMIT} limit`);
+    }
+    
+    // Insert the new quote
+    await query(
+      `INSERT INTO daily_quotes (quote, author, author_title, theme, generated_date) 
+       VALUES ($1, $2, $3, $4, $5)`,
+      [parsed.quote, parsed.author, parsed.authorTitle, 'growth', today]
+    );
+    
+    console.log(`✅ Quote saved: "${parsed.quote.substring(0, 50)}..." - ${parsed.author}`);
+    
+    res.json({ 
+      success: true, 
+      data: {
+        quote: parsed.quote,
+        author: parsed.author,
+        authorTitle: parsed.authorTitle
+      }
+    });
+    
+  } catch (error: any) {
+    console.error('Quote generation error:', error);
+    // Fallback quote if AI fails
+    res.json({ 
+      success: true, 
+      data: {
+        quote: "The only way to do great work is to love what you do.",
+        author: "Steve Jobs",
+        authorTitle: "Co-founder of Apple"
+      }
+    });
+  }
+});
+
 // Error handling middleware
 app.use((error: any, req: any, res: any, next: any) => {
   console.error('Unhandled error:', error);
@@ -9196,6 +9399,7 @@ app.listen(PORT, () => {
   console.log('📊 Health check: http://localhost:' + PORT + '/health');
   console.log('🔐 API health: http://localhost:' + PORT + '/api/v1/health');
   console.log('📝 Test org API: http://localhost:' + PORT + '/api/v1/admin/organizations/test');
+  console.log('🧪 Quote test: http://localhost:' + PORT + '/api/v1/test/quote-of-the-day');
   console.log('🗄️  Database: Real PostgreSQL database connected and ready');
 });
 
