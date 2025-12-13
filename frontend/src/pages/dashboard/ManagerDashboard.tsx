@@ -1629,8 +1629,11 @@ const ManagerDashboard: React.FC = () => {
       </div>
 
       {/* Mobile Tabs - Horizontally scrollable pills, hidden on desktop */}
-      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-3">
-        <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
+      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-3 relative">
+        {/* Scroll fade indicator on right edge - hints there's more content */}
+        <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white via-white/80 to-transparent pointer-events-none z-10" />
+        
+        <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 pr-12">
           <div className="flex gap-2 min-w-max">
             {tabs.map((tab) => {
               const Icon = tab.icon;
