@@ -394,23 +394,24 @@ const ManagerDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Stats Cards - Team focused */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
+      {/* Stats Cards - 2 columns on all sizes for compact mobile view */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6">
         {/* Direct Reports - Click to switch to Team tab */}
         <Card 
-          className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
+          className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer active:scale-[0.98]"
           onClick={() => setActiveTab('team')}
         >
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-center">
-              <div className="p-2 sm:p-3 bg-blue-100 rounded-xl flex-shrink-0">
+          <CardContent className="p-3 sm:p-4 md:p-6">
+            {/* Mobile: centered stacked layout, Desktop: horizontal layout */}
+            <div className="flex flex-col items-center text-center sm:flex-row sm:items-center sm:text-left">
+              <div className="p-2.5 sm:p-3 bg-blue-100 rounded-xl flex-shrink-0 mb-2 sm:mb-0">
                 <Users className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
-              <div className="ml-3 sm:ml-4 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Direct Reports</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900">
+              <div className="sm:ml-4 min-w-0">
+                <p className="text-2xl sm:text-2xl md:text-3xl font-bold text-gray-900">
                   {directReports.length}
                 </p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate mt-0.5">Direct Reports</p>
               </div>
             </div>
           </CardContent>
@@ -418,30 +419,32 @@ const ManagerDashboard: React.FC = () => {
 
         {/* Team Feedback Given - Navigate to feedback page with 'given' tab */}
         <Card 
-          className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
+          className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer active:scale-[0.98]"
           onClick={() => navigate('/feedback?tab=given')}
         >
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-center">
-              <div className="p-2 sm:p-3 bg-green-100 rounded-xl flex-shrink-0">
+          <CardContent className="p-3 sm:p-4 md:p-6">
+            {/* Mobile: centered stacked layout, Desktop: horizontal layout */}
+            <div className="flex flex-col items-center text-center sm:flex-row sm:items-center sm:text-left">
+              <div className="p-2.5 sm:p-3 bg-green-100 rounded-xl flex-shrink-0 mb-2 sm:mb-0">
                 <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
               </div>
-              <div className="ml-3 sm:ml-4 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Feedback to Team</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900">
+              <div className="sm:ml-4 min-w-0">
+                <p className="text-2xl sm:text-2xl md:text-3xl font-bold text-gray-900">
                   {isFeedbackLoading ? '...' : feedbackStats?.given || 0}
                 </p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate mt-0.5">Feedback Given</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Active Cycles Card */}
+      {/* Active Cycles Card - Mobile optimized */}
       {Array.isArray(activeCycles) && activeCycles.length > 0 && (
-        <Card className="transform transition-all duration-200 hover:shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+        <Card className="transform transition-all duration-200 hover:shadow-lg overflow-hidden">
+          <CardHeader className="pb-3 px-4 pt-4 sm:px-6 sm:pt-6">
+            {/* Mobile: Stack title and select, Desktop: side by side */}
+            <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <span className="flex items-center">
                 <RotateCcw className="h-5 w-5 mr-2 text-blue-600" />
                 Active Cycles
@@ -450,7 +453,7 @@ const ManagerDashboard: React.FC = () => {
                 <Select
                   value={selectedCycleId}
                   onChange={(e) => setSelectedCycleId(e.target.value)}
-                  className="w-56"
+                  className="w-full sm:w-56"
                 >
                   {activeCycles.map((cycle) => (
                     <option key={cycle.id} value={cycle.id}>
@@ -461,49 +464,58 @@ const ManagerDashboard: React.FC = () => {
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
             {selectedCycle && (
               <div className="space-y-4">
                 {/* Cycle Name (shown when only 1 cycle) */}
                 {activeCycles.length === 1 && (
-                  <h3 className="text-lg font-semibold">{selectedCycle.name}</h3>
+                  <h3 className="text-base sm:text-lg font-semibold">{selectedCycle.name}</h3>
                 )}
                 
-                {/* End Date and Countdown */}
-                <div className="flex items-center text-sm text-gray-600">
-                  <Clock className="w-4 h-4 mr-2" />
-                  <span>
-                    Ends: {new Date(selectedCycle.endDate).toLocaleDateString()}
-                    <span className={`ml-2 font-medium ${daysRemaining(selectedCycle.endDate) <= 7 ? 'text-red-500' : 'text-gray-700'}`}>
-                      ({daysRemaining(selectedCycle.endDate)} days left)
-                    </span>
-                  </span>
-              </div>
-                
-                {/* Team Progress */}
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-600">Team Participation</span>
-                    <span className="font-medium">
-                      {cycleCompletionData?.summary?.completed || 0}/{cycleCompletionData?.summary?.total || 0}
+                {/* End Date and Countdown - Mobile: card style with badge */}
+                <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Clock className="w-4 h-4 mr-2 flex-shrink-0" />
+                    <span className="truncate">
+                      Ends {new Date(selectedCycle.endDate).toLocaleDateString()}
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <span className={`text-sm font-bold px-2.5 py-1 rounded-full flex-shrink-0 ml-2 ${
+                    daysRemaining(selectedCycle.endDate) <= 7 
+                      ? 'bg-red-100 text-red-700' 
+                      : 'bg-blue-100 text-blue-700'
+                  }`}>
+                    {daysRemaining(selectedCycle.endDate)}d left
+                  </span>
+                </div>
+                
+                {/* Team Progress - Improved mobile styling */}
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-gray-600">Team Participation</span>
+                    <span className="font-semibold">
+                      {cycleCompletionData?.summary?.percentage || 0}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3">
                     <div 
-                      className="bg-green-500 h-2.5 rounded-full transition-all duration-300" 
+                      className="bg-green-500 h-3 rounded-full transition-all duration-300" 
                       style={{ width: `${cycleCompletionData?.summary?.percentage || 0}%` }}
                     />
                   </div>
+                  <p className="text-xs text-gray-500 mt-1.5">
+                    {cycleCompletionData?.summary?.completed || 0} of {cycleCompletionData?.summary?.total || 0} team members
+                  </p>
                 </div>
                 
-                {/* Pending Recipients (based on reminder type) - Clickable Chips */}
+                {/* Pending Recipients - Vertical list on mobile for better tap targets */}
                 {reminderPreview && reminderPreview.pendingCount > 0 && (
-                  <div className={`border rounded-lg p-3 ${
+                  <div className={`border rounded-xl p-3 sm:p-4 ${
                     reminderPreview.reminderType === 'acknowledge_feedback' 
                       ? 'bg-blue-50 border-blue-200' 
                       : 'bg-amber-50 border-amber-200'
                   }`}>
-                    <p className={`text-sm font-medium mb-2.5 ${
+                    <p className={`text-sm font-medium mb-3 ${
                       reminderPreview.reminderType === 'acknowledge_feedback' 
                         ? 'text-blue-800' 
                         : 'text-amber-800'
@@ -512,7 +524,60 @@ const ManagerDashboard: React.FC = () => {
                         ? 'Waiting to acknowledge:' 
                         : 'Need to give feedback to:'}
                     </p>
-                    <div className="flex flex-wrap gap-2">
+                    
+                    {/* Mobile: Vertical list, Desktop: Chips */}
+                    {/* Mobile vertical list - better tap targets */}
+                    <div className="space-y-2 sm:hidden">
+                      {(showAllPending 
+                        ? reminderPreview.pendingRecipients 
+                        : reminderPreview.pendingRecipients.slice(0, 3)
+                      ).map((recipient) => (
+                        <button
+                          key={recipient.id}
+                          onClick={() => handleSendIndividualReminder(recipient.id, recipient.name)}
+                          disabled={sendingReminderId === recipient.id}
+                          className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all min-h-[56px] active:scale-[0.98] disabled:opacity-50
+                            ${reminderPreview.reminderType === 'acknowledge_feedback'
+                              ? 'bg-blue-100/80 hover:bg-blue-100'
+                              : 'bg-amber-100/80 hover:bg-amber-100'
+                            }
+                          `}
+                        >
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+                            reminderPreview.reminderType === 'acknowledge_feedback'
+                              ? 'bg-blue-200 text-blue-800'
+                              : 'bg-amber-200 text-amber-800'
+                          }`}>
+                            {sendingReminderId === recipient.id ? (
+                              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              recipient.name.charAt(0).toUpperCase()
+                            )}
+                          </div>
+                          <div className="flex-1 text-left min-w-0">
+                            <p className={`font-medium truncate ${
+                              reminderPreview.reminderType === 'acknowledge_feedback'
+                                ? 'text-blue-900'
+                                : 'text-amber-900'
+                            }`}>{recipient.name}</p>
+                            {recipient.detail && (
+                              <p className="text-xs text-gray-500 truncate">{recipient.detail}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <Bell className={`w-4 h-4 ${
+                              reminderPreview.reminderType === 'acknowledge_feedback'
+                                ? 'text-blue-500'
+                                : 'text-amber-500'
+                            } ${sendingReminderId === recipient.id ? 'animate-pulse' : ''}`} />
+                            <ChevronRight className="w-4 h-4 text-gray-400" />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    
+                    {/* Desktop: Chips layout (unchanged from original) */}
+                    <div className="hidden sm:flex flex-wrap gap-2">
                       {(showAllPending 
                         ? reminderPreview.pendingRecipients 
                         : reminderPreview.pendingRecipients.slice(0, 3)
@@ -548,10 +613,11 @@ const ManagerDashboard: React.FC = () => {
                         </button>
                       ))}
                     </div>
+                    
                     {reminderPreview.pendingRecipients.length > 3 && (
                       <button
                         onClick={() => setShowAllPending(!showAllPending)}
-                        className={`mt-2.5 text-xs font-medium flex items-center gap-1 transition-colors ${
+                        className={`mt-3 w-full sm:w-auto py-2 text-sm font-medium flex items-center justify-center sm:justify-start gap-1 transition-colors ${
                           reminderPreview.reminderType === 'acknowledge_feedback'
                             ? 'text-blue-600 hover:text-blue-800'
                             : 'text-amber-600 hover:text-amber-800'
@@ -559,12 +625,12 @@ const ManagerDashboard: React.FC = () => {
                       >
                         {showAllPending ? (
                           <>
-                            <ChevronUp className="w-3.5 h-3.5" />
+                            <ChevronUp className="w-4 h-4" />
                             Show less
                           </>
                         ) : (
                           <>
-                            <ChevronDown className="w-3.5 h-3.5" />
+                            <ChevronDown className="w-4 h-4" />
                             Show {reminderPreview.pendingRecipients.length - 3} more
                           </>
                         )}
@@ -573,10 +639,10 @@ const ManagerDashboard: React.FC = () => {
                   </div>
                 )}
                 
-                {/* Send Reminder Button */}
+                {/* Send Reminder Button - 48px min height for mobile tap target */}
                 {reminderPreview && reminderPreview.pendingCount > 0 && (
                   <Button 
-                    className="w-full"
+                    className="w-full min-h-[48px]"
                     onClick={handleSendReminder}
                     disabled={isReminderSending}
                   >
@@ -585,13 +651,13 @@ const ManagerDashboard: React.FC = () => {
                   </Button>
                 )}
                 
-                {/* All complete message - only show when manager has given feedback to ALL team members AND all acknowledged */}
+                {/* All complete message - responsive text */}
                 {reminderPreview && reminderPreview.pendingCount === 0 && 
                  cycleCompletionData?.summary?.total !== undefined &&
                  cycleCompletionData.summary.total > 0 && 
                  cycleCompletionData.summary.completed === cycleCompletionData.summary.total && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-start sm:items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5 sm:mt-0" />
                     <span className="text-sm text-green-700">
                       {reminderPreview.isManagerOfManagers 
                         ? 'All your managers have given feedback to their teams!' 
@@ -606,8 +672,8 @@ const ManagerDashboard: React.FC = () => {
                  cycleCompletionData?.summary?.completed !== undefined &&
                  cycleCompletionData.summary.total > 0 && 
                  cycleCompletionData.summary.completed < cycleCompletionData.summary.total && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center">
-                    <Clock className="w-5 h-5 text-amber-600 mr-2" />
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start sm:items-center gap-2">
+                    <Clock className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5 sm:mt-0" />
                     <span className="text-sm text-amber-700">
                       {cycleCompletionData.summary.total - cycleCompletionData.summary.completed} team member(s) still waiting for your feedback
                     </span>
@@ -619,47 +685,48 @@ const ManagerDashboard: React.FC = () => {
         </Card>
       )}
 
-      {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Recent Activity - Stack on mobile, 2 columns on large screens */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         <Card className="transform transition-all duration-200 hover:shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center">
+          <CardHeader className="pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
+            <CardTitle className="text-base sm:text-lg flex items-center">
               <MessageSquare className="h-5 w-5 mr-2 text-green-600" />
               Feedback You Gave
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
             {isFeedbackLoading ? (
-              <div className="flex justify-center py-8">
+              <div className="flex justify-center py-6">
                 <LoadingSpinner size="md" />
               </div>
             ) : recentFeedback && recentFeedback.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {recentFeedback.slice(0, 3).map((feedback) => (
-                  <div 
+                  <button 
                     key={feedback.id} 
-                    className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-150 cursor-pointer"
+                    className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all min-h-[56px] active:scale-[0.98] text-left"
                     onClick={() => navigate(`/feedback?view=${feedback.id}`)}
                   >
-                    <div className={`w-2 h-2 rounded-full ${
+                    <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
                       feedback.status === 'completed' ? 'bg-green-500' :
                       (feedback.status as any) === 'pending' || feedback.status === 'submitted' ? 'bg-yellow-500' : 
                       feedback.status === 'draft' ? 'bg-gray-400' : 'bg-blue-500'
                     }`}></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
                         To: {feedback.toUser?.name || 'Unknown'}
                       </p>
                       <p className="text-xs text-gray-500">
                         {new Date(feedback.createdAt).toLocaleDateString()} • {feedback.status}
                       </p>
                     </div>
-                  </div>
+                    <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  </button>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                <Activity className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+              <div className="text-center py-6 text-gray-500">
+                <Activity className="w-10 h-10 mx-auto mb-2 text-gray-400" />
                 <p className="text-sm">No recent feedback given</p>
               </div>
             )}
@@ -667,28 +734,28 @@ const ManagerDashboard: React.FC = () => {
         </Card>
 
         <Card className="transform transition-all duration-200 hover:shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center">
+          <CardHeader className="pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
+            <CardTitle className="text-base sm:text-lg flex items-center">
               <Target className="h-5 w-5 mr-2 text-purple-600" />
               Team Feedback Progress
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
             <div className="space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">Team Members with Feedback</span>
-                  <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
+                  <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-medium">
                     {completionData?.summary ? `${completionData.summary.completed}/${completionData.summary.total}` : `${directReports.length} reports`}
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div 
-                    className="bg-green-500 h-2 rounded-full transition-all duration-500" 
+                    className="bg-green-500 h-2.5 rounded-full transition-all duration-500" 
                     style={{ width: completionData?.summary ? `${completionData.summary.percentage}%` : '0%' }}
                   ></div>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 mt-1.5">
                   {completionData?.summary 
                     ? `${completionData.summary.percentage}% of your team has received feedback from you`
                     : 'View Analytics tab for detailed completion data'}
@@ -697,8 +764,7 @@ const ManagerDashboard: React.FC = () => {
               
               <Button 
                 variant="outline" 
-                size="sm" 
-                className="w-full"
+                className="w-full min-h-[44px]"
                 onClick={() => setActiveTab('analytics')}
               >
                 <BarChart3 className="w-4 h-4 mr-2" />
@@ -1540,20 +1606,20 @@ const ManagerDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* Header - Responsive: smaller padding/text on mobile */}
       <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="px-6 py-4">
+        <div className="px-4 md:px-6 py-3 md:py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Manager Dashboard</h1>
-              <p className="text-gray-600">Manage your team and track performance</p>
+              <h1 className="text-lg md:text-2xl font-bold text-gray-900">Manager Dashboard</h1>
+              <p className="text-sm md:text-base text-gray-600 hidden md:block">Manage your team and track performance</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white border-b border-gray-200">
+      {/* Desktop Tabs - Hidden on mobile */}
+      <div className="hidden md:block bg-white border-b border-gray-200">
         <div className="px-6">
           <nav className="flex space-x-8">
             {tabs.map((tab) => {
@@ -1577,8 +1643,34 @@ const ManagerDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="p-6">
+      {/* Mobile Tabs - Horizontally scrollable pills, hidden on desktop */}
+      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-3">
+        <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
+          <div className="flex gap-2 min-w-max">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 active:scale-95 min-h-[44px] ${
+                    isActive
+                      ? 'bg-green-600 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content - Responsive padding */}
+      <div className="p-4 md:p-6">
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'team' && renderTeam()}
         {activeTab === 'insights' && renderInsights()}
