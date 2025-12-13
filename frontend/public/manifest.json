@@ -1,0 +1,23 @@
+{
+  "name": "GrowthPulse",
+  "short_name": "GrowthPulse",
+  "description": "Cultivate your team's potential with continuous feedback cycles and real-time performance insights.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5F7FB",
+  "theme_color": "#26A69A",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
+
