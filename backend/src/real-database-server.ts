@@ -3725,8 +3725,8 @@ app.post('/api/v1/profile/avatar', authenticateToken, avatarUpload.single('avata
   }
 });
 
-// GET /api/v1/users/:id/avatar - Serve user avatar from database
-app.get('/api/v1/users/:id/avatar', async (req: any, res: any) => {
+// GET /api/v1/users/:id/avatar - Serve user avatar from database (requires auth)
+app.get('/api/v1/users/:id/avatar', authenticateToken, async (req: any, res: any) => {
   try {
     const userId = req.params.id;
     
@@ -3735,23 +3735,23 @@ app.get('/api/v1/users/:id/avatar', async (req: any, res: any) => {
       [userId]
     );
     
+    // Security: Don't reveal if user exists or not - return generic placeholder
     if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'User not found' });
+      return res.redirect(`https://ui-avatars.com/api/?name=U&background=4F46E5&color=fff&size=200`);
     }
     
     const { avatar_data, avatar_mime_type, name } = result.rows[0];
     
     // If no avatar data, return a default generated avatar
     if (!avatar_data) {
-      // Redirect to a placeholder avatar service
-      const initials = encodeURIComponent(name || 'U');
-      return res.redirect(`https://ui-avatars.com/api/?name=${initials}&background=4F46E5&color=fff&size=200`);
+      // Security: Use generic initial to prevent name leakage to external service
+      return res.redirect(`https://ui-avatars.com/api/?name=U&background=4F46E5&color=fff&size=200`);
     }
     
     // Serve the image from database
     const imageBuffer = Buffer.from(avatar_data, 'base64');
     res.setHeader('Content-Type', avatar_mime_type || 'image/jpeg');
-    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+    res.setHeader('Cache-Control', 'private, max-age=3600'); // Private cache since auth required
     
     // Security: Restrict CORS to known origins only
     // Note: <img> tags don't use CORS, so images will load normally in our app.
