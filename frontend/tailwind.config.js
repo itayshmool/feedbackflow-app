@@ -6,7 +6,45 @@ export default {
   ],
   theme: {
     extend: {
+      // ═══════════════════════════════════════════════════════════════
+      // SPACING SCALE (4px base unit)
+      // ═══════════════════════════════════════════════════════════════
+      spacing: {
+        '0': '0px',
+        '0.5': '2px',      // 0.5 × 4px
+        '1': '4px',        // 1 × 4px
+        '2': '8px',        // 2 × 4px
+        '3': '12px',       // 3 × 4px
+        '4': '16px',       // 4 × 4px
+        '5': '20px',       // 5 × 4px
+        '6': '24px',       // 6 × 4px
+        '8': '32px',       // 8 × 4px
+        '10': '40px',      // 10 × 4px
+        '12': '48px',      // 12 × 4px
+        '16': '64px',      // 16 × 4px
+        '20': '80px',      // 20 × 4px
+        '24': '96px',      // 24 × 4px
+      },
+
+      // ═══════════════════════════════════════════════════════════════
+      // BORDER RADIUS (Standardized)
+      // ═══════════════════════════════════════════════════════════════
+      borderRadius: {
+        'none': '0',
+        'sm': '4px',       // Subtle rounding (inputs, small badges)
+        'DEFAULT': '6px',  // Default (buttons, tags)
+        'md': '8px',       // Medium (cards, modals)
+        'lg': '12px',      // Large (feature cards, panels)
+        'xl': '16px',      // Extra large (hero sections)
+        '2xl': '24px',     // 2XL (floating elements)
+        'full': '9999px',  // Pills, avatars
+      },
+
+      // ═══════════════════════════════════════════════════════════════
+      // COLORS
+      // ═══════════════════════════════════════════════════════════════
       colors: {
+        // Gray scale
         gray: {
           50: '#fafafa',
           100: '#f5f5f5',
@@ -20,6 +58,7 @@ export default {
           900: '#171717',
           950: '#0a0a0a',
         },
+        // Primary (Blue)
         primary: {
           50: '#eff6ff',
           100: '#dbeafe',
@@ -33,6 +72,7 @@ export default {
           900: '#1e3a8a',
           950: '#172554',
         },
+        // Secondary (Slate)
         secondary: {
           50: '#f8fafc',
           100: '#f1f5f9',
@@ -46,6 +86,7 @@ export default {
           900: '#0f172a',
           950: '#020617',
         },
+        // Success (Green)
         success: {
           50: '#f0fdf4',
           100: '#dcfce7',
@@ -59,6 +100,7 @@ export default {
           900: '#14532d',
           950: '#052e16',
         },
+        // Warning (Amber)
         warning: {
           50: '#fffbeb',
           100: '#fef3c7',
@@ -72,6 +114,7 @@ export default {
           900: '#78350f',
           950: '#451a03',
         },
+        // Error (Red)
         error: {
           50: '#fef2f2',
           100: '#fee2e2',
@@ -85,7 +128,42 @@ export default {
           900: '#7f1d1d',
           950: '#450a0a',
         },
+        // Info (Cyan)
+        info: {
+          50: '#ecfeff',
+          100: '#cffafe',
+          200: '#a5f3fc',
+          300: '#67e8f9',
+          400: '#22d3ee',
+          500: '#06b6d4',
+          600: '#0891b2',
+          700: '#0e7490',
+          800: '#155e75',
+          900: '#164e63',
+          950: '#083344',
+        },
       },
+
+      // ═══════════════════════════════════════════════════════════════
+      // BOX SHADOWS (Component-specific)
+      // ═══════════════════════════════════════════════════════════════
+      boxShadow: {
+        'sm': '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+        'DEFAULT': '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+        'md': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+        'lg': '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+        'xl': '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+        'card': '0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08)',
+        'card-hover': '0 4px 12px 0 rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.06)',
+        'button': '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+        'dropdown': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+        'modal': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
+        'none': 'none',
+      },
+
+      // ═══════════════════════════════════════════════════════════════
+      // TYPOGRAPHY
+      // ═══════════════════════════════════════════════════════════════
       fontFamily: {
         sans: [
           'Plus Jakarta Sans',
@@ -134,6 +212,10 @@ export default {
         wider: '0.025em',
         widest: '0.05em',
       },
+
+      // ═══════════════════════════════════════════════════════════════
+      // ANIMATIONS
+      // ═══════════════════════════════════════════════════════════════
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',
         'fade-in-up': 'fadeInUp 0.5s ease-out',
