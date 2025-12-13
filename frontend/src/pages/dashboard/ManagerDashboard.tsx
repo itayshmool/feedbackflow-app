@@ -147,6 +147,7 @@ const ManagerDashboard: React.FC = () => {
   const [completionData, setCompletionData] = useState<CompletionData | null>(null);
   const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
+  const [analyticsCycleId, setAnalyticsCycleId] = useState<string>(''); // empty = all cycles
   
   // State for Active Cycles Card
   const [activeCycles, setActiveCycles] = useState<any[]>([]);
@@ -164,14 +165,17 @@ const ManagerDashboard: React.FC = () => {
   } | null>(null);
 
   // Function to fetch analytics data
-  const fetchAnalyticsData = async () => {
+  const fetchAnalyticsData = async (cycleId?: string) => {
     setIsAnalyticsLoading(true);
     setAnalyticsError(null);
     
     try {
+      // Build params - only include cycleId if it's set (not empty = all cycles)
+      const params = cycleId ? { cycleId } : {};
+      
       const [colorRes, completionRes] = await Promise.all([
-        api.get('/analytics/team-color-distribution'),
-        api.get('/analytics/team-completion')
+        api.get('/analytics/team-color-distribution', { params }),
+        api.get('/analytics/team-completion', { params })
       ]);
       
       if (colorRes.data.success) {
@@ -188,12 +192,12 @@ const ManagerDashboard: React.FC = () => {
     }
   };
 
-  // Fetch analytics when switching to analytics tab
+  // Fetch analytics when switching to analytics tab or when cycle filter changes
   useEffect(() => {
-    if (activeTab === 'analytics' && !colorDistribution && !isAnalyticsLoading) {
-      fetchAnalyticsData();
+    if (activeTab === 'analytics') {
+      fetchAnalyticsData(analyticsCycleId || undefined);
     }
-  }, [activeTab]);
+  }, [activeTab, analyticsCycleId]);
   
   // Function to fetch AI team insights
   const fetchTeamInsights = async () => {
@@ -909,17 +913,35 @@ const ManagerDashboard: React.FC = () => {
 
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h2 className="text-xl font-semibold text-gray-900">Team Analytics</h2>
-          <Button
-            variant="outline"
-            onClick={fetchAnalyticsData}
-            disabled={isAnalyticsLoading}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${isAnalyticsLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-3">
+            {/* Cycle Filter */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600 whitespace-nowrap">Filter by cycle:</label>
+              <Select
+                value={analyticsCycleId}
+                onChange={(e) => setAnalyticsCycleId(e.target.value)}
+                className="w-48"
+              >
+                <option value="">All Cycles</option>
+                {activeCycles.map((cycle) => (
+                  <option key={cycle.id} value={cycle.id}>
+                    {cycle.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => fetchAnalyticsData(analyticsCycleId || undefined)}
+              disabled={isAnalyticsLoading}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isAnalyticsLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {analyticsError && (
@@ -1001,6 +1023,11 @@ const ManagerDashboard: React.FC = () => {
               <CardTitle className="flex items-center gap-2">
                 <Target className="h-5 w-5 text-blue-600" />
                 Feedback Completion Status
+                {analyticsCycleId && activeCycles.length > 0 && (
+                  <span className="text-xs font-normal text-gray-500 ml-1">
+                    ({activeCycles.find(c => c.id === analyticsCycleId)?.name || 'Selected Cycle'})
+                  </span>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>

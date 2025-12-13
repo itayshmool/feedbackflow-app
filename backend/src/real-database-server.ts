@@ -8380,6 +8380,7 @@ app.get('/api/v1/analytics/insights', authenticateToken, async (req, res) => {
 app.get('/api/v1/analytics/team-color-distribution', authenticateToken, async (req, res) => {
   try {
     const currentUserEmail = (req as any).user?.email;
+    const { cycleId } = req.query;
     
     if (!currentUserEmail) {
       return res.status(401).json({ success: false, error: 'Authentication required' });
@@ -8422,6 +8423,7 @@ app.get('/api/v1/analytics/team-color-distribution', authenticateToken, async (r
     }
 
     // Count feedback by color classification for team members (as recipients)
+    // Optionally filter by cycle if cycleId is provided
     const colorQuery = `
       SELECT 
         COALESCE(color_classification, 'unclassified') as color,
@@ -8429,10 +8431,12 @@ app.get('/api/v1/analytics/team-color-distribution', authenticateToken, async (r
       FROM feedback_responses
       WHERE recipient_id = ANY($1)
         AND is_approved = true
+        ${cycleId ? 'AND cycle_id = $2' : ''}
       GROUP BY COALESCE(color_classification, 'unclassified')
     `;
     
-    const colorResult = await query(colorQuery, [teamMemberIds]);
+    const queryParams = cycleId ? [teamMemberIds, cycleId] : [teamMemberIds];
+    const colorResult = await query(colorQuery, queryParams);
     
     // Initialize counts
     const distribution = { green: 0, yellow: 0, red: 0, unclassified: 0, total: 0 };
