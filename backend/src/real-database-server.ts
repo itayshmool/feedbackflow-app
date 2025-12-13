@@ -759,6 +759,19 @@ app.post('/api/v1/auth/login/mock', authRateLimit, async (req, res) => {
         error: 'Email and password are required'
       });
     }
+
+    // Restrict to @wix.com organization (even in mock login)
+    const allowedDomain = process.env.ALLOWED_EMAIL_DOMAIN || 'wix.com';
+    const emailDomain = email.split('@')[1]?.toLowerCase();
+    
+    if (emailDomain !== allowedDomain) {
+      console.log(`🚫 Mock login rejected: ${email} is not from @${allowedDomain}`);
+      return res.status(403).json({
+        success: false,
+        error: `Access restricted to @${allowedDomain} organization members only.`,
+        code: 'DOMAIN_NOT_ALLOWED'
+      });
+    }
     
     // Try to get user from database first
     let user;
@@ -958,15 +971,16 @@ app.post('/api/v1/auth/login/google', authRateLimit, async (req, res) => {
     const email = payload.email;
     const name = payload.name || email.split('@')[0];
 
-    // Restrict to @wix.com organization in production
-    const allowedDomain = 'wix.com';
+    // Restrict to @wix.com organization (all environments)
+    const allowedDomain = process.env.ALLOWED_EMAIL_DOMAIN || 'wix.com';
     const emailDomain = email.split('@')[1]?.toLowerCase();
     
-    if (process.env.NODE_ENV === 'production' && emailDomain !== allowedDomain) {
-      console.log(`Google login rejected: ${email} is not from @${allowedDomain}`);
+    if (emailDomain !== allowedDomain) {
+      console.log(`🚫 Google login rejected: ${email} is not from @${allowedDomain}`);
       return res.status(403).json({
         success: false,
-        error: `Access restricted to @${allowedDomain} organization members only.`
+        error: `Access restricted to @${allowedDomain} organization members only.`,
+        code: 'DOMAIN_NOT_ALLOWED'
       });
     }
 

@@ -7,6 +7,9 @@ import { UserService } from '../services/user.service.js';
 import { RefreshTokenModel } from '../models/refresh-token.model.js';
 import { getAccessTokenCookieOptions, getRefreshTokenCookieOptions } from '../../../shared/utils/cookie-helper.js';
 
+// Allowed email domain for Google login (configurable via env var)
+const ALLOWED_EMAIL_DOMAIN = process.env.ALLOWED_EMAIL_DOMAIN || 'wix.com';
+
 export class GoogleAuthController {
   private refreshTokenModel = new RefreshTokenModel();
 
@@ -15,6 +18,21 @@ export class GoogleAuthController {
     private jwtService: JwtService,
     private userService: UserService
   ) {}
+
+  /**
+   * Validate that email belongs to allowed domain (wix.com by default)
+   * Returns error message if invalid, null if valid
+   */
+  private validateEmailDomain(email: string): string | null {
+    const emailDomain = email.split('@')[1]?.toLowerCase();
+    
+    if (emailDomain !== ALLOWED_EMAIL_DOMAIN) {
+      console.log(`🚫 Login rejected: ${email} is not from @${ALLOWED_EMAIL_DOMAIN}`);
+      return `Access restricted to @${ALLOWED_EMAIL_DOMAIN} organization members only.`;
+    }
+    
+    return null;
+  }
 
   // Helper to transform UserService user to frontend format
   private transformUser(user: { id: string; email: string; name?: string; picture?: string; roles: string[] }) {
@@ -80,6 +98,16 @@ export class GoogleAuthController {
       const email = payload.email as string;
       if (!email) return res.status(400).json({ message: 'Google token missing email' });
 
+      // Validate email domain - block non-wix.com users
+      const domainError = this.validateEmailDomain(email);
+      if (domainError) {
+        return res.status(403).json({ 
+          success: false,
+          message: domainError,
+          code: 'DOMAIN_NOT_ALLOWED'
+        });
+      }
+
       const user = await this.userService.upsertGoogleUser({
         email,
         name: payload.name || undefined,
@@ -97,11 +125,21 @@ export class GoogleAuthController {
     }
   };
 
-  // Mock login for local testing (bypasses Google verification)
+  // Mock login for local testing (bypasses Google verification but still enforces domain restriction)
   mockLogin = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { email, name } = req.body as { email: string; name?: string };
       if (!email) return res.status(400).json({ message: 'email is required' });
+
+      // Validate email domain - block non-wix.com users (even in mock login)
+      const domainError = this.validateEmailDomain(email);
+      if (domainError) {
+        return res.status(403).json({ 
+          success: false,
+          message: domainError,
+          code: 'DOMAIN_NOT_ALLOWED'
+        });
+      }
 
       const user = await this.userService.upsertGoogleUser({
         email,
