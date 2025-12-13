@@ -121,7 +121,7 @@ export const useCyclesStore = create<CyclesState>()(
           });
         } catch (error: any) {
           set({
-            error: error.message || 'Failed to fetch cycles',
+            error: error?.response?.data?.error || error.message || 'Failed to fetch cycles',
             isLoading: false,
           });
         }
@@ -137,7 +137,7 @@ export const useCyclesStore = create<CyclesState>()(
           });
         } catch (error: any) {
           set({
-            error: error.message || 'Failed to fetch cycle',
+            error: error?.response?.data?.error || error.message || 'Failed to fetch cycle',
             isLoading: false,
           });
         }
@@ -155,7 +155,7 @@ export const useCyclesStore = create<CyclesState>()(
           return newCycle;
         } catch (error: any) {
           set({
-            createError: error.message || 'Failed to create cycle',
+            createError: error?.response?.data?.error || error.message || 'Failed to create cycle',
             isCreating: false,
           });
           return null;
@@ -177,7 +177,7 @@ export const useCyclesStore = create<CyclesState>()(
           return updatedCycle;
         } catch (error: any) {
           set({
-            updateError: error.message || 'Failed to update cycle',
+            updateError: error?.response?.data?.error || error.message || 'Failed to update cycle',
             isUpdating: false,
           });
           return null;
@@ -197,7 +197,7 @@ export const useCyclesStore = create<CyclesState>()(
           return true;
         } catch (error: any) {
           set({
-            deleteError: error.message || 'Failed to delete cycle',
+            deleteError: error?.response?.data?.error || error.message || 'Failed to delete cycle',
             isDeleting: false,
           });
           return false;
@@ -233,7 +233,7 @@ export const useCyclesStore = create<CyclesState>()(
           return updatedCycle;
         } catch (error: any) {
           set({
-            updateError: error.message || 'Failed to activate cycle',
+            updateError: error?.response?.data?.error || error.message || 'Failed to activate cycle',
             isUpdating: false,
           });
           return null;
@@ -255,7 +255,7 @@ export const useCyclesStore = create<CyclesState>()(
           return updatedCycle;
         } catch (error: any) {
           set({
-            updateError: error.message || 'Failed to close cycle',
+            updateError: error?.response?.data?.error || error.message || 'Failed to close cycle',
             isUpdating: false,
           });
           return null;
@@ -277,7 +277,7 @@ export const useCyclesStore = create<CyclesState>()(
           return updatedCycle;
         } catch (error: any) {
           set({
-            updateError: error.message || 'Failed to archive cycle',
+            updateError: error?.response?.data?.error || error.message || 'Failed to archive cycle',
             isUpdating: false,
           });
           return null;
@@ -299,7 +299,7 @@ export const useCyclesStore = create<CyclesState>()(
           return updatedCycle;
         } catch (error: any) {
           set({
-            updateError: error.message || 'Failed to restore cycle',
+            updateError: error?.response?.data?.error || error.message || 'Failed to restore cycle',
             isUpdating: false,
           });
           return null;
@@ -316,7 +316,7 @@ export const useCyclesStore = create<CyclesState>()(
           });
         } catch (error: any) {
           set({
-            summaryError: error.message || 'Failed to fetch cycle summary',
+            summaryError: error?.response?.data?.error || error.message || 'Failed to fetch cycle summary',
             isLoadingSummary: false,
           });
         }
@@ -332,7 +332,7 @@ export const useCyclesStore = create<CyclesState>()(
           });
         } catch (error: any) {
           set({
-            participantsError: error.message || 'Failed to fetch cycle participants',
+            participantsError: error?.response?.data?.error || error.message || 'Failed to fetch cycle participants',
             isLoadingParticipants: false,
           });
         }
@@ -350,7 +350,7 @@ export const useCyclesStore = create<CyclesState>()(
           return newParticipants;
         } catch (error: any) {
           set({
-            participantsError: error.message || 'Failed to add cycle participants',
+            participantsError: error?.response?.data?.error || error.message || 'Failed to add cycle participants',
             isLoadingParticipants: false,
           });
           return null;
@@ -369,7 +369,7 @@ export const useCyclesStore = create<CyclesState>()(
           return true;
         } catch (error: any) {
           set({
-            participantsError: error.message || 'Failed to remove cycle participant',
+            participantsError: error?.response?.data?.error || error.message || 'Failed to remove cycle participant',
             isLoadingParticipants: false,
           });
           return false;

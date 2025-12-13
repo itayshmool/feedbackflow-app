@@ -223,8 +223,23 @@ api.interceptors.response.use(
         }
       }
       
+      // Helper to extract error message from various backend response formats
+      // Backend can return: { error: 'string' } OR { error: { message: 'string' } } OR { message: 'string' }
+      const getErrorMessage = (responseData: any, fallback: string): string => {
+        if (!responseData) return fallback
+        if (typeof responseData.error === 'string') return responseData.error
+        if (responseData.error?.message) return responseData.error.message
+        if (responseData.message) return responseData.message
+        return fallback
+      }
+
       // Handle other error codes
       switch (status) {
+        case 400:
+          // Bad Request - validation/business logic errors from backend
+          toast.error(getErrorMessage(data, 'Invalid request. Please check your input.'))
+          break
+
         case 401:
           // Already handled above, this is for cases where retry already happened
           if (!window.location.pathname.includes('/login')) {
@@ -253,12 +268,12 @@ api.interceptors.response.use(
           }
           
           // Extract specific permission error from backend (e.g., privilege escalation, role restrictions)
-          toast.error(data.error || data.message || 'You do not have permission to perform this action.')
+          toast.error(getErrorMessage(data, 'You do not have permission to perform this action.'))
           break
           
         case 404:
           // Extract specific not found message from backend (e.g., "User not found", "Cycle not found")
-          toast.error(data.error || data.message || 'Resource not found.')
+          toast.error(getErrorMessage(data, 'The requested resource was not found.'))
           break
           
         case 422:
@@ -268,13 +283,13 @@ api.interceptors.response.use(
               toast.error(error[0] || 'Validation error')
             })
           } else {
-            toast.error(data.error || data.message || 'Validation error')
+            toast.error(getErrorMessage(data, 'Validation error. Please check your input.'))
           }
           break
           
         case 409:
-          // Conflict (e.g., duplicate resource) - let the component handle this
-          // Don't show toast here, the component will show a more contextual message
+          // Conflict (e.g., duplicate resource) - show the specific backend message
+          toast.error(getErrorMessage(data, 'A conflict occurred. The resource may already exist.'))
           break
 
         case 429:

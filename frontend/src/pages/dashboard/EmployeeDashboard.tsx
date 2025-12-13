@@ -389,8 +389,9 @@ const EmployeeDashboard: React.FC = () => {
         if (user?.id) {
           fetchFeedbackList({ toUserId: user.id }, 1, 10);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to update goal:', error);
+        // Toast is shown by api.ts interceptor
       }
     };
 

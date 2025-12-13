@@ -227,9 +227,10 @@ const ManagerDashboard: React.FC = () => {
       if (cycles.length > 0 && !selectedCycleId) {
         setSelectedCycleId(cycles[0].id);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch active cycles:', error);
       setActiveCycles([]);
+      // Toast is shown by api.ts interceptor
     }
   };
 
@@ -250,8 +251,9 @@ const ManagerDashboard: React.FC = () => {
         if (reminderResponse.data.success) {
           setReminderPreview(reminderResponse.data.data);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to fetch cycle data:', error);
+        // Toast is shown by api.ts interceptor
       }
     };
     fetchCycleData();
@@ -329,7 +331,7 @@ const ManagerDashboard: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Failed to send reminders:', error);
-      alert(error.response?.data?.error || 'Failed to send reminders');
+      // Toast is shown by api.ts interceptor
     } finally {
       setIsReminderSending(false);
     }

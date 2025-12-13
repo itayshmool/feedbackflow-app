@@ -76,6 +76,16 @@ function sanitizeErrorMessage(error: Error, isDevelopment: boolean): string {
     return 'Unable to complete this operation due to data constraints';
   }
 
+  // Token-related errors
+  if (error.message.toLowerCase().includes('token') && 
+      (error.message.toLowerCase().includes('expired') || error.message.toLowerCase().includes('invalid'))) {
+    return 'Your session has expired. Please sign in again.';
+  }
+
+  if (error.message.toLowerCase().includes('refresh token')) {
+    return 'Your session has expired. Please sign in again.';
+  }
+
   // Generic message for unknown errors
   return 'An unexpected error occurred';
 }

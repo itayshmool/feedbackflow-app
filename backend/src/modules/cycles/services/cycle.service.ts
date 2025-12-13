@@ -460,11 +460,11 @@ export class CycleService {
     const toParticipant = await this.participantModel.findByCycleAndUser(cycleId, toUserId);
     
     if (!fromParticipant || !toParticipant) {
-      throw new ValidationError('One or both users are not participants in this cycle');
+      throw new ValidationError('The selected recipient is not a participant in this feedback cycle');
     }
     
     if (fromParticipant.status !== 'active' || toParticipant.status !== 'active') {
-      throw new ValidationError('One or both users are not active participants');
+      throw new ValidationError('The selected recipient is not an active participant in this cycle');
     }
     
     return true;

@@ -293,7 +293,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
 
   const handleSaveAsDraft = async () => {
     if (!toUserEmail) {
-      alert('Please enter a recipient email');
+      toast.error('Please enter a recipient email');
       return;
     }
 
@@ -325,31 +325,28 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
       toast.success('Feedback saved as draft');
       onSuccess?.();
       onClose?.();
-    } else {
-      // Show error from store
-      const errorMsg = useFeedbackStore.getState().createError;
-      toast.error(errorMsg || 'Failed to save feedback');
     }
+    // Error toast is shown by api.ts interceptor
   };
 
   const handleSubmit = async () => {
     if (!selectedCycleId) {
-      alert('Please select a feedback cycle');
+      toast.error('Please select a feedback cycle');
       return;
     }
 
     if (!toUserEmail) {
-      alert('Please enter a recipient email');
+      toast.error('Please enter a recipient email');
       return;
     }
 
     if (!colorClassification) {
-      alert('Please select a color classification');
+      toast.error('Please select a color classification');
       return;
     }
 
     if (!overallComment.trim()) {
-      alert('Please provide an overall comment');
+      toast.error('Please provide an overall comment');
       return;
     }
 
@@ -384,14 +381,10 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         toast.success('Feedback submitted successfully');
         onSuccess?.();
         onClose?.();
-      } else {
-        toast.error('Failed to submit feedback');
       }
-    } else {
-      // Show error from store
-      const errorMsg = useFeedbackStore.getState().createError;
-      toast.error(errorMsg || 'Failed to create feedback');
+      // Error toast for submit failure is shown by api.ts interceptor
     }
+    // Error toast for create failure is shown by api.ts interceptor
   };
 
   if (isLoadingDirectReports) {
