@@ -1031,13 +1031,22 @@ app.post('/api/v1/auth/login/google', authRateLimit, async (req, res) => {
       
       if (userResult.rows.length > 0) {
         user = userResult.rows[0];
+        
+        // Update avatar_url from Google profile (if provided and user doesn't have custom avatar)
+        if (payload.picture && (!user.avatar_url || user.avatar_url.startsWith('http'))) {
+          await query(
+            `UPDATE users SET avatar_url = $2, last_login_at = NOW() WHERE id = $1`,
+            [user.id, payload.picture]
+          );
+          user.avatar_url = payload.picture;
+        }
       } else {
         // Create new user from Google account
         const insertResult = await query(
-          `INSERT INTO users (email, name, role, is_active, email_verified, created_at, updated_at)
-           VALUES ($1, $2, 'employee', true, true, NOW(), NOW())
+          `INSERT INTO users (email, name, avatar_url, role, is_active, email_verified, created_at, updated_at)
+           VALUES ($1, $2, $3, 'employee', true, true, NOW(), NOW())
            RETURNING *`,
-          [email, name]
+          [email, name, payload.picture]
         );
         const newUser = insertResult.rows[0];
         
@@ -1120,6 +1129,7 @@ app.post('/api/v1/auth/login/google', authRateLimit, async (req, res) => {
           id: user.id,
           email: user.email,
           name: user.name,
+          picture: user.avatar_url || payload.picture,
           roles: userRoles,
           organizationId: user.organization_id,
           organizationName: user.organization_name,
