@@ -14,7 +14,9 @@ import {
   FileText,
   Calendar,
   User,
-  Filter
+  Filter,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import api from '../../lib/api';
 
@@ -33,6 +35,17 @@ const EmployeeDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'my-feedback' | 'goals'>('overview');
   const [goalsCycleFilter, setGoalsCycleFilter] = useState<string>('');
   const [goalsStatusFilter, setGoalsStatusFilter] = useState<string>('');
+  const [expandedFeedback, setExpandedFeedback] = useState<Record<string, boolean>>({});
+
+  // Get feedback content text
+  const getContentText = (feedback: any) => {
+    return typeof feedback.content === 'string' 
+      ? feedback.content 
+      : feedback.content?.overallComment || 'No comment provided';
+  };
+
+  // Check if content needs truncation
+  const isLongContent = (text: string) => text.length > 150;
   
   // Check if user is a manager (managers see "Feedback Given" stat)
   const isManager = user?.roles?.includes('manager');
@@ -312,11 +325,39 @@ const EmployeeDashboard: React.FC = () => {
                          feedback.status}
                       </span>
                     </div>
-                    <p className="text-gray-600 text-sm line-clamp-2">
-                      {typeof feedback.content === 'string' 
-                        ? feedback.content 
-                        : feedback.content?.overallComment || 'No comment provided'}
-                    </p>
+                    <div>
+                      <p className={`text-gray-600 text-sm ${
+                        expandedFeedback[feedback.id] ? '' : 'line-clamp-3'
+                      }`}>
+                        {getContentText(feedback)}
+                      </p>
+                      {isLongContent(getContentText(feedback)) && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            setExpandedFeedback(prev => ({
+                              ...prev,
+                              [feedback.id]: !prev[feedback.id]
+                            }));
+                          }}
+                          className="mt-1.5 text-xs font-medium text-primary-600 hover:text-primary-700 hover:underline flex items-center gap-1 transition-colors relative z-10"
+                        >
+                          {expandedFeedback[feedback.id] ? (
+                            <>
+                              Show less
+                              <ChevronUp className="w-3 h-3" />
+                            </>
+                          ) : (
+                            <>
+                              Read more
+                              <ChevronDown className="w-3 h-3" />
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
                     <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
