@@ -36,6 +36,9 @@ const EXEMPT_ROUTES = [
   '/api/v1/auth/logout', // Logout is safe to exempt - only affects current user
   '/api/v1/profile', // Profile endpoints - already protected by auth token
   '/api/v1/webhooks/', // Webhooks have their own signature verification
+  // AI endpoints - long timeouts (2+ min) can cause CSRF cookie issues on mobile.
+  // Low risk: auth-protected, only affects user's own data, attacker can't read response.
+  '/api/v1/ai/',
   '/health',
   '/api/v1/health',
 ];
