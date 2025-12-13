@@ -8491,7 +8491,8 @@ app.get('/api/v1/analytics/team-completion', authenticateToken, async (req, res)
     }
 
     // Get direct reports with their feedback status from current manager
-    // This checks if the manager has given feedback to each of their direct reports
+    // This checks if the manager has given SUBMITTED feedback to each of their direct reports
+    // Note: Drafts are excluded - only submitted/completed feedback counts
     let completionQuery = `
       SELECT 
         u.id as "userId",
@@ -8503,18 +8504,22 @@ app.get('/api/v1/analytics/team-completion', authenticateToken, async (req, res)
         CASE 
           WHEN EXISTS (
             SELECT 1 FROM feedback_responses fr
+            JOIN feedback_requests frr ON fr.request_id = frr.id
             WHERE fr.giver_id = $1 
               AND fr.recipient_id = u.id
               AND fr.is_approved = true
+              AND frr.status != 'draft'
               ${cycleId ? 'AND fr.cycle_id = $3' : ''}
           ) THEN true
           ELSE false
         END as "hasReceivedFeedback",
         (
           SELECT COUNT(*) FROM feedback_responses fr
+          JOIN feedback_requests frr ON fr.request_id = frr.id
           WHERE fr.giver_id = $1 
             AND fr.recipient_id = u.id
             AND fr.is_approved = true
+            AND frr.status != 'draft'
             ${cycleId ? 'AND fr.cycle_id = $3' : ''}
         ) as "feedbackCount"
       FROM organizational_hierarchy oh
