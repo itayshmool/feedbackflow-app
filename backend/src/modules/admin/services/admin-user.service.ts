@@ -121,7 +121,7 @@ export class AdminUserService {
 
     if (unauthorizedOrgs.length > 0) {
       console.warn(`🚫 Privilege escalation attempt: user tried to assign admin to orgs they don't manage: ${unauthorizedOrgs.join(', ')}`);
-      throw new Error(`Privilege escalation denied: You cannot grant admin access to organizations you do not manage`);
+      throw new Error('You can only grant admin access for organizations you manage');
     }
   }
 
@@ -294,7 +294,7 @@ export class AdminUserService {
         
         case 'assign_role':
           if (!operation.roleId) {
-            throw new Error('Role ID is required for assign_role operation');
+            throw new Error('Please select a role to assign');
           }
           for (const userId of operation.userIds) {
             try {
@@ -308,7 +308,7 @@ export class AdminUserService {
         
         case 'remove_role':
           if (!operation.roleId) {
-            throw new Error('Role ID is required for remove_role operation');
+            throw new Error('Please select a role to remove');
           }
           for (const userId of operation.userIds) {
             try {

@@ -293,7 +293,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
 
   const handleSaveAsDraft = async () => {
     if (!toUserEmail) {
-      alert('Please enter a recipient email');
+      toast.error('Please enter a recipient email');
       return;
     }
 
@@ -334,22 +334,22 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
 
   const handleSubmit = async () => {
     if (!selectedCycleId) {
-      alert('Please select a feedback cycle');
+      toast.error('Please select a feedback cycle');
       return;
     }
 
     if (!toUserEmail) {
-      alert('Please enter a recipient email');
+      toast.error('Please enter a recipient email');
       return;
     }
 
     if (!colorClassification) {
-      alert('Please select a color classification');
+      toast.error('Please select a color classification');
       return;
     }
 
     if (!overallComment.trim()) {
-      alert('Please provide an overall comment');
+      toast.error('Please provide an overall comment');
       return;
     }
 

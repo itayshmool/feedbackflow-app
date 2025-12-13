@@ -1,6 +1,7 @@
 // Feedback Detail Component
 
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useFeedbackStore } from '../../stores/feedbackStore';
 import { Feedback, FeedbackStatus, GoalStatus } from '../../types/feedback.types';
 import { Card } from '../ui/Card';
@@ -82,8 +83,9 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
         content: editedContent,
       });
       setIsEditMode(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save feedback:', error);
+      toast.error(error?.response?.data?.error || 'Failed to save feedback');
     } finally {
       setIsSaving(false);
     }
@@ -99,9 +101,9 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
     
     try {
       await generateFeedbackDocx(currentFeedback);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating DOCX:', error);
-      alert('Failed to generate document. Please try again.');
+      toast.error('Failed to generate document. Please try again.');
     }
   };
 

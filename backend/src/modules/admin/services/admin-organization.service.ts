@@ -93,7 +93,7 @@ export class AdminOrganizationService {
     const organization = await this.organizationModel.getOrganizationById(organizationId);
     
     if (!organization) {
-      throw new NotFoundError(`Organization with ID ${organizationId} not found`);
+      throw new NotFoundError('Organization not found');
     }
     
     return organization;
@@ -134,7 +134,7 @@ export class AdminOrganizationService {
     return this.withTransaction(async (client) => {
       const existingOrg = await this.organizationModel.getOrganizationById(organizationId, client);
       if (!existingOrg) {
-        throw new NotFoundError(`Organization with ID ${organizationId} not found`);
+        throw new NotFoundError('Organization not found');
       }
 
       // Validate slug availability if slug is being updated
@@ -180,7 +180,7 @@ export class AdminOrganizationService {
         const existingOrg = await this.organizationModel.getOrganizationById(organizationId, client);
         if (!existingOrg) {
           this.logger.error('Organization not found', { organizationId });
-          throw new NotFoundError(`Organization with ID ${organizationId} not found`);
+          throw new NotFoundError('Organization not found');
         }
         this.logger.info('Organization found', { organizationId, name: existingOrg.name });
 
@@ -642,13 +642,13 @@ export class AdminOrganizationService {
         break;
       case 'departments':
         if (!request.filters?.organizationId) {
-          throw new ValidationError('Organization ID is required for department export');
+          throw new ValidationError('Please select an organization to export departments');
         }
         data = await this.departmentModel.getDepartments(request.filters.organizationId, request.filters);
         break;
       case 'teams':
         if (!request.filters?.organizationId) {
-          throw new ValidationError('Organization ID is required for team export');
+          throw new ValidationError('Please select an organization to export teams');
         }
         data = await this.teamModel.getTeams(request.filters.organizationId, request.filters);
         break;

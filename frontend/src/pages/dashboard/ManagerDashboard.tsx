@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { useAuthStore } from '../../stores/authStore';
 import { useHierarchyStore } from '../../stores/hierarchyStore';
 import { useFeedbackStore } from '../../stores/feedbackStore';
@@ -227,9 +228,10 @@ const ManagerDashboard: React.FC = () => {
       if (cycles.length > 0 && !selectedCycleId) {
         setSelectedCycleId(cycles[0].id);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch active cycles:', error);
       setActiveCycles([]);
+      toast.error(error?.response?.data?.error || 'Failed to load active cycles');
     }
   };
 
@@ -250,8 +252,9 @@ const ManagerDashboard: React.FC = () => {
         if (reminderResponse.data.success) {
           setReminderPreview(reminderResponse.data.data);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to fetch cycle data:', error);
+        toast.error(error?.response?.data?.error || 'Failed to load cycle details');
       }
     };
     fetchCycleData();
@@ -329,7 +332,7 @@ const ManagerDashboard: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Failed to send reminders:', error);
-      alert(error.response?.data?.error || 'Failed to send reminders');
+      toast.error(error.response?.data?.error || 'Failed to send reminders');
     } finally {
       setIsReminderSending(false);
     }

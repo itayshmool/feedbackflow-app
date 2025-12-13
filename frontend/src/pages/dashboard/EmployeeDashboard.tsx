@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useAuthStore } from '../../stores/authStore';
 import { useFeedbackStore } from '../../stores/feedbackStore';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
@@ -389,8 +390,9 @@ const EmployeeDashboard: React.FC = () => {
         if (user?.id) {
           fetchFeedbackList({ toUserId: user.id }, 1, 10);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to update goal:', error);
+        toast.error(error?.response?.data?.error || 'Failed to update goal progress');
       }
     };
 

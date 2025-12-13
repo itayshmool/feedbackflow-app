@@ -5849,7 +5849,7 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
       }
       targetUserId = targetUser.rows[0].id as string;
     } else {
-      return res.status(400).json({ success: false, error: 'Either recipientId or toUserEmail must be provided' });
+      return res.status(400).json({ success: false, error: 'Please select a feedback recipient' });
     }
 
     // Permission logic based on review type

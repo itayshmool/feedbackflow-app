@@ -537,7 +537,7 @@ export class FeedbackService {
     client: PoolClient
   ): Promise<void> {
     if (!cycleId || !fromUserId || !toUserId) {
-      throw new ValidationError('Invalid cycle or user parameters');
+      throw new ValidationError('Please select a valid feedback cycle and recipient');
     }
     
     if (fromUserId === toUserId) {
