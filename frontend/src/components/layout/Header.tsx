@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Menu, User, LogOut, Settings } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
+import { GrowthPulseLogoIcon } from '@/components/ui/GrowthPulseLogo'
 import { useProfileStore } from '@/stores/profileStore'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import Button from '@/components/ui/Button'
@@ -32,11 +33,9 @@ export default function Header({ onMenuToggle }: HeaderProps) {
         <div className="flex justify-between items-center h-14 md:h-16">
           {/* Left side - Brand on mobile + menu button for advanced options */}
           <div className="flex items-center gap-2">
-            {/* Mobile: Show compact FF brand */}
+            {/* Mobile: Show compact GrowthPulse logo */}
             <div className="flex md:hidden items-center">
-              <div className="h-8 w-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">FF</span>
-              </div>
+              <GrowthPulseLogoIcon size={32} />
             </div>
             
             {/* Hamburger opens full sidebar drawer for advanced options - mobile only */}
