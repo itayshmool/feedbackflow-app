@@ -19,11 +19,11 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>
 
-// FeedbackFlow Logo
+// GrowthPulse Logo
 const Logo = () => (
   <div className="flex items-center justify-center gap-3">
     <div className="h-14 w-14 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center shadow-lg shadow-primary-500/25 transform hover:scale-105 transition-transform duration-200">
-      <span className="text-white font-bold text-2xl tracking-tight">FF</span>
+      <span className="text-white font-bold text-2xl tracking-tight">GP</span>
     </div>
   </div>
 )
@@ -158,9 +158,9 @@ export default function LoginPage() {
           <div className="mb-12">
             <div className="flex items-center gap-4 mb-8">
               <div className="h-16 w-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center shadow-xl shadow-primary-500/20">
-                <span className="text-white font-bold text-3xl tracking-tight">FF</span>
+                <span className="text-white font-bold text-3xl tracking-tight">GP</span>
               </div>
-              <span className="text-2xl font-bold text-gray-800 tracking-tight">FeedbackFlow</span>
+              <span className="text-2xl font-bold text-gray-800 tracking-tight">GrowthPulse</span>
             </div>
             
             {/* Tagline */}
@@ -220,7 +220,7 @@ export default function LoginPage() {
             <div className="lg:hidden text-center mb-8">
               <Logo />
               <h1 className="mt-6 text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
-                Sign in to FeedbackFlow
+                Sign in to GrowthPulse
               </h1>
               <p className="mt-3 text-base sm:text-lg text-gray-600">
                 {!isMockLoginEnabled 
@@ -437,7 +437,7 @@ export default function LoginPage() {
                 </a>
               </div>
               <p className="text-xs text-gray-300">
-                FeedbackFlow v1.0
+                GrowthPulse v1.0
               </p>
             </footer>
           </div>

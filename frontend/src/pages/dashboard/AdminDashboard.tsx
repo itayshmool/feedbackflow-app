@@ -92,7 +92,7 @@ const AdminDashboard: React.FC = () => {
             <div>
               <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.name}!</h1>
               <p className="text-blue-100 text-lg">
-                Manage your FeedbackFlow platform and organizations
+                Manage your GrowthPulse platform and organizations
               </p>
             </div>
             <Button
@@ -279,7 +279,7 @@ const AdminDashboard: React.FC = () => {
               </label>
               <input
                 type="text"
-                defaultValue="FeedbackFlow"
+                defaultValue="GrowthPulse"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -340,7 +340,7 @@ const AdminDashboard: React.FC = () => {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-              <p className="text-gray-600">Manage your FeedbackFlow platform</p>
+              <p className="text-gray-600">Manage your GrowthPulse platform</p>
             </div>
             <Badge variant="success">Admin</Badge>
           </div>

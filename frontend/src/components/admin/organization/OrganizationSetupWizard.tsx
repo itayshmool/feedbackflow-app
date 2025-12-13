@@ -578,7 +578,7 @@ const OrganizationSetupWizard: React.FC<OrganizationSetupWizardProps> = ({ onCom
                 <li>• Organization created successfully</li>
                 <li>• {departments?.length || 0} departments configured</li>
                 <li>• {teams?.length || 0} teams set up</li>
-                <li>• Ready to start using FeedbackFlow</li>
+                <li>• Ready to start using GrowthPulse</li>
               </ul>
             </div>
           </div>
