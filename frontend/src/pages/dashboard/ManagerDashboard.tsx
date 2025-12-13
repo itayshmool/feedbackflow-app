@@ -496,8 +496,10 @@ const ManagerDashboard: React.FC = () => {
                   </Button>
                 )}
                 
-                {/* All complete message */}
-                {reminderPreview && reminderPreview.pendingCount === 0 && (cycleCompletionData?.summary?.total || 0) > 0 && (
+                {/* All complete message - only show when manager has given feedback to ALL team members AND all acknowledged */}
+                {reminderPreview && reminderPreview.pendingCount === 0 && 
+                 cycleCompletionData?.summary?.total > 0 && 
+                 cycleCompletionData?.summary?.completed === cycleCompletionData?.summary?.total && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center">
                     <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
                     <span className="text-sm text-green-700">
@@ -505,7 +507,19 @@ const ManagerDashboard: React.FC = () => {
                         ? 'All your managers have given feedback to their teams!' 
                         : 'All team members have acknowledged their feedback!'}
                     </span>
-            </div>
+                  </div>
+                )}
+                
+                {/* Show message when manager hasn't given feedback to all team members yet */}
+                {reminderPreview && reminderPreview.pendingCount === 0 && 
+                 cycleCompletionData?.summary?.total > 0 && 
+                 cycleCompletionData?.summary?.completed < cycleCompletionData?.summary?.total && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center">
+                    <Clock className="w-5 h-5 text-amber-600 mr-2" />
+                    <span className="text-sm text-amber-700">
+                      {cycleCompletionData.summary.total - cycleCompletionData.summary.completed} team member(s) still waiting for your feedback
+                    </span>
+                  </div>
                 )}
               </div>
             )}
