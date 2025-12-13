@@ -29,9 +29,12 @@ const PROTECTED_METHODS = ['POST', 'PUT', 'DELETE', 'PATCH'];
 const EXEMPT_ROUTES = [
   '/api/v1/auth/login',
   '/api/v1/auth/login/mock',
+  '/api/v1/auth/login/google', // Google OAuth login
   '/api/v1/auth/google/callback',
   '/api/v1/auth/register',
   '/api/v1/auth/refresh', // Token refresh uses httpOnly refresh token for security
+  '/api/v1/auth/logout', // Logout is safe to exempt - only affects current user
+  '/api/v1/profile', // Profile endpoints - already protected by auth token
   '/api/v1/webhooks/', // Webhooks have their own signature verification
   '/health',
   '/api/v1/health',
