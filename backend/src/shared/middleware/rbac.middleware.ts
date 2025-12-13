@@ -7,6 +7,7 @@ export interface OrgScopedRequest extends Request {
     email: string;
     name: string;
     roles: string[];
+    organizationId?: string; // The user's organization (from membership)
     adminOrganizationId?: string | null; // The org this admin is scoped to (null for super_admin)
   };
   // Effective organization ID for the current request
@@ -168,9 +169,19 @@ export function requireOrgAccess() {
       return next();
     }
 
-    // Non-admin users - check if they belong to the org
+    // Non-admin users - check if they belong to the org via membership
     // This handles managers/employees accessing their own org data
-    if (targetOrgId && user.adminOrganizationId === targetOrgId) {
+    const userOrgId = user.organizationId || user.adminOrganizationId;
+    
+    if (!userOrgId) {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Organization membership required',
+        message: 'You are not assigned to any organization'
+      });
+    }
+    
+    if (targetOrgId && userOrgId === targetOrgId) {
       req.effectiveOrganizationId = targetOrgId;
       return next();
     }
