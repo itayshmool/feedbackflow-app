@@ -14,6 +14,7 @@ export interface User {
   name?: string;
   picture?: string;
   roles: string[];
+  organizationId?: string;
 }
 
 export class UserService {
@@ -29,6 +30,8 @@ export class UserService {
           u.email,
           u.name,
           u.avatar_url as picture,
+          u.organization_id,
+          COALESCE(om.organization_id, u.organization_id) as effective_org_id,
           COALESCE(
             ARRAY_AGG(DISTINCT r.name) FILTER (WHERE r.name IS NOT NULL),
             ARRAY['employee']::VARCHAR[]
@@ -36,8 +39,9 @@ export class UserService {
         FROM users u
         LEFT JOIN user_roles ur ON u.id = ur.user_id AND ur.is_active = true
         LEFT JOIN roles r ON ur.role_id = r.id
+        LEFT JOIN organization_members om ON u.id = om.user_id AND om.is_active = true
         WHERE LOWER(u.email) = LOWER($1) AND u.is_active = true
-        GROUP BY u.id, u.email, u.name, u.avatar_url`,
+        GROUP BY u.id, u.email, u.name, u.avatar_url, u.organization_id, om.organization_id`,
         [email]
       );
 
@@ -52,6 +56,7 @@ export class UserService {
         name: row.name,
         picture: row.picture,
         roles: row.roles || ['employee'],
+        organizationId: row.effective_org_id || row.organization_id,
       };
     } catch (error) {
       console.error('UserService.findByEmail error:', error);
@@ -88,7 +93,8 @@ export class UserService {
         return { 
           ...existingUser, 
           name: profile.name || existingUser.name, 
-          picture: profile.picture || existingUser.picture 
+          picture: profile.picture || existingUser.picture,
+          organizationId: existingUser.organizationId,
         };
       }
 
@@ -167,6 +173,7 @@ export class UserService {
         name: newUser.name,
         picture: newUser.picture,
         roles,
+        organizationId: undefined, // New users don't have an org yet
       };
     } catch (error) {
       console.error('UserService.upsertGoogleUser error:', error);

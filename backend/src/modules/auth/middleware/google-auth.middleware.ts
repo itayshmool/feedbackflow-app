@@ -27,7 +27,8 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
       id: payload.sub, 
       email: payload.email, 
       name: payload.name,
-      roles: payload.roles || []
+      roles: payload.roles || [],
+      organizationId: payload.organizationId,
     };
     return next();
   } catch (e) {
