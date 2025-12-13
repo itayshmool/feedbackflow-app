@@ -4,7 +4,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { GoogleOAuthProvider } from '@react-oauth/google'
-import { Toaster } from 'react-hot-toast'
+import { Toaster, toast, ToastBar } from 'react-hot-toast'
 import App from './App.tsx'
 import './index.css'
 
@@ -54,7 +54,33 @@ const AppWithProviders = () => {
             },
           },
         }}
-      />
+      >
+        {(t) => (
+          <ToastBar toast={t}>
+            {({ icon, message }) => (
+              <div 
+                className="flex items-center gap-2 cursor-pointer"
+                onClick={() => t.type !== 'loading' && toast.dismiss(t.id)}
+                title="Click to dismiss"
+              >
+                {icon}
+                {message}
+                {t.type !== 'loading' && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toast.dismiss(t.id);
+                    }}
+                    className="ml-2 text-gray-400 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            )}
+          </ToastBar>
+        )}
+      </Toaster>
     </QueryClientProvider>
   )
 
