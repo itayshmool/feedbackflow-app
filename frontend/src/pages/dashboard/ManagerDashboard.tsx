@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { Select } from '../../components/ui/Select';
 import { generateInsightsDocx } from '../../utils/generateInsightsDocx';
+import QuoteOfTheDay from '../../components/dashboard/QuoteOfTheDay';
 
 // Types for Analytics
 interface ColorDistribution {
@@ -373,26 +374,10 @@ const ManagerDashboard: React.FC = () => {
     }
   };
 
-  // Show welcome banner only once per session
-  const [showWelcome] = useState(() => {
-    const welcomed = sessionStorage.getItem('manager-welcomed');
-    if (!welcomed) {
-      sessionStorage.setItem('manager-welcomed', 'true');
-      return true;
-    }
-    return false;
-  });
-
   const renderOverview = () => (
     <div className="space-y-4 sm:space-y-6">
-      {/* Welcome Section - Only show once per session */}
-      {showWelcome && (
-        <div className="bg-gradient-to-r from-green-600 to-blue-600 rounded-xl p-4 sm:p-6 text-white shadow-lg transform transition-all duration-200 hover:shadow-xl">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Welcome back, {user?.name}!</h1>
-          </div>
-        </div>
-      )}
+      {/* Daily Growth Quote */}
+      <QuoteOfTheDay />
 
       {/* Stats Cards - 2 columns on all sizes for compact mobile view */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6">

@@ -33,6 +33,7 @@ import TemplatesManagement from './pages/admin/TemplatesManagement';
 import TemplateLibrary from './pages/manager/TemplateLibrary';
 import EmployeeHistoryPage from './pages/team/EmployeeHistoryPage';
 import NotFoundPage from './pages/NotFoundPage';
+import QuoteTest from './pages/test/QuoteTest';
 
 // Layout
 import Layout from './components/layout/Layout';
@@ -48,6 +49,10 @@ const AppRouter: React.FC = () => {
     {
       path: '/test-google-login',
       element: <GoogleOAuthTestPage />,
+    },
+    {
+      path: '/test/quote',
+      element: <QuoteTest />,
     },
     {
       path: '/',
