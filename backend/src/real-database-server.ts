@@ -122,6 +122,10 @@ app.use(cors({
       'http://localhost:3000',
       'http://localhost:5173',
       process.env.FRONTEND_URL,
+      process.env.FRONTEND_URL_SECONDARY,
+      // Production domains
+      'https://growthpulse.team',
+      'https://feedbackflow-frontend.onrender.com',
     ].filter(Boolean) as string[];
     
     // Allow requests with no origin (mobile apps, curl, etc)
