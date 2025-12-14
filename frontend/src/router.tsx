@@ -32,6 +32,7 @@ import HierarchyManagement from './pages/admin/HierarchyManagement';
 import TemplatesManagement from './pages/admin/TemplatesManagement';
 import TemplateLibrary from './pages/manager/TemplateLibrary';
 import EmployeeHistoryPage from './pages/team/EmployeeHistoryPage';
+import QuoteArchivePage from './pages/quotes/QuoteArchivePage';
 import NotFoundPage from './pages/NotFoundPage';
 import QuoteTest from './pages/test/QuoteTest';
 
@@ -150,6 +151,10 @@ const AppRouter: React.FC = () => {
         {
           path: 'myself',
           element: <EmployeeDashboard />,
+        },
+        {
+          path: 'quotes',
+          element: <QuoteArchivePage />,
         },
         {
           path: 'team/:employeeId',

@@ -13,7 +13,8 @@ import {
   Users2,
   FileText,
   X,
-  User
+  User,
+  Sparkles
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useHierarchyStore } from '@/stores/hierarchyStore'
@@ -135,6 +136,7 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
   // Personal section
   const personalNavigation: NavItem[] = [
     { name: 'Myself', href: '/myself', icon: User },
+    { name: 'Growth Quotes', href: '/quotes', icon: Sparkles },
   ]
 
   // Resources section

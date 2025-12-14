@@ -9369,7 +9369,8 @@ Return ONLY a JSON object:
 // PRODUCTION ENDPOINT - uses database caching (one quote per day)
 app.get('/api/v1/quote-of-the-day', authenticateToken, async (req: any, res: any) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    // Use Israel timezone (Asia/Jerusalem) for consistent daily quotes
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
     
     // Check if we already have a quote for today
     const existingQuote = await query(
@@ -9469,6 +9470,150 @@ Return ONLY a JSON object:
         authorTitle: "Co-founder of Apple"
       }
     });
+  }
+});
+
+// QUOTES ARCHIVE - Get all past quotes with search/filter
+app.get('/api/v1/quotes/archive', authenticateToken, async (req: any, res: any) => {
+  try {
+    const { 
+      search, 
+      author, 
+      category,
+      startDate,
+      endDate,
+      page = 1, 
+      limit = 20 
+    } = req.query;
+    
+    const pageNum = Math.max(1, parseInt(page as string) || 1);
+    const limitNum = Math.min(50, Math.max(1, parseInt(limit as string) || 20));
+    const offset = (pageNum - 1) * limitNum;
+    
+    // Build dynamic query with filters
+    let whereConditions: string[] = [];
+    let queryParams: any[] = [];
+    let paramIndex = 1;
+    
+    if (search) {
+      whereConditions.push(`(quote ILIKE $${paramIndex} OR author ILIKE $${paramIndex})`);
+      queryParams.push(`%${search}%`);
+      paramIndex++;
+    }
+    
+    if (author) {
+      whereConditions.push(`author ILIKE $${paramIndex}`);
+      queryParams.push(`%${author}%`);
+      paramIndex++;
+    }
+    
+    if (category) {
+      whereConditions.push(`theme = $${paramIndex}`);
+      queryParams.push(category);
+      paramIndex++;
+    }
+    
+    if (startDate) {
+      whereConditions.push(`generated_date >= $${paramIndex}`);
+      queryParams.push(startDate);
+      paramIndex++;
+    }
+    
+    if (endDate) {
+      whereConditions.push(`generated_date <= $${paramIndex}`);
+      queryParams.push(endDate);
+      paramIndex++;
+    }
+    
+    const whereClause = whereConditions.length > 0 
+      ? `WHERE ${whereConditions.join(' AND ')}` 
+      : '';
+    
+    // Get total count
+    const countResult = await query(
+      `SELECT COUNT(*) FROM daily_quotes ${whereClause}`,
+      queryParams
+    );
+    const total = parseInt(countResult.rows[0].count);
+    
+    // Get quotes with pagination
+    const quotesResult = await query(
+      `SELECT id, quote, author, author_title, theme, generated_date, created_at 
+       FROM daily_quotes 
+       ${whereClause}
+       ORDER BY generated_date DESC, created_at DESC
+       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+      [...queryParams, limitNum, offset]
+    );
+    
+    const quotes = quotesResult.rows.map(row => ({
+      id: row.id,
+      quote: row.quote,
+      author: row.author,
+      authorTitle: row.author_title,
+      category: row.theme || 'growth',
+      generatedDate: row.generated_date,
+      createdAt: row.created_at
+    }));
+    
+    res.json({
+      success: true,
+      data: {
+        quotes,
+        pagination: {
+          total,
+          page: pageNum,
+          limit: limitNum,
+          totalPages: Math.ceil(total / limitNum),
+          hasMore: offset + quotes.length < total
+        }
+      }
+    });
+    
+  } catch (error: any) {
+    console.error('Quotes archive error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch quotes archive' 
+    });
+  }
+});
+
+// Get unique authors for filter dropdown
+app.get('/api/v1/quotes/authors', authenticateToken, async (req: any, res: any) => {
+  try {
+    const result = await query(
+      `SELECT DISTINCT author FROM daily_quotes ORDER BY author ASC`
+    );
+    
+    res.json({
+      success: true,
+      data: result.rows.map(row => row.author)
+    });
+  } catch (error: any) {
+    console.error('Quotes authors error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch authors' });
+  }
+});
+
+// Get quote statistics
+app.get('/api/v1/quotes/stats', authenticateToken, async (req: any, res: any) => {
+  try {
+    const totalResult = await query('SELECT COUNT(*) FROM daily_quotes');
+    const authorsResult = await query('SELECT COUNT(DISTINCT author) FROM daily_quotes');
+    const oldestResult = await query('SELECT MIN(generated_date) as oldest FROM daily_quotes');
+    
+    res.json({
+      success: true,
+      data: {
+        totalQuotes: parseInt(totalResult.rows[0].count),
+        uniqueAuthors: parseInt(authorsResult.rows[0].count),
+        oldestQuote: oldestResult.rows[0].oldest
+      }
+    });
+  } catch (error: any) {
+    console.error('Quotes stats error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch stats' });
   }
 });
 
