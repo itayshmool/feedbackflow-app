@@ -111,6 +111,12 @@ function isExemptRoute(path: string): boolean {
  * 
  * Or for specific routes:
  *   app.post('/api/something', csrfProtection, handler);
+ * 
+ * Security Note: Bearer token requests skip CSRF validation because:
+ * 1. Bearer tokens are NOT automatically sent by browsers (unlike cookies)
+ * 2. The token must be explicitly set via JavaScript in the Authorization header
+ * 3. Same-Origin Policy prevents malicious sites from reading localStorage/tokens
+ * 4. This is industry standard (Auth0, Firebase, AWS Cognito, all OAuth 2.0 APIs)
  */
 export function csrfProtection(req: Request, res: Response, next: NextFunction): void {
   // Only validate state-changing methods
@@ -124,6 +130,18 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     return next();
   }
   
+  // Skip CSRF validation for Bearer token authentication
+  // Bearer tokens are inherently CSRF-safe because:
+  // - They are not automatically sent by browsers (unlike cookies)
+  // - Attackers cannot read/steal tokens from other origins (Same-Origin Policy)
+  // - The token must be explicitly included via JavaScript
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    console.log(`🔓 CSRF: Skipping for Bearer token auth on ${req.method} ${req.path}`);
+    return next();
+  }
+  
+  // For cookie-based authentication, validate CSRF token
   // Get token from cookie
   const cookieToken = req.cookies?.[CSRF_COOKIE_NAME];
   
