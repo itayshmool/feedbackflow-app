@@ -457,16 +457,6 @@ const ManagerDashboard: React.FC = () => {
         />
       )}
 
-      {/* Nudge Panel - Send reminders at the bottom */}
-      {reminderPreview && (reminderPreview.hasEmployeeReports || reminderPreview.hasManagerReports) && (
-        <NudgePanel
-          cycleId={selectedCycleId}
-          employeeData={reminderPreview.employeeData}
-          managerData={reminderPreview.managerData}
-          onReminderSent={handleReminderSent}
-        />
-      )}
-
       {/* Recent Activity - Stack on mobile, 2 columns on large screens */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         <Card className="transform transition-all duration-200 hover:shadow-lg">
@@ -556,6 +546,16 @@ const ManagerDashboard: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Nudge Panel - Send reminders at the BOTTOM */}
+      {reminderPreview && (reminderPreview.hasEmployeeReports || reminderPreview.hasManagerReports) && (
+        <NudgePanel
+          cycleId={selectedCycleId}
+          employeeData={reminderPreview.employeeData}
+          managerData={reminderPreview.managerData}
+          onReminderSent={handleReminderSent}
+        />
+      )}
     </div>
   );
 
