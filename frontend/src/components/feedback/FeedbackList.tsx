@@ -421,19 +421,29 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
       {showFilters && showFilterPanel && (
         <Card className="p-4">
           {/* 
-            Color filter visibility rules:
-            - Only for managers on "given" or "drafts" tabs (their own feedback)
-            - Hidden on "received" and "all" tabs to prevent exposing their manager's color assessment
+            Filter visibility rules:
+            - Color filter: Only for managers on "given" or "drafts" tabs (their own feedback)
+            - Status filter: Only for managers (employees use tabs for status filtering)
+            - Cycle filter: Visible to everyone
           */}
           {(() => {
             const showColorFilter = isManager && (activeTab === 'given' || activeTab === 'drafts');
+            // Status filter only for managers - employees use tabs for status (waiting/acknowledged/all)
+            const showStatusFilter = isManager;
             // Determine if Draft status option should be shown:
-            // - For employees: never (they don't create feedback)
             // - For managers: only on "given", "drafts", or "all" tabs (not on "received")
             const showDraftStatus = isManager && activeTab !== 'received';
             
+            // Calculate grid columns: 1 for cycle, +1 for status (managers), +1 for color (managers on given/drafts)
+            const columnCount = 1 + (showStatusFilter ? 1 : 0) + (showColorFilter ? 1 : 0);
+            const gridClass = columnCount === 1 
+              ? 'grid-cols-1' 
+              : columnCount === 2 
+                ? 'grid-cols-1 md:grid-cols-2' 
+                : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
+            
             return (
-              <div className={`grid grid-cols-1 md:grid-cols-2 ${showColorFilter ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-4`}>
+              <div className={`grid ${gridClass} gap-4`}>
                 <Select
                   label="Cycle"
                   value={cycleFilter}
@@ -446,19 +456,22 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
                     </option>
                   ))}
                 </Select>
-                <Select
-                  label="Status"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as FeedbackStatus)}
-                >
-                  <option value="">All Statuses</option>
-                  {/* Draft option only for managers on appropriate tabs */}
-                  {showDraftStatus && (
-                    <option value={FeedbackStatus.DRAFT}>Draft</option>
-                  )}
-                  <option value={FeedbackStatus.SUBMITTED}>Submitted</option>
-                  <option value={FeedbackStatus.COMPLETED}>Completed</option>
-                </Select>
+                {/* Status filter - only for managers (employees use tabs for status) */}
+                {showStatusFilter && (
+                  <Select
+                    label="Status"
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as FeedbackStatus)}
+                  >
+                    <option value="">All Statuses</option>
+                    {/* Draft option only for managers on appropriate tabs */}
+                    {showDraftStatus && (
+                      <option value={FeedbackStatus.DRAFT}>Draft</option>
+                    )}
+                    <option value={FeedbackStatus.SUBMITTED}>Submitted</option>
+                    <option value={FeedbackStatus.COMPLETED}>Completed</option>
+                  </Select>
+                )}
                 {/* Type filter removed - single feedback type (Manager Review) */}
                 {/* Color filter - only visible to managers on "given" or "drafts" tabs
                     This prevents exposing the color classification of feedback they received */}
@@ -477,7 +490,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
               </div>
             );
           })()}
-          {(cycleFilter || statusFilter || (isManager && (activeTab === 'given' || activeTab === 'drafts') && colorFilter)) && (
+          {(cycleFilter || (isManager && statusFilter) || (isManager && (activeTab === 'given' || activeTab === 'drafts') && colorFilter)) && (
             <div className="flex justify-end mt-4">
               <Button variant="outline" size="sm" onClick={handleClearFilters} icon={RotateCcw}>
               Clear Filters
