@@ -45,6 +45,30 @@ interface Pagination {
   hasMore: boolean;
 }
 
+// Highlight search term in text
+const HighlightText = ({ text, searchTerm }: { text: string; searchTerm: string }) => {
+  if (!searchTerm.trim()) {
+    return <>{text}</>;
+  }
+  
+  const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  const parts = text.split(regex);
+  
+  return (
+    <>
+      {parts.map((part, index) => 
+        regex.test(part) ? (
+          <mark key={index} className="bg-yellow-200 text-yellow-900 rounded px-0.5">
+            {part}
+          </mark>
+        ) : (
+          <span key={index}>{part}</span>
+        )
+      )}
+    </>
+  );
+};
+
 export default function QuoteArchivePage() {
   const [quotes, setQuotes] = useState<QuoteItem[]>([]);
   const [stats, setStats] = useState<QuoteStats | null>(null);
@@ -304,7 +328,7 @@ export default function QuoteArchivePage() {
                 <div className="flex gap-2 sm:gap-3 mb-3">
                   <Quote className="w-5 h-5 text-indigo-400/60 flex-shrink-0 mt-0.5" />
                   <blockquote className="text-sm sm:text-base text-gray-800 italic leading-relaxed">
-                    "{quote.quote}"
+                    "<HighlightText text={quote.quote} searchTerm={debouncedSearch} />"
                   </blockquote>
                 </div>
                 
@@ -316,7 +340,7 @@ export default function QuoteArchivePage() {
                     </div>
                     <div className="min-w-0">
                       <p className="font-medium text-gray-900 text-sm truncate">
-                        {quote.author}
+                        <HighlightText text={quote.author} searchTerm={debouncedSearch} />
                       </p>
                       <p className="text-xs text-gray-500 truncate">
                         {quote.authorTitle}
