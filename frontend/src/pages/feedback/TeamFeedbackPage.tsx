@@ -248,9 +248,7 @@ export default function TeamFeedbackPage() {
                       <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Recipient
                       </th>
-                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Type
-                      </th>
+                      {/* Type column removed - single feedback type (Manager Review) */}
                       <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
                       </th>
@@ -288,9 +286,7 @@ export default function TeamFeedbackPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {item.reviewType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                        </td>
+                        {/* Type column removed - single feedback type (Manager Review) */}
                         <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             item.status === 'completed' 

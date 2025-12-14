@@ -136,19 +136,14 @@ export const AnalyticsCategories: React.FC<AnalyticsCategoriesProps> = ({
     </Card>
   );
 
+  // Note: Feedback type charts removed - single feedback type (Manager Review)
+  // If category data is needed for other purposes, it can be displayed here
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {renderPieChart(
-          typeData, 
-          'Feedback by Type', 
-          <BarChart3 className="w-5 h-5 text-blue-500" />
-        )}
-        {renderBarChart(
-          ratingData, 
-          'Average Rating by Type', 
-          <PieChartIcon className="w-5 h-5 text-green-500" />
-        )}
+      <div className="text-center text-gray-500 p-8">
+        <BarChart3 className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+        <p className="text-lg font-medium">Category Analytics</p>
+        <p className="text-sm">All feedback uses the Manager Review format.</p>
       </div>
     </div>
   );

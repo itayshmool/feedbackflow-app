@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useFeedbackStore } from '../../stores/feedbackStore';
 import { useCyclesStore } from '../../stores/cyclesStore';
-import { Feedback, FeedbackStatus, ReviewType, FeedbackFilters } from '../../types/feedback.types';
+import { Feedback, FeedbackStatus, FeedbackFilters } from '../../types/feedback.types';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -57,7 +57,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
   const [activeTab, setActiveTab] = useState<'received' | 'given' | 'all' | 'drafts' | 'waiting' | 'acknowledged'>(defaultTab as any);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<FeedbackStatus | ''>(initialStatus as FeedbackStatus || '');
-  const [typeFilter, setTypeFilter] = useState<ReviewType | ''>('');
+  // typeFilter removed - single feedback type (Manager Review) only
   const [cycleFilter, setCycleFilter] = useState<string>('');
   const [colorFilter, setColorFilter] = useState<string>(initialColorFilter || '');
   const [showFilterPanel, setShowFilterPanel] = useState(!!initialStatus || !!initialColorFilter); // Auto-show filter panel if filters pre-set
@@ -83,7 +83,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
   // Auto-apply dropdown filters when they change
   useEffect(() => {
     loadFeedback();
-  }, [statusFilter, typeFilter, cycleFilter, colorFilter]);
+  }, [statusFilter, cycleFilter, colorFilter]);
 
   // Handle search on Enter key
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -132,9 +132,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
       newFilters.status = statusFilter;
     }
     
-    if (typeFilter) {
-      newFilters.reviewType = typeFilter;
-    }
+    // typeFilter removed - single feedback type (Manager Review)
     
     if (searchQuery) {
       newFilters.search = searchQuery;
@@ -158,7 +156,6 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
   const handleClearFilters = () => {
     setSearchQuery('');
     setStatusFilter('');
-    setTypeFilter('');
     setColorFilter('');
     setCycleFilter('');
     clearFilters();
@@ -215,17 +212,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
     }
   };
 
-  const getTypeLabel = (type: ReviewType): string => {
-    const labels: Record<ReviewType, string> = {
-      [ReviewType.SELF_ASSESSMENT]: 'Self Assessment',
-      [ReviewType.MANAGER_REVIEW]: 'Manager Review',
-      [ReviewType.PEER_REVIEW]: 'Peer Review',
-      [ReviewType.UPWARD_REVIEW]: 'Upward Review',
-      [ReviewType.THREE_SIXTY_REVIEW]: '360° Review',
-      [ReviewType.PROJECT_REVIEW]: 'Project Review',
-    };
-    return labels[type] || type;
-  };
+  // getTypeLabel removed - single feedback type (Manager Review)
 
   // Show all feedback types (no filtering by reviewType)
   // Note: Backend returns "manager", "peer", etc. (not "manager_review", "peer_review")
@@ -260,9 +247,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
       currentFilters.status = statusFilter;
     }
     
-    if (typeFilter) {
-      currentFilters.reviewType = typeFilter;
-    }
+    // typeFilter removed - single feedback type (Manager Review)
     
     if (searchQuery) {
       currentFilters.search = searchQuery;
@@ -443,15 +428,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
               <option value={FeedbackStatus.SUBMITTED}>Submitted</option>
               <option value={FeedbackStatus.COMPLETED}>Completed</option>
             </Select>
-            <Select
-              label="Type"
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as ReviewType)}
-            >
-              <option value="">All Types</option>
-              <option value={ReviewType.MANAGER_REVIEW}>Manager Review</option>
-              <option value={ReviewType.PROJECT_REVIEW}>Project Review</option>
-            </Select>
+            {/* Type filter removed - single feedback type (Manager Review) */}
             {/* Color filter - only visible to managers (internal triage) */}
             {isManager && (
               <Select
@@ -466,7 +443,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
               </Select>
             )}
           </div>
-          {(cycleFilter || statusFilter || typeFilter || colorFilter) && (
+          {(cycleFilter || statusFilter || colorFilter) && (
             <div className="flex justify-end mt-4">
               <Button variant="outline" size="sm" onClick={handleClearFilters} icon={RotateCcw}>
               Clear Filters
@@ -514,7 +491,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
                       <Badge color={getStatusColor(feedback.status)}>
                         {feedback.status?.replace('_', ' ') || 'Unknown'}
                       </Badge>
-                      <Badge color="blue">{getTypeLabel(feedback.reviewType)}</Badge>
+                      {/* Type badge removed - single feedback type (Manager Review) */}
                       {feedback.content?.confidential && (
                         <Badge color="gray">Confidential</Badge>
                       )}

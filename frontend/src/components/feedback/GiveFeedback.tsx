@@ -512,27 +512,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
               </div>
             </div>
           )}
-          <div>
-            <Select
-              label="Review Type"
-              value={reviewType}
-              onChange={(e) => setReviewType(e.target.value as ReviewType)}
-              required
-            >
-              <option value={ReviewType.MANAGER_REVIEW}>Manager Review</option>
-              <option value={ReviewType.PROJECT_REVIEW}>Project Review</option>
-            </Select>
-            {reviewType === ReviewType.MANAGER_REVIEW && (
-              <p className="text-sm text-blue-600 mt-1">
-                Manager reviews can only be given to your direct reports.
-              </p>
-            )}
-            {reviewType === ReviewType.PROJECT_REVIEW && (
-              <p className="text-sm text-green-600 mt-1">
-                Project reviews can be given to anyone in your organization.
-              </p>
-            )}
-          </div>
+          {/* Review type is hidden - always Manager Review */}
         </div>
       </Card>
 
