@@ -123,7 +123,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex login-page-bg">
+    <div className="min-h-screen-safe flex login-page-bg">
       {/* ═══════════════════════════════════════════════════════════════
           LEFT SIDE - Branding & Abstract Background (Desktop only)
           ═══════════════════════════════════════════════════════════════ */}

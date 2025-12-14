@@ -116,7 +116,7 @@ export default function EmployeeHistoryPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="bg-gray-50 flex items-center justify-center py-20">
         <div className="text-center">
           <LoadingSpinner size="lg" />
           <p className="mt-4 text-gray-600">Loading employee history...</p>
@@ -127,7 +127,7 @@ export default function EmployeeHistoryPage() {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="bg-gray-50 p-6">
         <Button variant="outline" onClick={() => navigate(-1)} className="mb-6">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
@@ -147,7 +147,7 @@ export default function EmployeeHistoryPage() {
   const { employee, feedbackHistory, stats } = data;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200">
         <div className="px-6 py-4">

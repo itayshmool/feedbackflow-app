@@ -11,7 +11,7 @@ export default function DashboardPage() {
   // Wait for user to be loaded
   if (isLoading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex items-center justify-center py-20">
         <LoadingSpinner size="lg" />
       </div>
     )

@@ -26,7 +26,7 @@ export default function Layout() {
   const closeMobileMenu = () => setIsMobileMenuOpen(false)
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen-safe bg-gray-50">
       <div className="flex">
         {/* Sidebar - Desktop (always visible) + Mobile (drawer for advanced options) */}
         <Sidebar 

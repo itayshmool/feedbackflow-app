@@ -158,9 +158,12 @@ export default function MobileBottomNav() {
       </div>
       
       {/* Bottom Navigation Bar - only on mobile */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 md:hidden">
-        {/* Safe area padding for devices with home indicator */}
-        <div className="flex items-center justify-around h-[72px] px-1" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <nav 
+        className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 md:hidden"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        {/* Safe area padding moved to nav element so it expands the total height */}
+        <div className="flex items-center justify-around h-[72px] px-1">
           {coreNav.map((item) => {
             const Icon = item.icon
             const isActive = isNavActive(item.href)

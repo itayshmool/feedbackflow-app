@@ -76,7 +76,7 @@ export default function AnalyticsPage() {
 
   if (isCheckingRole) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex justify-center items-center py-20">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -84,7 +84,7 @@ export default function AnalyticsPage() {
 
   if (!isManager) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex justify-center items-center py-20">
         <Card className="p-8 max-w-md text-center">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
             Manager Access Required

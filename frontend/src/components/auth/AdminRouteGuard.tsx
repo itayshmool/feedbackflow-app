@@ -18,7 +18,7 @@ export default function AdminRouteGuard({ children }: AdminRouteGuardProps) {
   // Wait for hydration
   if (!hasHydrated || isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex justify-center items-center min-h-screen-safe">
         <LoadingSpinner size="lg" />
       </div>
     );

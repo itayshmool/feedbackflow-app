@@ -46,7 +46,7 @@ export default function GoogleOAuthTestPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-8">
+    <div className="min-h-screen-safe flex items-center justify-center bg-gray-50 p-8">
       <div className="max-w-2xl w-full space-y-6">
         <div className="bg-white rounded-lg shadow-md p-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-6">

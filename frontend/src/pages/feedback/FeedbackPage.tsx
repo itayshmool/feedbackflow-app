@@ -59,7 +59,7 @@ export default function FeedbackPage() {
   // Don't render if user is not authenticated
   if (!user) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex justify-center items-center py-20">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-900">Please log in to view feedback</h2>
         </div>

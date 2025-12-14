@@ -1590,7 +1590,7 @@ const ManagerDashboard: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="bg-gray-50">
       {/* Header - Responsive: smaller padding/text on mobile */}
       <div className="bg-white shadow-sm border-b border-gray-200">
         <div className="px-4 md:px-6 py-3 md:py-4">

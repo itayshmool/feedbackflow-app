@@ -210,10 +210,16 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    /* iOS Safari height fix */
+    min-height: 100vh;
+    min-height: 100dvh;
   }
   
   html {
     scroll-behavior: smooth;
+    /* iOS Safari 100vh fix - use dvh where supported */
+    min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height - accounts for Safari UI */
   }
   
   /* Apple-style headings */
@@ -397,6 +403,21 @@
   
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+  
+  /* ═══════════════════════════════════════════════════════════════
+     iOS-SAFE HEIGHT UTILITIES
+     ═══════════════════════════════════════════════════════════════ */
+  
+  /* iOS-safe minimum height that accounts for browser UI (Safari address bar) */
+  .min-h-screen-safe {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  
+  .h-screen-safe {
+    height: 100vh;
+    height: 100dvh;
   }
   
   /* ═══════════════════════════════════════════════════════════════
