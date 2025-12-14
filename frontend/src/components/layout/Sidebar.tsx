@@ -125,6 +125,9 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
     coreNavigation.push({ name: "Manager's Feedback", href: '/team-feedback', icon: Users2 })
   }
   
+  // Growth Quotes - visible to everyone
+  coreNavigation.push({ name: 'Growth Quotes', href: '/quotes', icon: Sparkles })
+  
   // Notifications always at end of core/management section
   coreNavigation.push({ 
     name: 'Notifications', 
@@ -133,10 +136,9 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
     badge: stats?.unread && stats.unread > 0 ? stats.unread : undefined 
   })
 
-  // Personal section
+  // Personal section (managers only)
   const personalNavigation: NavItem[] = [
     { name: 'Myself', href: '/myself', icon: User },
-    { name: 'Growth Quotes', href: '/quotes', icon: Sparkles },
   ]
 
   // Resources section
