@@ -39,7 +39,6 @@ import QuoteOfTheDay from '../../components/dashboard/QuoteOfTheDay';
 import CycleInfoCard from '../../components/dashboard/CycleInfoCard';
 import FeedbackAcceptanceStatus from '../../components/dashboard/FeedbackAcceptanceStatus';
 import ManagerCompletionStatus from '../../components/dashboard/ManagerCompletionStatus';
-import NudgePanel from '../../components/dashboard/NudgePanel';
 
 // Types for Analytics
 interface ColorDistribution {
@@ -427,34 +426,43 @@ const ManagerDashboard: React.FC = () => {
       {/* Cycle Info Card - Shows active cycles at the top */}
       <CycleInfoCard cycles={activeCycles} />
 
-      {/* Feedback Acceptance by My Team - For managers with direct employee reports */}
-      {reminderPreview?.hasEmployeeReports && (
-        <FeedbackAcceptanceStatus
-          cycles={activeCycles}
-          selectedCycleId={selectedEmployeeCycleId || selectedCycleId}
-          onCycleChange={(cycleId) => {
-            setSelectedEmployeeCycleId(cycleId);
-            // Also update main cycle and fetch new data
-            setSelectedCycleId(cycleId);
-          }}
-          employeeData={reminderPreview.employeeData}
-          isLoading={isWidgetDataLoading}
-        />
-      )}
+      {/* Status Widgets - Side by side on larger screens */}
+      {(reminderPreview?.hasEmployeeReports || reminderPreview?.hasManagerReports) && (
+        <div className={`grid gap-4 ${
+          reminderPreview?.hasEmployeeReports && reminderPreview?.hasManagerReports 
+            ? 'grid-cols-1 md:grid-cols-2' 
+            : 'grid-cols-1'
+        }`}>
+          {/* Feedback Acceptance by My Team - For managers with direct employee reports */}
+          {reminderPreview?.hasEmployeeReports && (
+            <FeedbackAcceptanceStatus
+              cycles={activeCycles}
+              selectedCycleId={selectedEmployeeCycleId || selectedCycleId}
+              onCycleChange={(cycleId) => {
+                setSelectedEmployeeCycleId(cycleId);
+                setSelectedCycleId(cycleId);
+              }}
+              employeeData={reminderPreview.employeeData}
+              isLoading={isWidgetDataLoading}
+              onReminderSent={handleReminderSent}
+            />
+          )}
 
-      {/* Feedback Completion by Your Managers - For managers of managers */}
-      {reminderPreview?.hasManagerReports && (
-        <ManagerCompletionStatus
-          cycles={activeCycles}
-          selectedCycleId={selectedManagerCycleId || selectedCycleId}
-          onCycleChange={(cycleId) => {
-            setSelectedManagerCycleId(cycleId);
-            // Also update main cycle and fetch new data
-            setSelectedCycleId(cycleId);
-          }}
-          managerData={reminderPreview.managerData}
-          isLoading={isWidgetDataLoading}
-        />
+          {/* Feedback Completion by Your Managers - For managers of managers */}
+          {reminderPreview?.hasManagerReports && (
+            <ManagerCompletionStatus
+              cycles={activeCycles}
+              selectedCycleId={selectedManagerCycleId || selectedCycleId}
+              onCycleChange={(cycleId) => {
+                setSelectedManagerCycleId(cycleId);
+                setSelectedCycleId(cycleId);
+              }}
+              managerData={reminderPreview.managerData}
+              isLoading={isWidgetDataLoading}
+              onReminderSent={handleReminderSent}
+            />
+          )}
+        </div>
       )}
 
       {/* Recent Activity - Stack on mobile, 2 columns on large screens */}
@@ -546,16 +554,6 @@ const ManagerDashboard: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Nudge Panel - Send reminders at the BOTTOM */}
-      {reminderPreview && (reminderPreview.hasEmployeeReports || reminderPreview.hasManagerReports) && (
-        <NudgePanel
-          cycleId={selectedCycleId}
-          employeeData={reminderPreview.employeeData}
-          managerData={reminderPreview.managerData}
-          onReminderSent={handleReminderSent}
-        />
-      )}
     </div>
   );
 
