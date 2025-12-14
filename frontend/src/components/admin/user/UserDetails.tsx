@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { User } from '@/types/user.types';
+import { useOrganizationStore } from '@/stores/organizationStore';
 import { 
   X, 
   Edit, 
@@ -42,6 +43,17 @@ export const UserDetails: React.FC<UserDetailsProps> = ({ user, onClose, onEdit 
 
   const getVerificationBadgeVariant = (emailVerified: boolean) => {
     return emailVerified ? 'success' : 'warning';
+  };
+
+  // Get organization name from store
+  const { organizations } = useOrganizationStore();
+  const getOrganizationDisplay = () => {
+    if (!user.organizationId) return 'Not assigned';
+    const org = organizations.find(o => o.id === user.organizationId);
+    if (org) {
+      return `${org.name} (${org.slug})`;
+    }
+    return user.organizationId; // Fallback to ID if not found
   };
 
   return (
@@ -172,9 +184,9 @@ export const UserDetails: React.FC<UserDetailsProps> = ({ user, onClose, onEdit 
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Organization ID
+              Organization
             </label>
-            <p className="text-sm text-gray-900">{user.organizationId || 'Not assigned'}</p>
+            <p className="text-sm text-gray-900">{getOrganizationDisplay()}</p>
           </div>
         </Card>
 
