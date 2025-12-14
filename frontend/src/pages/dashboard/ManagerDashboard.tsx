@@ -1160,20 +1160,23 @@ const ManagerDashboard: React.FC = () => {
                 </div>
               ) : colorDistribution && colorDistribution.total > 0 ? (
                 <div>
-                  <div className="h-56">
+                  {/* Responsive height: smaller on mobile */}
+                  <div className="h-48 sm:h-56">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
                           data={colorChartData}
                           cx="50%"
                           cy="50%"
-                          labelLine={true}
-                          label={renderCustomizedLabel}
-                          outerRadius={65}
+                          labelLine={false}
+                          label={false}
+                          outerRadius="70%"
+                          innerRadius="35%"
                           fill="#8884d8"
                           dataKey="value"
                           onClick={handlePieClick}
                           style={{ cursor: 'pointer' }}
+                          paddingAngle={2}
                         >
                           {colorChartData.map((entry, index) => (
                             <Cell 
