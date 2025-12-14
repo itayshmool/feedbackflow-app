@@ -332,68 +332,70 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs - with horizontal scroll for mobile */}
       {userId && (
-        <div className="flex gap-2 border-b">
+        <div className="flex gap-2 border-b overflow-x-auto scrollbar-hide">
           {isManager ? (
             // Manager tabs: Received, Given, Drafts, All
             <>
-          <button
-            className={`px-4 py-2 font-medium transition-colors ${
-              activeTab === 'received'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-            onClick={() => setActiveTab('received')}
-          >
-            Received ({feedbackStats?.received || 0})
-          </button>
-          <button
-            className={`px-4 py-2 font-medium transition-colors ${
-              activeTab === 'given'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-            onClick={() => setActiveTab('given')}
-          >
-            Given ({feedbackStats?.given || 0})
-          </button>
-          <button
-            className={`px-4 py-2 font-medium transition-colors ${
-              activeTab === 'drafts'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-            onClick={() => setActiveTab('drafts')}
-          >
-            Drafts ({feedbackStats?.drafts || 0})
-          </button>
-          <button
-            className={`px-4 py-2 font-medium transition-colors ${
-              activeTab === 'all'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-            onClick={() => setActiveTab('all')}
-          >
-            All ({(feedbackStats?.given || 0) + (feedbackStats?.received || 0) + (feedbackStats?.drafts || 0)})
-          </button>
+              <button
+                className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+                  activeTab === 'received'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                onClick={() => setActiveTab('received')}
+              >
+                Received ({feedbackStats?.received || 0})
+              </button>
+              <button
+                className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+                  activeTab === 'given'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                onClick={() => setActiveTab('given')}
+              >
+                Given ({feedbackStats?.given || 0})
+              </button>
+              <button
+                className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+                  activeTab === 'drafts'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                onClick={() => setActiveTab('drafts')}
+              >
+                Drafts ({feedbackStats?.drafts || 0})
+              </button>
+              <button
+                className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+                  activeTab === 'all'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                onClick={() => setActiveTab('all')}
+              >
+                All ({(feedbackStats?.given || 0) + (feedbackStats?.received || 0) + (feedbackStats?.drafts || 0)})
+              </button>
             </>
           ) : (
             // Employee tabs: Waiting for Acknowledgement, Acknowledged, All Received
+            // Use shorter labels on mobile for better fit
             <>
               <button
-                className={`px-4 py-2 font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap ${
                   activeTab === 'waiting'
                     ? 'border-b-2 border-blue-500 text-blue-600'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
                 onClick={() => setActiveTab('waiting')}
               >
-                Waiting for Acknowledgement ({feedbackStats?.pending || 0})
+                <span className="sm:hidden">Waiting ({feedbackStats?.pending || 0})</span>
+                <span className="hidden sm:inline">Waiting for Acknowledgement ({feedbackStats?.pending || 0})</span>
               </button>
               <button
-                className={`px-4 py-2 font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap ${
                   activeTab === 'acknowledged'
                     ? 'border-b-2 border-blue-500 text-blue-600'
                     : 'text-gray-600 hover:text-gray-900'
@@ -403,14 +405,15 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
                 Acknowledged ({feedbackStats?.acknowledged || 0})
               </button>
               <button
-                className={`px-4 py-2 font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap ${
                   activeTab === 'received'
                     ? 'border-b-2 border-blue-500 text-blue-600'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
                 onClick={() => setActiveTab('received')}
               >
-                All Received ({feedbackStats?.received || 0})
+                <span className="sm:hidden">All ({feedbackStats?.received || 0})</span>
+                <span className="hidden sm:inline">All Received ({feedbackStats?.received || 0})</span>
               </button>
             </>
           )}
