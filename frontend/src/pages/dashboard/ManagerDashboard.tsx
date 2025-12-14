@@ -31,13 +31,15 @@ import {
   Zap,
   Download,
   XCircle,
-  Bell,
-  RotateCcw,
   Clock
 } from 'lucide-react';
 import { Select } from '../../components/ui/Select';
 import { generateInsightsDocx } from '../../utils/generateInsightsDocx';
 import QuoteOfTheDay from '../../components/dashboard/QuoteOfTheDay';
+import CycleInfoCard from '../../components/dashboard/CycleInfoCard';
+import FeedbackAcceptanceStatus from '../../components/dashboard/FeedbackAcceptanceStatus';
+import ManagerCompletionStatus from '../../components/dashboard/ManagerCompletionStatus';
+import NudgePanel from '../../components/dashboard/NudgePanel';
 
 // Types for Analytics
 interface ColorDistribution {
@@ -161,19 +163,31 @@ const ManagerDashboard: React.FC = () => {
   // State for Active Cycles Card
   const [activeCycles, setActiveCycles] = useState<any[]>([]);
   const [selectedCycleId, setSelectedCycleId] = useState<string>('');
+  const [selectedEmployeeCycleId, setSelectedEmployeeCycleId] = useState<string>(''); // For employee widget
+  const [selectedManagerCycleId, setSelectedManagerCycleId] = useState<string>(''); // For manager widget
   const [cycleCompletionData, setCycleCompletionData] = useState<CompletionData | null>(null);
-  const [isReminderSending, setIsReminderSending] = useState(false);
   
-  // State for reminder preview (who would receive reminders)
+  // State for reminder preview with split data (employees and managers)
+  interface ReminderPreviewData {
+    pendingRecipients: { id: string; name: string; detail?: string }[];
+    pendingCount: number;
+    totalCount: number;
+    completedCount: number;
+  }
+  
   const [reminderPreview, setReminderPreview] = useState<{
     reminderType: 'give_feedback' | 'acknowledge_feedback';
     buttonText: string;
     pendingCount: number;
     pendingRecipients: { id: string; name: string; detail?: string }[];
     isManagerOfManagers: boolean;
+    // New split data fields
+    hasEmployeeReports: boolean;
+    hasManagerReports: boolean;
+    employeeData: ReminderPreviewData | null;
+    managerData: ReminderPreviewData | null;
   } | null>(null);
-  const [showAllPending, setShowAllPending] = useState(false);
-  const [sendingReminderId, setSendingReminderId] = useState<string | null>(null); // Track which individual reminder is being sent
+  const [isWidgetDataLoading, setIsWidgetDataLoading] = useState(false);
 
   // Function to fetch analytics data
   const fetchAnalyticsData = async (cycleId?: string) => {
@@ -239,8 +253,11 @@ const ManagerDashboard: React.FC = () => {
       // API returns { success, data: { cycles: [...], pagination: {...} } }
       const cycles = response.data?.data?.cycles || [];
       setActiveCycles(cycles);
-      if (cycles.length > 0 && !selectedCycleId) {
-        setSelectedCycleId(cycles[0].id);
+      if (cycles.length > 0) {
+        const firstCycleId = cycles[0].id;
+        if (!selectedCycleId) setSelectedCycleId(firstCycleId);
+        if (!selectedEmployeeCycleId) setSelectedEmployeeCycleId(firstCycleId);
+        if (!selectedManagerCycleId) setSelectedManagerCycleId(firstCycleId);
       }
     } catch (error: any) {
       console.error('Failed to fetch active cycles:', error);
@@ -249,10 +266,29 @@ const ManagerDashboard: React.FC = () => {
     }
   };
 
+  // Function to fetch reminder preview data for a specific cycle
+  const fetchReminderPreview = async (cycleId: string) => {
+    if (!cycleId) return;
+    setIsWidgetDataLoading(true);
+    try {
+      const reminderResponse = await api.get('/notifications/cycle-reminder-preview', { 
+        params: { cycleId } 
+      });
+      if (reminderResponse.data.success) {
+        setReminderPreview(reminderResponse.data.data);
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch reminder preview:', error);
+    } finally {
+      setIsWidgetDataLoading(false);
+    }
+  };
+
   // Fetch cycle completion and reminder preview when selected cycle changes
   useEffect(() => {
     const fetchCycleData = async () => {
       if (!selectedCycleId) return;
+      setIsWidgetDataLoading(true);
       try {
         // Fetch both completion data and reminder preview in parallel
         const [completionResponse, reminderResponse] = await Promise.all([
@@ -269,10 +305,34 @@ const ManagerDashboard: React.FC = () => {
       } catch (error: any) {
         console.error('Failed to fetch cycle data:', error);
         // Toast is shown by api.ts interceptor
+      } finally {
+        setIsWidgetDataLoading(false);
       }
     };
     fetchCycleData();
   }, [selectedCycleId]);
+
+  // Refresh reminder data when employee/manager widget cycle changes
+  useEffect(() => {
+    // Only refetch if different from main selectedCycleId
+    if (selectedEmployeeCycleId && selectedEmployeeCycleId !== selectedCycleId) {
+      fetchReminderPreview(selectedEmployeeCycleId);
+    }
+  }, [selectedEmployeeCycleId]);
+
+  useEffect(() => {
+    // Only refetch if different from main selectedCycleId
+    if (selectedManagerCycleId && selectedManagerCycleId !== selectedCycleId) {
+      fetchReminderPreview(selectedManagerCycleId);
+    }
+  }, [selectedManagerCycleId]);
+
+  // Callback for when reminders are sent - refresh the data
+  const handleReminderSent = () => {
+    if (selectedCycleId) {
+      fetchReminderPreview(selectedCycleId);
+    }
+  };
 
   useEffect(() => {
     if (user?.id) {
@@ -313,73 +373,6 @@ const ManagerDashboard: React.FC = () => {
     { id: 'insights', label: 'AI Insights', icon: Sparkles },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   ];
-
-  // Helper functions for Active Cycles card
-  const daysRemaining = (endDate: string) => {
-    const end = new Date(endDate);
-    const now = new Date();
-    const diff = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    return Math.max(0, diff);
-  };
-
-  const selectedCycle = Array.isArray(activeCycles) ? activeCycles.find(c => c.id === selectedCycleId) : null;
-
-  const handleSendReminder = async () => {
-    if (!selectedCycleId || !reminderPreview || reminderPreview.pendingCount === 0) return;
-    
-    setIsReminderSending(true);
-    try {
-      const response = await api.post('/notifications/cycle-reminder', {
-        cycleId: selectedCycleId
-      });
-      
-      if (response.data.success) {
-        const recipientType = response.data.reminderType === 'give_feedback' ? 'manager(s)' : 'employee(s)';
-        alert(`Reminder sent to ${response.data.sentCount} ${recipientType}: ${response.data.recipients.join(', ')}`);
-        // Refresh the reminder preview
-        const previewResponse = await api.get('/notifications/cycle-reminder-preview', { 
-          params: { cycleId: selectedCycleId } 
-        });
-        if (previewResponse.data.success) {
-          setReminderPreview(previewResponse.data.data);
-        }
-      }
-    } catch (error: any) {
-      console.error('Failed to send reminders:', error);
-      // Toast is shown by api.ts interceptor
-    } finally {
-      setIsReminderSending(false);
-    }
-  };
-
-  // Send reminder to a specific recipient
-  const handleSendIndividualReminder = async (recipientId: string, recipientName: string) => {
-    if (!selectedCycleId || !reminderPreview) return;
-    
-    setSendingReminderId(recipientId);
-    try {
-      const response = await api.post('/notifications/cycle-reminder', {
-        cycleId: selectedCycleId,
-        recipientId: recipientId // Send to specific person
-      });
-      
-      if (response.data.success) {
-        alert(`Reminder sent to ${recipientName}`);
-        // Refresh the reminder preview
-        const previewResponse = await api.get('/notifications/cycle-reminder-preview', { 
-          params: { cycleId: selectedCycleId } 
-        });
-        if (previewResponse.data.success) {
-          setReminderPreview(previewResponse.data.data);
-        }
-      }
-    } catch (error: any) {
-      console.error('Failed to send reminder:', error);
-      // Toast is shown by api.ts interceptor
-    } finally {
-      setSendingReminderId(null);
-    }
-  };
 
   const renderOverview = () => (
     <div className="space-y-4 sm:space-y-6">
@@ -431,250 +424,47 @@ const ManagerDashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Active Cycles Card - Mobile optimized */}
-      {Array.isArray(activeCycles) && activeCycles.length > 0 && (
-        <Card className="transform transition-all duration-200 hover:shadow-lg overflow-hidden">
-          <CardHeader className="pb-3 px-4 pt-4 sm:px-6 sm:pt-6">
-            {/* Mobile: Stack title and select, Desktop: side by side */}
-            <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <span className="flex items-center">
-                <RotateCcw className="h-5 w-5 mr-2 text-blue-600" />
-                Active Cycles
-              </span>
-              {activeCycles.length > 1 && (
-                <Select
-                  value={selectedCycleId}
-                  onChange={(e) => setSelectedCycleId(e.target.value)}
-                  className="w-full sm:w-56"
-                >
-                  {activeCycles.map((cycle) => (
-                    <option key={cycle.id} value={cycle.id}>
-                      {cycle.name} ({daysRemaining(cycle.endDate)}d left)
-                    </option>
-                  ))}
-                </Select>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
-            {selectedCycle && (
-              <div className="space-y-4">
-                {/* Cycle Name (shown when only 1 cycle) */}
-                {activeCycles.length === 1 && (
-                  <h3 className="text-base sm:text-lg font-semibold">{selectedCycle.name}</h3>
-                )}
-                
-                {/* End Date and Countdown - Mobile: card style with badge */}
-                <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Clock className="w-4 h-4 mr-2 flex-shrink-0" />
-                    <span className="truncate">
-                      Ends {new Date(selectedCycle.endDate).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <span className={`text-sm font-bold px-2.5 py-1 rounded-full flex-shrink-0 ml-2 ${
-                    daysRemaining(selectedCycle.endDate) <= 7 
-                      ? 'bg-red-100 text-red-700' 
-                      : 'bg-blue-100 text-blue-700'
-                  }`}>
-                    {daysRemaining(selectedCycle.endDate)}d left
-                  </span>
-                </div>
-                
-                {/* Team Progress - Improved mobile styling */}
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-600">Team Participation</span>
-                    <span className="font-semibold">
-                      {cycleCompletionData?.summary?.percentage || 0}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div 
-                      className="bg-green-500 h-3 rounded-full transition-all duration-300" 
-                      style={{ width: `${cycleCompletionData?.summary?.percentage || 0}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1.5">
-                    {cycleCompletionData?.summary?.completed || 0} of {cycleCompletionData?.summary?.total || 0} team members
-                  </p>
-                </div>
-                
-                {/* Pending Recipients - Vertical list on mobile for better tap targets */}
-                {reminderPreview && reminderPreview.pendingCount > 0 && (
-                  <div className={`border rounded-xl p-3 sm:p-4 ${
-                    reminderPreview.reminderType === 'acknowledge_feedback' 
-                      ? 'bg-blue-50 border-blue-200' 
-                      : 'bg-amber-50 border-amber-200'
-                  }`}>
-                    <p className={`text-sm font-medium mb-3 ${
-                      reminderPreview.reminderType === 'acknowledge_feedback' 
-                        ? 'text-blue-800' 
-                        : 'text-amber-800'
-                    }`}>
-                      {reminderPreview.reminderType === 'acknowledge_feedback' 
-                        ? 'Waiting to acknowledge:' 
-                        : 'Need to give feedback to:'}
-                    </p>
-                    
-                    {/* Mobile: Vertical list, Desktop: Chips */}
-                    {/* Mobile vertical list - better tap targets */}
-                    <div className="space-y-2 sm:hidden">
-                      {(showAllPending 
-                        ? reminderPreview.pendingRecipients 
-                        : reminderPreview.pendingRecipients.slice(0, 3)
-                      ).map((recipient) => (
-                        <button
-                          key={recipient.id}
-                          onClick={() => handleSendIndividualReminder(recipient.id, recipient.name)}
-                          disabled={sendingReminderId === recipient.id}
-                          className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all min-h-[56px] active:scale-[0.98] disabled:opacity-50
-                            ${reminderPreview.reminderType === 'acknowledge_feedback'
-                              ? 'bg-blue-100/80 hover:bg-blue-100'
-                              : 'bg-amber-100/80 hover:bg-amber-100'
-                            }
-                          `}
-                        >
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                            reminderPreview.reminderType === 'acknowledge_feedback'
-                              ? 'bg-blue-200 text-blue-800'
-                              : 'bg-amber-200 text-amber-800'
-                          }`}>
-                            {sendingReminderId === recipient.id ? (
-                              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                              recipient.name.charAt(0).toUpperCase()
-                            )}
-                          </div>
-                          <div className="flex-1 text-left min-w-0">
-                            <p className={`font-medium truncate ${
-                              reminderPreview.reminderType === 'acknowledge_feedback'
-                                ? 'text-blue-900'
-                                : 'text-amber-900'
-                            }`}>{recipient.name}</p>
-                            {recipient.detail && (
-                              <p className="text-xs text-gray-500 truncate">{recipient.detail}</p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <Bell className={`w-4 h-4 ${
-                              reminderPreview.reminderType === 'acknowledge_feedback'
-                                ? 'text-blue-500'
-                                : 'text-amber-500'
-                            } ${sendingReminderId === recipient.id ? 'animate-pulse' : ''}`} />
-                            <ChevronRight className="w-4 h-4 text-gray-400" />
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                    
-                    {/* Desktop: Chips layout (unchanged from original) */}
-                    <div className="hidden sm:flex flex-wrap gap-2">
-                      {(showAllPending 
-                        ? reminderPreview.pendingRecipients 
-                        : reminderPreview.pendingRecipients.slice(0, 3)
-                      ).map((recipient) => (
-                        <button
-                          key={recipient.id}
-                          onClick={() => handleSendIndividualReminder(recipient.id, recipient.name)}
-                          disabled={sendingReminderId === recipient.id}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
-                            ${reminderPreview.reminderType === 'acknowledge_feedback'
-                              ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-900 hover:shadow-md'
-                              : 'bg-amber-100 text-amber-700 hover:bg-amber-200 hover:text-amber-900 hover:shadow-md'
-                            }
-                          `}
-                          title={`Click to send reminder to ${recipient.name}`}
-                        >
-                          <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                            reminderPreview.reminderType === 'acknowledge_feedback'
-                              ? 'bg-blue-200 text-blue-800'
-                              : 'bg-amber-200 text-amber-800'
-                          }`}>
-                            {sendingReminderId === recipient.id ? (
-                              <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                              recipient.name.charAt(0).toUpperCase()
-                            )}
-                          </div>
-                          <span>{recipient.name}</span>
-                          {recipient.detail && (
-                            <span className="text-xs opacity-75">({recipient.detail})</span>
-                          )}
-                          <Bell className={`w-3.5 h-3.5 ${sendingReminderId === recipient.id ? 'animate-pulse' : ''}`} />
-                        </button>
-                      ))}
-                    </div>
-                    
-                    {reminderPreview.pendingRecipients.length > 3 && (
-                      <button
-                        onClick={() => setShowAllPending(!showAllPending)}
-                        className={`mt-3 w-full sm:w-auto py-2 text-sm font-medium flex items-center justify-center sm:justify-start gap-1 transition-colors ${
-                          reminderPreview.reminderType === 'acknowledge_feedback'
-                            ? 'text-blue-600 hover:text-blue-800'
-                            : 'text-amber-600 hover:text-amber-800'
-                        }`}
-                      >
-                        {showAllPending ? (
-                          <>
-                            <ChevronUp className="w-4 h-4" />
-                            Show less
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDown className="w-4 h-4" />
-                            Show {reminderPreview.pendingRecipients.length - 3} more
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                )}
-                
-                {/* Send Reminder Button - 48px min height for mobile tap target */}
-                {reminderPreview && reminderPreview.pendingCount > 0 && (
-                  <Button 
-                    className="w-full min-h-[48px]"
-                    onClick={handleSendReminder}
-                    disabled={isReminderSending}
-                  >
-                    <Bell className="w-4 h-4 mr-2" />
-                    {isReminderSending ? 'Sending...' : `${reminderPreview.buttonText} (${reminderPreview.pendingCount})`}
-                  </Button>
-                )}
-                
-                {/* All complete message - responsive text */}
-                {reminderPreview && reminderPreview.pendingCount === 0 && 
-                 cycleCompletionData?.summary?.total !== undefined &&
-                 cycleCompletionData.summary.total > 0 && 
-                 cycleCompletionData.summary.completed === cycleCompletionData.summary.total && (
-                  <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-start sm:items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5 sm:mt-0" />
-                    <span className="text-sm text-green-700">
-                      {reminderPreview.isManagerOfManagers 
-                        ? 'All your managers have given feedback to their teams!' 
-                        : 'All team members have acknowledged their feedback!'}
-                    </span>
-                  </div>
-                )}
-                
-                {/* Show message when manager hasn't given feedback to all team members yet */}
-                {reminderPreview && reminderPreview.pendingCount === 0 && 
-                 cycleCompletionData?.summary?.total !== undefined &&
-                 cycleCompletionData?.summary?.completed !== undefined &&
-                 cycleCompletionData.summary.total > 0 && 
-                 cycleCompletionData.summary.completed < cycleCompletionData.summary.total && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start sm:items-center gap-2">
-                    <Clock className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5 sm:mt-0" />
-                    <span className="text-sm text-amber-700">
-                      {cycleCompletionData.summary.total - cycleCompletionData.summary.completed} team member(s) still waiting for your feedback
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Cycle Info Card - Shows active cycles at the top */}
+      <CycleInfoCard cycles={activeCycles} />
+
+      {/* Feedback Acceptance by My Team - For managers with direct employee reports */}
+      {reminderPreview?.hasEmployeeReports && (
+        <FeedbackAcceptanceStatus
+          cycles={activeCycles}
+          selectedCycleId={selectedEmployeeCycleId || selectedCycleId}
+          onCycleChange={(cycleId) => {
+            setSelectedEmployeeCycleId(cycleId);
+            // Also update main cycle and fetch new data
+            setSelectedCycleId(cycleId);
+          }}
+          employeeData={reminderPreview.employeeData}
+          isLoading={isWidgetDataLoading}
+        />
+      )}
+
+      {/* Feedback Completion by Your Managers - For managers of managers */}
+      {reminderPreview?.hasManagerReports && (
+        <ManagerCompletionStatus
+          cycles={activeCycles}
+          selectedCycleId={selectedManagerCycleId || selectedCycleId}
+          onCycleChange={(cycleId) => {
+            setSelectedManagerCycleId(cycleId);
+            // Also update main cycle and fetch new data
+            setSelectedCycleId(cycleId);
+          }}
+          managerData={reminderPreview.managerData}
+          isLoading={isWidgetDataLoading}
+        />
+      )}
+
+      {/* Nudge Panel - Send reminders at the bottom */}
+      {reminderPreview && (reminderPreview.hasEmployeeReports || reminderPreview.hasManagerReports) && (
+        <NudgePanel
+          cycleId={selectedCycleId}
+          employeeData={reminderPreview.employeeData}
+          managerData={reminderPreview.managerData}
+          onReminderSent={handleReminderSent}
+        />
       )}
 
       {/* Recent Activity - Stack on mobile, 2 columns on large screens */}
