@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useFeedbackStore } from '../../stores/feedbackStore';
-import { Feedback, FeedbackStatus, GoalStatus } from '../../types/feedback.types';
+import { Feedback, FeedbackStatus, GoalStatus, FeedbackColorClassification } from '../../types/feedback.types';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -49,6 +49,9 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedContent, setEditedContent] = useState(currentFeedback?.content);
+  const [editedColorClassification, setEditedColorClassification] = useState<FeedbackColorClassification | undefined>(
+    currentFeedback?.colorClassification as FeedbackColorClassification | undefined
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -64,6 +67,9 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
         specificExamples: currentFeedback.content.specificExamples || [],
         recommendations: currentFeedback.content.recommendations || [],
       });
+    }
+    if (currentFeedback?.colorClassification) {
+      setEditedColorClassification(currentFeedback.colorClassification as FeedbackColorClassification);
     }
   }, [currentFeedback]);
 
@@ -81,6 +87,7 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
     try {
       await updateFeedback(feedbackId, {
         content: editedContent,
+        colorClassification: editedColorClassification,
       });
       setIsEditMode(false);
     } catch (error: any) {
@@ -178,7 +185,7 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
               </Badge>
             )}
             {/* Show color classification to giver and managers, NOT to receiver (internal use only) */}
-            {currentFeedback.colorClassification && currentUserId !== currentFeedback.toUserId && (
+            {!isEditMode && currentFeedback.colorClassification && currentUserId !== currentFeedback.toUserId && (
               <div 
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
                   currentFeedback.colorClassification === 'green' 
@@ -293,6 +300,36 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
           )}
         </div>
       </Card>
+
+      {/* Color Classification - Editable in edit mode */}
+      {isEditMode && (
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-3">Color Classification</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Internal classification (not visible to recipient)
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {[
+              { value: FeedbackColorClassification.GREEN, label: 'Exceeds Expectations', bgColor: 'bg-green-500', hoverColor: 'hover:bg-green-600', ringColor: 'ring-green-500' },
+              { value: FeedbackColorClassification.YELLOW, label: 'Meets Expectations', bgColor: 'bg-yellow-500', hoverColor: 'hover:bg-yellow-600', ringColor: 'ring-yellow-500' },
+              { value: FeedbackColorClassification.RED, label: 'Needs Improvement', bgColor: 'bg-red-500', hoverColor: 'hover:bg-red-600', ringColor: 'ring-red-500' },
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setEditedColorClassification(option.value)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
+                  editedColorClassification === option.value
+                    ? `${option.bgColor} text-white border-transparent ring-2 ${option.ringColor} ring-offset-2`
+                    : `bg-white border-gray-300 hover:border-gray-400 text-gray-700`
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Overall Comment */}
       {(currentFeedback.content?.overallComment || isEditMode) && (
