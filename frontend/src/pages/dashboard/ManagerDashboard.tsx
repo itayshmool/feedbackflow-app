@@ -1107,16 +1107,16 @@ const ManagerDashboard: React.FC = () => {
 
     return (
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col gap-4">
           <h2 className="text-xl font-semibold text-gray-900">Team Analytics</h2>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             {/* Cycle Filter */}
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-600 whitespace-nowrap">Filter by cycle:</label>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <label className="text-sm text-gray-600">Filter by cycle:</label>
               <Select
                 value={analyticsCycleId}
                 onChange={(e) => setAnalyticsCycleId(e.target.value)}
-                className="w-48"
+                className="w-full sm:w-48"
               >
                 <option value="">All Cycles</option>
                 {activeCycles.map((cycle) => (
@@ -1130,7 +1130,7 @@ const ManagerDashboard: React.FC = () => {
               variant="outline"
               onClick={() => fetchAnalyticsData(analyticsCycleId || undefined)}
               disabled={isAnalyticsLoading}
-              className="flex items-center gap-2"
+              className="flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <RefreshCw className={`h-4 w-4 ${isAnalyticsLoading ? 'animate-spin' : ''}`} />
               Refresh
