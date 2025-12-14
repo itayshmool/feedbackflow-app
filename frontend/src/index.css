@@ -213,6 +213,10 @@
     /* iOS Safari height fix */
     min-height: 100vh;
     min-height: 100dvh;
+    /* Prevent horizontal scroll/shift on mobile */
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
   }
   
   html {
@@ -220,6 +224,8 @@
     /* iOS Safari 100vh fix - use dvh where supported */
     min-height: 100vh;
     min-height: 100dvh; /* Dynamic viewport height - accounts for Safari UI */
+    /* Prevent horizontal scroll/shift on mobile */
+    overflow-x: hidden;
   }
   
   /* Apple-style headings */
