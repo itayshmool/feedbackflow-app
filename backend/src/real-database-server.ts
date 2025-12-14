@@ -4412,17 +4412,55 @@ app.get('/api/v1/hierarchy/direct-reports/:managerId', authenticateToken, async 
     const { managerId } = req.params;
     const user = (req as any).user;
     
-    // Validate the manager belongs to the user's organization
+    // Super admins can access any organization's data
     if (!user.roles?.includes('super_admin')) {
-      const managerOrgResult = await query(
-        `SELECT organization_id FROM users WHERE id = $1`,
-        [managerId]
-      );
+      // Get manager's organization from multiple sources for robustness
+      // This handles cases where users.organization_id might be NULL but user is in organization_members
+      const managerOrgResult = await query(`
+        SELECT 
+          u.organization_id as user_org_id,
+          om.organization_id as member_org_id,
+          (SELECT organization_id FROM user_roles 
+           WHERE user_id = u.id AND is_active = true AND organization_id IS NOT NULL 
+           LIMIT 1) as role_org_id
+        FROM users u
+        LEFT JOIN organization_members om ON u.id = om.user_id AND om.is_active = true
+        WHERE u.id = $1
+      `, [managerId]);
+      
       if (managerOrgResult.rows.length === 0) {
         return res.status(404).json({ success: false, error: 'Manager not found' });
       }
-      if (managerOrgResult.rows[0].organization_id !== user.organizationId) {
-        return res.status(403).json({ success: false, error: 'Access denied: Cannot access another organization\'s hierarchy' });
+      
+      const row = managerOrgResult.rows[0];
+      // Use first non-null organization_id found (priority: users > org_members > user_roles)
+      const managerOrgId = row.user_org_id || row.member_org_id || row.role_org_id;
+      const requesterOrgId = user.organizationId;
+      
+      // Handle NULL organization cases with clear error messages
+      if (managerOrgId !== requesterOrgId) {
+        // Special case: requester has no org assigned
+        if (!requesterOrgId) {
+          console.warn(`🚫 Access denied: User ${user.email} has no organization assigned`);
+          return res.status(403).json({ 
+            success: false, 
+            error: 'Access denied: You are not assigned to any organization. Please contact your administrator.' 
+          });
+        }
+        // Special case: manager has no org assigned (shouldn't happen normally)
+        if (!managerOrgId) {
+          console.warn(`🚫 Access denied: Manager ${managerId} has no organization assigned`);
+          return res.status(403).json({ 
+            success: false, 
+            error: 'Access denied: Target user is not assigned to any organization.' 
+          });
+        }
+        // Both have different orgs - cross-org access attempt
+        console.warn(`🚫 Cross-org access denied: User ${user.email} (org: ${requesterOrgId}) tried to access manager ${managerId} (org: ${managerOrgId})`);
+        return res.status(403).json({ 
+          success: false, 
+          error: 'Access denied: Cannot access another organization\'s hierarchy' 
+        });
       }
     }
     

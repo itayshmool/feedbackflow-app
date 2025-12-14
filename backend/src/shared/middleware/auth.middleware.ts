@@ -64,6 +64,69 @@ async function fetchAdminOrganizations(userId: string): Promise<AdminOrganizatio
   }
 }
 
+/**
+ * Resolves the user's organizationId from multiple sources.
+ * Priority: 1) users.organization_id, 2) organization_members, 3) user_roles.organization_id
+ * This ensures we always have an organizationId even if users table isn't updated.
+ * Also auto-syncs users.organization_id if it was NULL but found elsewhere.
+ */
+async function resolveUserOrganizationId(userId: string, dbOrganizationId: string | null): Promise<string | null> {
+  // If users table has organization_id, use it
+  if (dbOrganizationId) {
+    return dbOrganizationId;
+  }
+  
+  // Fallback 1: Check organization_members table
+  try {
+    const memberResult = await query(`
+      SELECT organization_id 
+      FROM organization_members 
+      WHERE user_id = $1 AND is_active = true
+      ORDER BY joined_at DESC
+      LIMIT 1
+    `, [userId]);
+    
+    if (memberResult.rows.length > 0 && memberResult.rows[0].organization_id) {
+      const orgId = memberResult.rows[0].organization_id;
+      
+      // Sync back to users table for consistency (fire and forget)
+      query('UPDATE users SET organization_id = $1 WHERE id = $2 AND organization_id IS NULL', [orgId, userId])
+        .then(() => console.log(`✅ Synced organization_id ${orgId} to user ${userId}`))
+        .catch(err => console.warn('Failed to sync organization_id to users table:', err));
+      
+      return orgId;
+    }
+  } catch (err) {
+    console.warn('Error checking organization_members:', err);
+  }
+  
+  // Fallback 2: Check user_roles table for organization-scoped roles
+  try {
+    const roleResult = await query(`
+      SELECT organization_id 
+      FROM user_roles 
+      WHERE user_id = $1 AND is_active = true AND organization_id IS NOT NULL
+      ORDER BY granted_at DESC
+      LIMIT 1
+    `, [userId]);
+    
+    if (roleResult.rows.length > 0 && roleResult.rows[0].organization_id) {
+      const orgId = roleResult.rows[0].organization_id;
+      
+      // Sync back to users table for consistency (fire and forget)
+      query('UPDATE users SET organization_id = $1 WHERE id = $2 AND organization_id IS NULL', [orgId, userId])
+        .then(() => console.log(`✅ Synced organization_id ${orgId} to user ${userId} from user_roles`))
+        .catch(err => console.warn('Failed to sync organization_id to users table:', err));
+      
+      return orgId;
+    }
+  } catch (err) {
+    console.warn('Error checking user_roles:', err);
+  }
+  
+  return null;
+}
+
 async function authenticateTokenAsync(req: Request, res: Response, next: NextFunction) {
   // Check Authorization header first (for cross-domain requests)
   const authHeader = req.headers.authorization;
@@ -102,15 +165,16 @@ async function authenticateTokenAsync(req: Request, res: Response, next: NextFun
         // Extract email from token (everything between 'mock-jwt-token-' and last '-TIMESTAMP')
         const email = parts.slice(3, -1).join('-');
         
-        // Fetch user from database to get proper roles and admin org
+        // Fetch user from database to get proper roles, admin org, and organization_id
         const userResult = await query(`
-          SELECT u.id, u.email, u.name
+          SELECT u.id, u.email, u.name, u.organization_id
           FROM users u
           WHERE u.email = $1
         `, [email]);
 
         const userId = userResult.rows[0]?.id || '00000000-0000-0000-0000-000000000000';
         const userName = userResult.rows[0]?.name || email.split('@')[0];
+        const dbOrganizationId = userResult.rows[0]?.organization_id || null;
         
         // Fetch admin organizations info
         const { adminOrganizations, isSuperAdmin, roles } = await fetchAdminOrganizations(userId);
@@ -118,12 +182,15 @@ async function authenticateTokenAsync(req: Request, res: Response, next: NextFun
         // Fallback roles for mock user if no database roles found
         const effectiveRoles = roles.length > 0 ? roles : ['admin', 'employee'];
         
+        // Resolve organizationId from multiple sources (handles NULL cases)
+        const resolvedOrgId = await resolveUserOrganizationId(userId, dbOrganizationId);
+        
         (req as any).user = {
           id: userId,
           email: email,
           name: userName,
           roles: effectiveRoles,
-          organizationId: '00000000-0000-0000-0000-000000000001', // Default org
+          organizationId: resolvedOrgId,
           // Multi-org admin support
           adminOrganizations: adminOrganizations,
           isSuperAdmin: isSuperAdmin,
@@ -132,7 +199,7 @@ async function authenticateTokenAsync(req: Request, res: Response, next: NextFun
           adminOrganizationSlug: adminOrganizations[0]?.slug || null,
         };
         
-        console.log('🔍 Auth middleware - mock token authenticated:', email, 'adminOrgs:', adminOrganizations.length, 'isSuperAdmin:', isSuperAdmin);
+        console.log('🔍 Auth middleware - mock token authenticated:', email, 'orgId:', resolvedOrgId, 'isSuperAdmin:', isSuperAdmin);
         return next();
       }
     }
@@ -147,13 +214,24 @@ async function authenticateTokenAsync(req: Request, res: Response, next: NextFun
     // Use database roles if available, otherwise fall back to JWT payload roles
     const effectiveRoles = roles.length > 0 ? roles : (payload.roles || []);
 
-    // Set user data from JWT payload including admin organization info from database
+    // CRITICAL FIX: Always fetch fresh organizationId from database
+    // This prevents stale token issues where organizationId in JWT doesn't match DB
+    const userOrgResult = await query(
+      'SELECT organization_id FROM users WHERE id = $1',
+      [payload.sub]
+    );
+    const dbOrganizationId = userOrgResult.rows[0]?.organization_id || null;
+    
+    // Resolve organizationId from multiple sources (handles NULL cases)
+    const resolvedOrgId = await resolveUserOrganizationId(payload.sub, dbOrganizationId);
+
+    // Set user data with fresh organizationId from database (not stale JWT value)
     (req as any).user = {
       id: payload.sub,
       email: payload.email,
       name: payload.name,
       roles: effectiveRoles,
-      organizationId: payload.organizationId, // User's organization from JWT
+      organizationId: resolvedOrgId, // Fresh value from DB, not JWT
       // Multi-org admin support
       adminOrganizations: adminOrganizations,
       isSuperAdmin: isSuperAdmin,
@@ -162,7 +240,7 @@ async function authenticateTokenAsync(req: Request, res: Response, next: NextFun
       adminOrganizationSlug: adminOrganizations[0]?.slug || null,
     };
     
-    console.log('🔍 Auth middleware - real JWT authenticated:', payload.email, 'roles:', effectiveRoles, 'adminOrgs:', adminOrganizations.length, 'isSuperAdmin:', isSuperAdmin);
+    console.log('🔍 Auth middleware - JWT authenticated:', payload.email, 'roles:', effectiveRoles, 'orgId:', resolvedOrgId, 'isSuperAdmin:', isSuperAdmin);
 
     next();
   } catch (error) {
