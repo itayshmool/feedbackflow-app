@@ -156,37 +156,41 @@ export default function EmployeeHistoryPage() {
             Back to Team
           </Button>
           
-          <div className="flex items-start gap-6">
-            {/* Avatar */}
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
-              <span className="text-3xl font-bold text-white">
-                {employee.name.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            
-            {/* Info */}
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-gray-900">{employee.name}</h1>
-              <p className="text-gray-600">{employee.position || 'Team Member'}</p>
-              
-              <div className="flex flex-wrap gap-4 mt-3 text-sm text-gray-500">
-                <span className="flex items-center gap-1">
-                  <Mail className="w-4 h-4" />
-                  {employee.email}
+          {/* Mobile-responsive layout: stacks button below on small screens */}
+          <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+            {/* Avatar + Info row stays together */}
+            <div className="flex items-start gap-4 flex-1 min-w-0">
+              {/* Avatar - slightly smaller on mobile */}
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+                <span className="text-2xl sm:text-3xl font-bold text-white">
+                  {employee.name.charAt(0).toUpperCase()}
                 </span>
-                {employee.department && (
+              </div>
+              
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{employee.name}</h1>
+                <p className="text-gray-600 text-sm sm:text-base">{employee.position || 'Team Member'}</p>
+                
+                <div className="flex flex-wrap gap-2 sm:gap-4 mt-2 sm:mt-3 text-xs sm:text-sm text-gray-500">
                   <span className="flex items-center gap-1">
-                    <Building className="w-4 h-4" />
-                    {employee.department}
+                    <Mail className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="truncate max-w-[180px] sm:max-w-none">{employee.email}</span>
                   </span>
-                )}
+                  {employee.department && (
+                    <span className="flex items-center gap-1">
+                      <Building className="w-3 h-3 sm:w-4 sm:h-4" />
+                      {employee.department}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             
-            {/* Give Feedback Button */}
+            {/* Give Feedback Button - full width on mobile, auto on desktop */}
             <Button
               onClick={() => navigate(`/feedback?action=give&recipient=${encodeURIComponent(employee.email)}&name=${encodeURIComponent(employee.name)}`)}
-              className="bg-green-600 hover:bg-green-700"
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 flex-shrink-0"
             >
               <MessageSquare className="w-4 h-4 mr-2" />
               Give Feedback
