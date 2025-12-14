@@ -420,7 +420,7 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
       {/* Filter Panel - Dropdowns auto-apply on change */}
       {showFilters && showFilterPanel && (
         <Card className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className={`grid grid-cols-1 md:grid-cols-2 ${isManager ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-4`}>
             <Select
               label="Cycle"
               value={cycleFilter}
@@ -452,16 +452,19 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
               <option value={ReviewType.MANAGER_REVIEW}>Manager Review</option>
               <option value={ReviewType.PROJECT_REVIEW}>Project Review</option>
             </Select>
-            <Select
-              label="Color"
-              value={colorFilter}
-              onChange={(e) => setColorFilter(e.target.value)}
-            >
-              <option value="">All Colors</option>
-              <option value="green">🟢 Exceeds Expectations</option>
-              <option value="yellow">🟡 Meets Expectations</option>
-              <option value="red">🔴 Needs Improvement</option>
-            </Select>
+            {/* Color filter - only visible to managers (internal triage) */}
+            {isManager && (
+              <Select
+                label="Color"
+                value={colorFilter}
+                onChange={(e) => setColorFilter(e.target.value)}
+              >
+                <option value="">All Colors</option>
+                <option value="green">🟢 Exceeds Expectations</option>
+                <option value="yellow">🟡 Meets Expectations</option>
+                <option value="red">🔴 Needs Improvement</option>
+              </Select>
+            )}
           </div>
           {(cycleFilter || statusFilter || typeFilter || colorFilter) && (
             <div className="flex justify-end mt-4">
