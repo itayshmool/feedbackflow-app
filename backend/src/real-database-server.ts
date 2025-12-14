@@ -1116,6 +1116,13 @@ app.post('/api/v1/auth/login/google', authRateLimit, async (req, res) => {
               [user.id, defaultOrg.id]
             );
             
+            // Update user_roles.organization_id for roles without org (needed for org-based filtering)
+            await query(
+              `UPDATE user_roles SET organization_id = $1 
+               WHERE user_id = $2 AND organization_id IS NULL`,
+              [defaultOrg.id, user.id]
+            );
+            
             // Update user object with org info
             user.organization_id = defaultOrg.id;
             user.organization_name = defaultOrg.name;
