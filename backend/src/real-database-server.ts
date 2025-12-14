@@ -5783,12 +5783,14 @@ app.get('/api/v1/feedback/stats', authenticateToken, async (req, res) => {
     
     // Query feedback statistics from database
     // Note: "given" excludes drafts to match the list view
+    // For employees: pending = waiting for acknowledgment (submitted), acknowledged = completed
     const statsQuery = `
       WITH feedback_stats AS (
         SELECT 
           COUNT(CASE WHEN fr.giver_id = $1 AND frr.status != 'draft' THEN 1 END) as given,
           COUNT(CASE WHEN fr.recipient_id = $1 AND frr.status != 'draft' THEN 1 END) as received,
           COUNT(CASE WHEN fr.recipient_id = $1 AND frr.status = 'submitted' THEN 1 END) as pending,
+          COUNT(CASE WHEN fr.recipient_id = $1 AND frr.status = 'completed' THEN 1 END) as acknowledged,
           COUNT(CASE WHEN fr.giver_id = $1 AND frr.status = 'draft' THEN 1 END) as drafts,
           AVG(CASE WHEN fr.recipient_id = $1 AND fr.rating IS NOT NULL THEN fr.rating END) as avg_rating
         FROM feedback_responses fr
@@ -5799,6 +5801,7 @@ app.get('/api/v1/feedback/stats', authenticateToken, async (req, res) => {
         COALESCE(given, 0) as given,
         COALESCE(received, 0) as received,
         COALESCE(pending, 0) as pending,
+        COALESCE(acknowledged, 0) as acknowledged,
         COALESCE(drafts, 0) as drafts,
         COALESCE(avg_rating, 0) as average_rating
       FROM feedback_stats
@@ -5813,6 +5816,7 @@ app.get('/api/v1/feedback/stats', authenticateToken, async (req, res) => {
         given: parseInt(stats.given),
         received: parseInt(stats.received),
         pending: parseInt(stats.pending),
+        acknowledged: parseInt(stats.acknowledged),
         drafts: parseInt(stats.drafts),
         averageRating: parseFloat(stats.average_rating) || 0,
         completionRate: 0.85 // Keep this as a placeholder for now

@@ -85,6 +85,21 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
     loadFeedback();
   }, [statusFilter, cycleFilter, colorFilter]);
 
+  // Clear color filter when switching to tabs where it shouldn't apply
+  // This prevents a hidden color filter from affecting results
+  useEffect(() => {
+    const colorFilterAllowedTabs = ['given', 'drafts'];
+    if (isManager && colorFilter && !colorFilterAllowedTabs.includes(activeTab)) {
+      setColorFilter('');
+    }
+    // Also clear Draft status filter for employees or when manager is on 'received' tab
+    if (statusFilter === FeedbackStatus.DRAFT) {
+      if (!isManager || activeTab === 'received') {
+        setStatusFilter('');
+      }
+    }
+  }, [activeTab, isManager]);
+
   // Handle search on Enter key
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -317,68 +332,70 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs - with horizontal scroll for mobile */}
       {userId && (
-        <div className="flex gap-2 border-b">
+        <div className="flex gap-2 border-b overflow-x-auto scrollbar-hide">
           {isManager ? (
             // Manager tabs: Received, Given, Drafts, All
             <>
-          <button
-            className={`px-4 py-2 font-medium transition-colors ${
-              activeTab === 'received'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-            onClick={() => setActiveTab('received')}
-          >
-            Received ({feedbackStats?.received || 0})
-          </button>
-          <button
-            className={`px-4 py-2 font-medium transition-colors ${
-              activeTab === 'given'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-            onClick={() => setActiveTab('given')}
-          >
-            Given ({feedbackStats?.given || 0})
-          </button>
-          <button
-            className={`px-4 py-2 font-medium transition-colors ${
-              activeTab === 'drafts'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-            onClick={() => setActiveTab('drafts')}
-          >
-            Drafts ({feedbackStats?.drafts || 0})
-          </button>
-          <button
-            className={`px-4 py-2 font-medium transition-colors ${
-              activeTab === 'all'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-            onClick={() => setActiveTab('all')}
-          >
-            All ({(feedbackStats?.given || 0) + (feedbackStats?.received || 0) + (feedbackStats?.drafts || 0)})
-          </button>
+              <button
+                className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+                  activeTab === 'received'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                onClick={() => setActiveTab('received')}
+              >
+                Received ({feedbackStats?.received || 0})
+              </button>
+              <button
+                className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+                  activeTab === 'given'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                onClick={() => setActiveTab('given')}
+              >
+                Given ({feedbackStats?.given || 0})
+              </button>
+              <button
+                className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+                  activeTab === 'drafts'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                onClick={() => setActiveTab('drafts')}
+              >
+                Drafts ({feedbackStats?.drafts || 0})
+              </button>
+              <button
+                className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+                  activeTab === 'all'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+                onClick={() => setActiveTab('all')}
+              >
+                All ({(feedbackStats?.given || 0) + (feedbackStats?.received || 0) + (feedbackStats?.drafts || 0)})
+              </button>
             </>
           ) : (
             // Employee tabs: Waiting for Acknowledgement, Acknowledged, All Received
+            // Use shorter labels on mobile for better fit
             <>
               <button
-                className={`px-4 py-2 font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap ${
                   activeTab === 'waiting'
                     ? 'border-b-2 border-blue-500 text-blue-600'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
                 onClick={() => setActiveTab('waiting')}
               >
-                Waiting for Acknowledgement ({feedbackStats?.pending || 0})
+                <span className="sm:hidden">Waiting ({feedbackStats?.pending || 0})</span>
+                <span className="hidden sm:inline">Waiting for Acknowledgement ({feedbackStats?.pending || 0})</span>
               </button>
               <button
-                className={`px-4 py-2 font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap ${
                   activeTab === 'acknowledged'
                     ? 'border-b-2 border-blue-500 text-blue-600'
                     : 'text-gray-600 hover:text-gray-900'
@@ -388,14 +405,15 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
                 Acknowledged ({feedbackStats?.acknowledged || 0})
               </button>
               <button
-                className={`px-4 py-2 font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap ${
                   activeTab === 'received'
                     ? 'border-b-2 border-blue-500 text-blue-600'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
                 onClick={() => setActiveTab('received')}
               >
-                All Received ({feedbackStats?.received || 0})
+                <span className="sm:hidden">All ({feedbackStats?.received || 0})</span>
+                <span className="hidden sm:inline">All Received ({feedbackStats?.received || 0})</span>
               </button>
             </>
           )}
@@ -405,45 +423,77 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
       {/* Filter Panel - Dropdowns auto-apply on change */}
       {showFilters && showFilterPanel && (
         <Card className="p-4">
-          <div className={`grid grid-cols-1 md:grid-cols-2 ${isManager ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-4`}>
-            <Select
-              label="Cycle"
-              value={cycleFilter}
-              onChange={(e) => setCycleFilter(e.target.value)}
-            >
-              <option value="">All Cycles</option>
-              {cycles.map((cycle) => (
-                <option key={cycle.id} value={cycle.id}>
-                  {cycle.name}
-                </option>
-              ))}
-            </Select>
-            <Select
-              label="Status"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as FeedbackStatus)}
-            >
-              <option value="">All Statuses</option>
-              <option value={FeedbackStatus.DRAFT}>Draft</option>
-              <option value={FeedbackStatus.SUBMITTED}>Submitted</option>
-              <option value={FeedbackStatus.COMPLETED}>Completed</option>
-            </Select>
-            {/* Type filter removed - single feedback type (Manager Review) */}
-            {/* Color filter - only visible to managers (internal triage) */}
-            {isManager && (
-              <Select
-                label="Color"
-                value={colorFilter}
-                onChange={(e) => setColorFilter(e.target.value)}
-              >
-                <option value="">All Colors</option>
-                <option value="green">🟢 Exceeds Expectations</option>
-                <option value="yellow">🟡 Meets Expectations</option>
-                <option value="red">🔴 Needs Improvement</option>
-              </Select>
-            )}
-          </div>
-          {(cycleFilter || statusFilter || colorFilter) && (
+          {/* 
+            Filter visibility rules:
+            - Color filter: Only for managers on "given" or "drafts" tabs (their own feedback)
+            - Status filter: Only for managers (employees use tabs for status filtering)
+            - Cycle filter: Visible to everyone
+          */}
+          {(() => {
+            const showColorFilter = isManager && (activeTab === 'given' || activeTab === 'drafts');
+            // Status filter only for managers - employees use tabs for status (waiting/acknowledged/all)
+            const showStatusFilter = isManager;
+            // Determine if Draft status option should be shown:
+            // - For managers: only on "given", "drafts", or "all" tabs (not on "received")
+            const showDraftStatus = isManager && activeTab !== 'received';
+            
+            // Calculate grid columns: 1 for cycle, +1 for status (managers), +1 for color (managers on given/drafts)
+            const columnCount = 1 + (showStatusFilter ? 1 : 0) + (showColorFilter ? 1 : 0);
+            const gridClass = columnCount === 1 
+              ? 'grid-cols-1' 
+              : columnCount === 2 
+                ? 'grid-cols-1 md:grid-cols-2' 
+                : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
+            
+            return (
+              <div className={`grid ${gridClass} gap-4`}>
+                <Select
+                  label="Cycle"
+                  value={cycleFilter}
+                  onChange={(e) => setCycleFilter(e.target.value)}
+                >
+                  <option value="">All Cycles</option>
+                  {cycles.map((cycle) => (
+                    <option key={cycle.id} value={cycle.id}>
+                      {cycle.name}
+                    </option>
+                  ))}
+                </Select>
+                {/* Status filter - only for managers (employees use tabs for status) */}
+                {showStatusFilter && (
+                  <Select
+                    label="Status"
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as FeedbackStatus)}
+                  >
+                    <option value="">All Statuses</option>
+                    {/* Draft option only for managers on appropriate tabs */}
+                    {showDraftStatus && (
+                      <option value={FeedbackStatus.DRAFT}>Draft</option>
+                    )}
+                    <option value={FeedbackStatus.SUBMITTED}>Submitted</option>
+                    <option value={FeedbackStatus.COMPLETED}>Completed</option>
+                  </Select>
+                )}
+                {/* Type filter removed - single feedback type (Manager Review) */}
+                {/* Color filter - only visible to managers on "given" or "drafts" tabs
+                    This prevents exposing the color classification of feedback they received */}
+                {showColorFilter && (
+                  <Select
+                    label="Color"
+                    value={colorFilter}
+                    onChange={(e) => setColorFilter(e.target.value)}
+                  >
+                    <option value="">All Colors</option>
+                    <option value="green">🟢 Exceeds Expectations</option>
+                    <option value="yellow">🟡 Meets Expectations</option>
+                    <option value="red">🔴 Needs Improvement</option>
+                  </Select>
+                )}
+              </div>
+            );
+          })()}
+          {(cycleFilter || (isManager && statusFilter) || (isManager && (activeTab === 'given' || activeTab === 'drafts') && colorFilter)) && (
             <div className="flex justify-end mt-4">
               <Button variant="outline" size="sm" onClick={handleClearFilters} icon={RotateCcw}>
               Clear Filters
