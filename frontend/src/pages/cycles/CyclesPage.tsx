@@ -99,14 +99,14 @@ export default function CyclesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
-      <div className="flex justify-between items-center">
+      {/* Page header - Mobile responsive */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Feedback Cycles</h1>
-          <p className="text-gray-600">Manage and track your feedback cycles</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Feedback Cycles</h1>
+          <p className="text-sm sm:text-base text-gray-600">Manage and track your feedback cycles</p>
         </div>
         {canCreateCycles && (
-          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setShowCreateModal(true)}>
+          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setShowCreateModal(true)} className="w-full sm:w-auto">
             Create Cycle
           </Button>
         )}

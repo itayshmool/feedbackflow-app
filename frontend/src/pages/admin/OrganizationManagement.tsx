@@ -147,17 +147,18 @@ const OrganizationManagement: React.FC = () => {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+      {/* Header - Mobile responsive */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Organization Management</h1>
-          <p className="text-gray-600">Manage organizations, departments, and teams</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Organization Management</h1>
+          <p className="text-sm sm:text-base text-gray-600">Manage organizations, departments, and teams</p>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             onClick={() => setShowBulkOps(true)}
             variant="outline"
             size="sm"
+            className="flex-1 sm:flex-none"
           >
             <Upload className="w-4 h-4 mr-2" />
             Import
@@ -166,11 +167,12 @@ const OrganizationManagement: React.FC = () => {
             onClick={() => setShowBulkOps(true)}
             variant="outline"
             size="sm"
+            className="flex-1 sm:flex-none"
           >
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
-          <Button onClick={() => setShowForm(true)} size="sm" data-testid="create-organization-button">
+          <Button onClick={() => setShowForm(true)} size="sm" data-testid="create-organization-button" className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             New Organization
           </Button>

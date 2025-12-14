@@ -271,10 +271,10 @@ const EmployeeDashboard: React.FC = () => {
 
   const renderMyFeedback = () => (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">My Feedback History</h2>
-        <Link to="/feedback">
-          <Button>View All Feedback</Button>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">My Feedback History</h2>
+        <Link to="/feedback" className="w-full sm:w-auto">
+          <Button className="w-full sm:w-auto">View All Feedback</Button>
         </Link>
       </div>
 

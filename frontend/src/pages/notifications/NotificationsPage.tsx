@@ -82,22 +82,23 @@ export default function NotificationsPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      {/* Header */}
+      {/* Header - Mobile responsive */}
       <div className="mb-8">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <BellRing className="w-8 h-8 text-blue-600" />
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2 sm:gap-3">
+              <BellRing className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
               Notifications
             </h1>
-            <p className="text-gray-600 mt-2">Stay updated with your feedback activities</p>
+            <p className="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">Stay updated with your feedback activities</p>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Button
               variant="outline"
               onClick={handleRefresh}
               disabled={isLoading}
               icon={isLoading ? LoadingSpinner : RefreshCw}
+              className="flex-1 sm:flex-none"
             >
               Refresh
             </Button>
@@ -106,6 +107,7 @@ export default function NotificationsPage() {
                 onClick={handleMarkAllAsRead}
                 disabled={isMarkingAsRead}
                 icon={isMarkingAsRead ? LoadingSpinner : Check}
+                className="flex-1 sm:flex-none"
               >
                 Mark All Read
               </Button>
