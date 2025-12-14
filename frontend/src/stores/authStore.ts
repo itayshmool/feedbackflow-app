@@ -3,6 +3,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { api } from '@/lib/api'
+import { useHierarchyStore } from './hierarchyStore'
 
 export interface User {
   id: string
@@ -124,6 +125,9 @@ export const useAuthStore = create<AuthState>()(
         sessionStorage.removeItem('employee-welcomed')
         sessionStorage.removeItem('manager-welcomed')
         sessionStorage.removeItem('admin-welcomed')
+        
+        // Clear hierarchy data to prevent stale data showing for next user
+        useHierarchyStore.getState().clearHierarchyData()
         
         set({
           user: null,
