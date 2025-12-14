@@ -209,21 +209,8 @@ const TemplatesManagement: React.FC = () => {
                 />
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Template Type *
-                </label>
-                <Select
-                  value={formData.templateType}
-                  onChange={(e) => setFormData(prev => ({ ...prev, templateType: e.target.value as any }))}
-                >
-                  <option value="peer">Peer Review</option>
-                  <option value="manager">Manager Review</option>
-                  <option value="self">Self Review</option>
-                  <option value="project">Project Review</option>
-                  <option value="360">360 Review</option>
-                </Select>
-              </div>
+              {/* Template Type hidden - single feedback type (Manager Review) */}
+              <input type="hidden" value="manager" />
             </div>
 
             <div>

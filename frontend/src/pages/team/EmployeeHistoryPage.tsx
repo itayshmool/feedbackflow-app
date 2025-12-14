@@ -327,7 +327,7 @@ export default function EmployeeHistoryPage() {
                       {getColorBadge(feedback.colorClassification)}
                       <div>
                         <p className="font-medium text-gray-900">
-                          {feedback.cycleName || feedback.reviewType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          {feedback.cycleName || 'Performance Review'}
                         </p>
                         <p className="text-sm text-gray-500">
                           {new Date(feedback.createdAt).toLocaleDateString('en-US', { 

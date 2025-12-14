@@ -285,29 +285,8 @@ export const CycleDetails: React.FC<CycleDetailsProps> = ({ cycleId, onClose, on
               </h3>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <h4 className="font-medium text-gray-900">Review Types</h4>
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-2">
-                      <div className={`w-2 h-2 rounded-full ${settings.allowSelfReview ? 'bg-green-500' : 'bg-gray-300'}`} />
-                      <span className="text-sm text-gray-700">Self Review</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className={`w-2 h-2 rounded-full ${settings.allowPeerReview ? 'bg-green-500' : 'bg-gray-300'}`} />
-                      <span className="text-sm text-gray-700">Peer Review</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className={`w-2 h-2 rounded-full ${settings.allowManagerReview ? 'bg-green-500' : 'bg-gray-300'}`} />
-                      <span className="text-sm text-gray-700">Manager Review</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className={`w-2 h-2 rounded-full ${settings.allowUpwardReview ? 'bg-green-500' : 'bg-gray-300'}`} />
-                      <span className="text-sm text-gray-700">Upward Review</span>
-                    </div>
-                  </div>
-                </div>
-
+              <div className="grid grid-cols-1 gap-4">
+                {/* Review Types section removed - single feedback type (Manager Review) */}
                 <div className="space-y-2">
                   <h4 className="font-medium text-gray-900">Feedback Settings</h4>
                   <div className="space-y-1">

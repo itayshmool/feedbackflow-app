@@ -131,12 +131,7 @@ export const generateFeedbackDocx = async (feedback: Feedback): Promise<void> =>
         new TableCell({ children: [new Paragraph(feedback.toUser?.name || feedback.toUserEmail || 'Unknown')] }),
       ],
     }),
-    new TableRow({
-      children: [
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Review Type:', bold: true })] })] }),
-        new TableCell({ children: [new Paragraph(feedback.reviewType.replace('_', ' ').toUpperCase())] }),
-      ],
-    }),
+    // Review Type row removed - single feedback type (Manager Review)
     new TableRow({
       children: [
         new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Status:', bold: true })] })] }),

@@ -209,13 +209,7 @@ export const FeedbackWorkflow: React.FC<FeedbackWorkflowProps> = ({
             <p className="font-medium">{new Date(feedback.createdAt).toLocaleDateString()}</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <MessageSquare className="w-4 h-4 text-gray-500" />
-          <div>
-            <p className="text-sm text-gray-600">Type</p>
-            <p className="font-medium">{feedback.reviewType}</p>
-          </div>
-        </div>
+        {/* Type display removed - single feedback type (Manager Review) */}
       </div>
 
       {/* Available Actions */}
