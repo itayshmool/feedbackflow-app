@@ -85,6 +85,21 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
     loadFeedback();
   }, [statusFilter, cycleFilter, colorFilter]);
 
+  // Clear color filter when switching to tabs where it shouldn't apply
+  // This prevents a hidden color filter from affecting results
+  useEffect(() => {
+    const colorFilterAllowedTabs = ['given', 'drafts'];
+    if (isManager && colorFilter && !colorFilterAllowedTabs.includes(activeTab)) {
+      setColorFilter('');
+    }
+    // Also clear Draft status filter for employees or when manager is on 'received' tab
+    if (statusFilter === FeedbackStatus.DRAFT) {
+      if (!isManager || activeTab === 'received') {
+        setStatusFilter('');
+      }
+    }
+  }, [activeTab, isManager]);
+
   // Handle search on Enter key
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -405,45 +420,64 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
       {/* Filter Panel - Dropdowns auto-apply on change */}
       {showFilters && showFilterPanel && (
         <Card className="p-4">
-          <div className={`grid grid-cols-1 md:grid-cols-2 ${isManager ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-4`}>
-            <Select
-              label="Cycle"
-              value={cycleFilter}
-              onChange={(e) => setCycleFilter(e.target.value)}
-            >
-              <option value="">All Cycles</option>
-              {cycles.map((cycle) => (
-                <option key={cycle.id} value={cycle.id}>
-                  {cycle.name}
-                </option>
-              ))}
-            </Select>
-            <Select
-              label="Status"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as FeedbackStatus)}
-            >
-              <option value="">All Statuses</option>
-              <option value={FeedbackStatus.DRAFT}>Draft</option>
-              <option value={FeedbackStatus.SUBMITTED}>Submitted</option>
-              <option value={FeedbackStatus.COMPLETED}>Completed</option>
-            </Select>
-            {/* Type filter removed - single feedback type (Manager Review) */}
-            {/* Color filter - only visible to managers (internal triage) */}
-            {isManager && (
-              <Select
-                label="Color"
-                value={colorFilter}
-                onChange={(e) => setColorFilter(e.target.value)}
-              >
-                <option value="">All Colors</option>
-                <option value="green">🟢 Exceeds Expectations</option>
-                <option value="yellow">🟡 Meets Expectations</option>
-                <option value="red">🔴 Needs Improvement</option>
-              </Select>
-            )}
-          </div>
-          {(cycleFilter || statusFilter || colorFilter) && (
+          {/* 
+            Color filter visibility rules:
+            - Only for managers on "given" or "drafts" tabs (their own feedback)
+            - Hidden on "received" and "all" tabs to prevent exposing their manager's color assessment
+          */}
+          {(() => {
+            const showColorFilter = isManager && (activeTab === 'given' || activeTab === 'drafts');
+            // Determine if Draft status option should be shown:
+            // - For employees: never (they don't create feedback)
+            // - For managers: only on "given", "drafts", or "all" tabs (not on "received")
+            const showDraftStatus = isManager && activeTab !== 'received';
+            
+            return (
+              <div className={`grid grid-cols-1 md:grid-cols-2 ${showColorFilter ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-4`}>
+                <Select
+                  label="Cycle"
+                  value={cycleFilter}
+                  onChange={(e) => setCycleFilter(e.target.value)}
+                >
+                  <option value="">All Cycles</option>
+                  {cycles.map((cycle) => (
+                    <option key={cycle.id} value={cycle.id}>
+                      {cycle.name}
+                    </option>
+                  ))}
+                </Select>
+                <Select
+                  label="Status"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as FeedbackStatus)}
+                >
+                  <option value="">All Statuses</option>
+                  {/* Draft option only for managers on appropriate tabs */}
+                  {showDraftStatus && (
+                    <option value={FeedbackStatus.DRAFT}>Draft</option>
+                  )}
+                  <option value={FeedbackStatus.SUBMITTED}>Submitted</option>
+                  <option value={FeedbackStatus.COMPLETED}>Completed</option>
+                </Select>
+                {/* Type filter removed - single feedback type (Manager Review) */}
+                {/* Color filter - only visible to managers on "given" or "drafts" tabs
+                    This prevents exposing the color classification of feedback they received */}
+                {showColorFilter && (
+                  <Select
+                    label="Color"
+                    value={colorFilter}
+                    onChange={(e) => setColorFilter(e.target.value)}
+                  >
+                    <option value="">All Colors</option>
+                    <option value="green">🟢 Exceeds Expectations</option>
+                    <option value="yellow">🟡 Meets Expectations</option>
+                    <option value="red">🔴 Needs Improvement</option>
+                  </Select>
+                )}
+              </div>
+            );
+          })()}
+          {(cycleFilter || statusFilter || (isManager && (activeTab === 'given' || activeTab === 'drafts') && colorFilter)) && (
             <div className="flex justify-end mt-4">
               <Button variant="outline" size="sm" onClick={handleClearFilters} icon={RotateCcw}>
               Clear Filters
