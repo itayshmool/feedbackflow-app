@@ -53,9 +53,9 @@ export default function MobileBottomNav() {
     { name: 'Feedback', href: '/feedback', icon: MessageSquare },
   ]
   
-  // Add Team Feedback for managers of managers or admins
-  if (hasManagerReports || isAdmin) {
-    coreNav.push({ name: 'Team', href: '/team-feedback', icon: Users })
+  // Add My Team for all managers (links to dashboard Team tab)
+  if (isManager) {
+    coreNav.push({ name: 'My Team', href: '/dashboard?tab=team', icon: Users })
   }
   
   // Add Notifications with badge
@@ -94,8 +94,16 @@ export default function MobileBottomNav() {
 
   // Check if a nav item is active
   const isNavActive = (href: string) => {
+    // Handle My Team tab (/dashboard?tab=team)
+    if (href === '/dashboard?tab=team') {
+      const searchParams = new URLSearchParams(location.search)
+      return location.pathname === '/dashboard' && searchParams.get('tab') === 'team'
+    }
+    // Dashboard is only active when no tab param or on overview
     if (href === '/dashboard') {
-      return location.pathname === '/dashboard'
+      const searchParams = new URLSearchParams(location.search)
+      const tab = searchParams.get('tab')
+      return location.pathname === '/dashboard' && (!tab || tab === 'overview')
     }
     return location.pathname.startsWith(href)
   }

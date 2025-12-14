@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useHierarchyStore } from '../../stores/hierarchyStore';
 import { useFeedbackStore } from '../../stores/feedbackStore';
@@ -137,7 +137,14 @@ const ManagerDashboard: React.FC = () => {
     fetchFeedbackList
   } = useFeedbackStore();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'analytics' | 'insights'>('overview');
+  // Support URL parameter for direct tab linking (e.g., /dashboard?tab=team)
+  type TabType = 'overview' | 'team' | 'analytics' | 'insights';
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const validTabs: TabType[] = ['overview', 'team', 'analytics', 'insights'];
+  const initialTab: TabType = validTabs.includes(tabParam as TabType) ? (tabParam as TabType) : 'overview';
+
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   
   // State for AI Insights
   const [teamInsights, setTeamInsights] = useState<TeamInsight | null>(null);
