@@ -426,13 +426,9 @@ const ManagerDashboard: React.FC = () => {
       {/* Cycle Info Card - Shows active cycles at the top */}
       <CycleInfoCard cycles={activeCycles} />
 
-      {/* Status Widgets - Side by side on larger screens */}
+      {/* Status Widgets - Always side by side on sm+, stacked on mobile */}
       {(reminderPreview?.hasEmployeeReports || reminderPreview?.hasManagerReports) && (
-        <div className={`grid gap-4 ${
-          reminderPreview?.hasEmployeeReports && reminderPreview?.hasManagerReports 
-            ? 'grid-cols-1 md:grid-cols-2' 
-            : 'grid-cols-1'
-        }`}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {/* Feedback Acceptance by My Team - For managers with direct employee reports */}
           {reminderPreview?.hasEmployeeReports && (
             <FeedbackAcceptanceStatus

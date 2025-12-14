@@ -1,5 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { RotateCcw, Clock, Calendar } from 'lucide-react';
+import { RotateCcw, Clock } from 'lucide-react';
 
 interface Cycle {
   id: string;
@@ -26,16 +25,15 @@ export default function CycleInfoCard({ cycles }: CycleInfoCardProps) {
     return null;
   }
 
+  // Compact inline display for active cycles
   return (
-    <Card className="transform transition-all duration-200 hover:shadow-lg overflow-hidden">
-      <CardHeader className="pb-2 px-4 pt-4 sm:px-6 sm:pt-5">
-        <CardTitle className="flex items-center text-base sm:text-lg">
-          <RotateCcw className="h-5 w-5 mr-2 text-blue-600" />
-          Active Cycles
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="px-4 pb-4 sm:px-6 sm:pb-5">
-        <div className={`grid gap-3 ${cycles.length > 1 ? 'sm:grid-cols-2' : ''}`}>
+    <div className="bg-white rounded-lg border border-gray-200 px-3 py-2 sm:px-4 sm:py-2.5 shadow-sm">
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 text-gray-700">
+          <RotateCcw className="h-4 w-4 text-blue-600" />
+          <span className="text-xs sm:text-sm font-medium">Active:</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
           {cycles.map((cycle) => {
             const days = daysRemaining(cycle.endDate);
             const isUrgent = days <= 7;
@@ -43,42 +41,26 @@ export default function CycleInfoCard({ cycles }: CycleInfoCardProps) {
             return (
               <div
                 key={cycle.id}
-                className="bg-gray-50 rounded-xl p-3 sm:p-4 border border-gray-100"
+                className="flex items-center gap-2 bg-gray-50 rounded-md px-2 py-1"
               >
-                {/* Cycle Name */}
-                <h4 className="font-semibold text-gray-900 text-sm sm:text-base mb-2 truncate">
+                <span className="text-xs sm:text-sm font-medium text-gray-900 truncate max-w-[150px] sm:max-w-[200px]">
                   {cycle.name}
-                </h4>
-                
-                {/* Dates Row */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center text-xs sm:text-sm text-gray-600 min-w-0">
-                    <Calendar className="w-3.5 h-3.5 mr-1.5 flex-shrink-0 text-gray-400" />
-                    <span className="truncate">
-                      {new Date(cycle.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      {' - '}
-                      {new Date(cycle.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </span>
-                  </div>
-                  
-                  {/* Days Remaining Badge */}
-                  <span
-                    className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 flex items-center gap-1 ${
-                      isUrgent
-                        ? 'bg-red-100 text-red-700'
-                        : 'bg-blue-100 text-blue-700'
-                    }`}
-                  >
-                    <Clock className="w-3 h-3" />
-                    {days}d left
-                  </span>
-                </div>
+                </span>
+                <span
+                  className={`text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
+                    isUrgent
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-blue-100 text-blue-700'
+                  }`}
+                >
+                  <Clock className="w-3 h-3" />
+                  {days}d
+                </span>
               </div>
             );
           })}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
-
