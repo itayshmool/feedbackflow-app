@@ -1089,6 +1089,46 @@ app.post('/api/v1/auth/login/google', authRateLimit, async (req, res) => {
         };
         console.log('Created new user from Google login:', email, 'with role: employee');
       }
+      
+      // Auto-assign users without organization to default "gna" organization
+      if (!user.organization_id) {
+        console.log('🏢 GOOGLE LOGIN: User has no organization, assigning to default "gna"');
+        try {
+          // Get the default organization (gna)
+          const defaultOrgResult = await query(
+            `SELECT id, name, slug FROM organizations WHERE slug = 'gna' LIMIT 1`
+          );
+          
+          if (defaultOrgResult.rows.length > 0) {
+            const defaultOrg = defaultOrgResult.rows[0];
+            
+            // Update user's organization_id
+            await query(
+              `UPDATE users SET organization_id = $1 WHERE id = $2`,
+              [defaultOrg.id, user.id]
+            );
+            
+            // Add to organization_members
+            await query(
+              `INSERT INTO organization_members (user_id, organization_id, is_active, joined_at)
+               VALUES ($1, $2, true, NOW())
+               ON CONFLICT (user_id, organization_id) DO UPDATE SET is_active = true`,
+              [user.id, defaultOrg.id]
+            );
+            
+            // Update user object with org info
+            user.organization_id = defaultOrg.id;
+            user.organization_name = defaultOrg.name;
+            
+            console.log(`🏢 GOOGLE LOGIN: Assigned ${email} to organization "${defaultOrg.name}" (${defaultOrg.slug})`);
+          } else {
+            console.warn('🏢 GOOGLE LOGIN: Default organization "gna" not found, user will have no organization');
+          }
+        } catch (orgError) {
+          console.error('🏢 GOOGLE LOGIN: Error assigning default organization:', orgError);
+          // Don't fail login if org assignment fails
+        }
+      }
     } catch (dbError) {
       console.error('Database error during Google login:', dbError);
       // Fall back to mock user if database fails
