@@ -1,0 +1,166 @@
+# Deployment Workflow - Staging & Production
+
+> **FeedbackFlow Deployment Architecture**
+> Two-environment setup with staging auto-deploy and manual production deploys
+
+---
+
+## Branch Strategy
+
+```
+feature/* ──► staging ──► main
+              │            │
+         auto-deploy   manual deploy
+         (test here)   (production)
+```
+
+| Branch | Purpose | Auto-Deploy | Environment |
+|--------|---------|-------------|-------------|
+| `feature/*` | Development | No | Local only |
+| `staging` | Pre-production testing | Yes | Staging |
+| `main` | Production | **No** (manual) | Production |
+
+---
+
+## Environment URLs
+
+### Staging
+- **Frontend**: https://feedbackflow-frontend-staging.onrender.com
+- **Backend**: https://feedbackflow-backend-staging.onrender.com
+- **Health Check**: https://feedbackflow-backend-staging.onrender.com/api/v1/health
+
+### Production
+- **Frontend**: https://feedbackflow-frontend.onrender.com
+- **Backend**: https://feedbackflow-backend.onrender.com
+- **Health Check**: https://feedbackflow-backend.onrender.com/api/v1/health
+
+---
+
+## Development Workflow
+
+### 1. Create Feature Branch
+```bash
+git checkout staging
+git pull origin staging
+git checkout -b feature/my-new-feature
+```
+
+### 2. Develop and Commit
+```bash
+# Make changes...
+git add .
+git commit -m "feat(module): description"
+```
+
+### 3. Push and Create PR to Staging
+```bash
+git push origin feature/my-new-feature
+# Create PR: feature/my-new-feature → staging
+```
+
+### 4. Merge to Staging
+- Merge the PR to `staging` branch
+- **Auto-deploys** to staging environment
+- Test at: https://feedbackflow-frontend-staging.onrender.com
+
+### 5. Promote to Production
+```bash
+# Create PR: staging → main
+# Review all changes
+# Merge PR (does NOT auto-deploy!)
+```
+
+### 6. Manual Production Deploy
+1. Go to [Render Dashboard](https://dashboard.render.com)
+2. Select `feedbackflow-backend` → Manual Deploy → Deploy latest commit
+3. Wait for health check to pass
+4. Select `feedbackflow-frontend` → Manual Deploy → Deploy latest commit
+5. Verify at production URL
+
+---
+
+## Key Rules
+
+### Never Push Directly to Main
+- All changes must go through `staging` first
+- Production deploys are **manual only**
+- This protects users from deployment disruptions
+
+### Always Test on Staging
+- Staging has a copy of production data
+- Test full user flows before promoting to production
+- Check logs in Render dashboard if issues occur
+
+### Database Migrations
+- Test migrations on staging first
+- Ensure migrations are backward-compatible
+- Production and staging have separate databases
+
+---
+
+## Render Services
+
+| Service | ID | Branch | Auto-Deploy |
+|---------|-----|--------|-------------|
+| feedbackflow-backend | srv-d4o1nu2li9vc73c6ipe0 | main | OFF |
+| feedbackflow-frontend | srv-d4o8gj7pm1nc7380pl4g | main | OFF |
+| feedbackflow-backend-staging | srv-d4vr77i4d50c73871ps0 | staging | ON |
+| feedbackflow-frontend-staging | srv-d4vrbrje5dus73al0bpg | staging | ON |
+
+---
+
+## Environment Variables
+
+### Staging Backend
+- `NODE_ENV=production` (for cookie settings)
+- `DATABASE_URL=<staging-db-internal-url>`
+- `FRONTEND_URL=https://feedbackflow-frontend-staging.onrender.com`
+
+### Production Backend
+- `NODE_ENV=production`
+- `DATABASE_URL=<production-db-internal-url>`
+- `FRONTEND_URL=https://feedbackflow-frontend.onrender.com`
+
+---
+
+## Troubleshooting
+
+### Login Issues on Staging
+- Clear cookies for `onrender.com` domain
+- Both staging and production share `.onrender.com` cookies
+- Use incognito window to test staging independently
+
+### Deploy Failed
+1. Check Render dashboard logs
+2. Verify environment variables are set
+3. Check build command output
+
+### Database Issues
+- Staging and production have separate databases
+- Run migrations on staging first
+- Use Render's query tool or external psql for debugging
+
+---
+
+## Infrastructure as Code
+
+The `render.yaml` file in the repository root defines:
+- All Render services (backend, frontend)
+- Database configurations
+- Environment variable templates
+
+Changes to infrastructure should be made in `render.yaml` and deployed via Render Blueprints.
+
+---
+
+## Cost Summary
+
+| Service | Plan | Monthly Cost |
+|---------|------|--------------|
+| Production Backend | Standard | $25 |
+| Production Frontend | Static | Free |
+| Production Database | Starter | $7 |
+| Staging Backend | Starter | $7 |
+| Staging Frontend | Static | Free |
+| Staging Database | Free | $0 |
+| **Total** | | **~$39/month** |

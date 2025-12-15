@@ -5,10 +5,6 @@ import {
   HeadingLevel,
   AlignmentType,
   BorderStyle,
-  Table,
-  TableRow,
-  TableCell,
-  WidthType,
   Packer,
   convertInchesToTwip,
 } from 'docx';
@@ -67,12 +63,18 @@ const getGoalStatusText = (status: GoalStatus): string => {
 //   return priorityMap[priority.toLowerCase()] || '6B7280';
 // };
 
-// Main function to generate DOCX
-export const generateFeedbackDocx = async (feedback: Feedback): Promise<void> => {
+// Result type for blob generation
+export interface DocxGenerationResult {
+  blob: Blob;
+  filename: string;
+}
+
+// Core function to create the DOCX document and return blob
+export const createFeedbackDocxBlob = async (feedback: Feedback): Promise<DocxGenerationResult> => {
   const statusInfo = getStatusInfo(feedback.status);
 
-  // Build document sections (can contain both Paragraphs and Tables)
-  const sections: (Paragraph | Table)[] = [];
+  // Build document sections
+  const sections: Paragraph[] = [];
 
   // Title
   sections.push(
@@ -111,70 +113,30 @@ export const generateFeedbackDocx = async (feedback: Feedback): Promise<void> =>
     })
   );
 
-  // Metadata table
-  const metadataRows: TableRow[] = [
-    new TableRow({
-      children: [
-        new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: 'From:', bold: true })] })],
-          width: { size: 30, type: WidthType.PERCENTAGE },
-        }),
-        new TableCell({
-          children: [new Paragraph(feedback.fromUser?.name || feedback.fromUserEmail || 'Unknown')],
-          width: { size: 70, type: WidthType.PERCENTAGE },
-        }),
-      ],
-    }),
-    new TableRow({
-      children: [
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'To:', bold: true })] })] }),
-        new TableCell({ children: [new Paragraph(feedback.toUser?.name || feedback.toUserEmail || 'Unknown')] }),
-      ],
-    }),
-    // Review Type row removed - single feedback type (Manager Review)
-    new TableRow({
-      children: [
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Status:', bold: true })] })] }),
-        new TableCell({
-          children: [
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: statusInfo.text,
-                  bold: true,
-                  color: statusInfo.color,
-                }),
-              ],
-            }),
-          ],
-        }),
-      ],
-    }),
-    new TableRow({
-      children: [
-        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Created:', bold: true })] })] }),
-        new TableCell({ children: [new Paragraph(formatDate(feedback.createdAt))] }),
-      ],
-    }),
+  // Metadata - inline format for better readability
+  const metadataItems: { label: string; value: string; color?: string }[] = [
+    { label: 'From', value: feedback.fromUser?.name || feedback.fromUserEmail || 'Unknown' },
+    { label: 'To', value: feedback.toUser?.name || feedback.toUserEmail || 'Unknown' },
+    { label: 'Status', value: statusInfo.text, color: statusInfo.color },
+    { label: 'Created', value: formatDate(feedback.createdAt) },
   ];
 
   if (feedback.cycle) {
-    metadataRows.push(
-      new TableRow({
-        children: [
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Cycle:', bold: true })] })] }),
-          new TableCell({ children: [new Paragraph(feedback.cycle.name)] }),
-        ],
-      })
-    );
+    metadataItems.push({ label: 'Cycle', value: feedback.cycle.name });
   }
 
-  sections.push(
-    new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      rows: metadataRows,
-    })
-  );
+  // Create readable metadata paragraphs - each item on its own line
+  metadataItems.forEach((item) => {
+    sections.push(
+      new Paragraph({
+        children: [
+          new TextRun({ text: `${item.label}: `, bold: true, size: 22 }),
+          new TextRun({ text: item.value, color: item.color, size: 22 }),
+        ],
+        spacing: { after: 80 },
+      })
+    );
+  });
 
   // Horizontal separator
   sections.push(
@@ -600,11 +562,18 @@ export const generateFeedbackDocx = async (feedback: Feedback): Promise<void> =>
   const date = new Date().toISOString().split('T')[0];
   const filename = `Feedback - ${fromName} to ${toName} - ${date}.docx`;
 
-  // Convert to blob with proper MIME type and save
+  // Convert to blob with proper MIME type
   const blob = await Packer.toBlob(doc);
   const docxBlob = new Blob([blob], { 
     type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
   });
-  saveAs(docxBlob, filename);
+  
+  return { blob: docxBlob, filename };
+};
+
+// Main function to generate and download DOCX (backward compatible)
+export const generateFeedbackDocx = async (feedback: Feedback): Promise<void> => {
+  const { blob, filename } = await createFeedbackDocxBlob(feedback);
+  saveAs(blob, filename);
 };
 

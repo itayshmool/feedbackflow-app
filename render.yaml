@@ -1,0 +1,122 @@
+# render.yaml
+# Render Blueprint - FeedbackFlow Staging + Production
+# Documentation: https://render.com/docs/blueprint-spec
+
+services:
+  # ==========================================
+  # STAGING ENVIRONMENT
+  # ==========================================
+  
+  - type: web
+    name: feedbackflow-backend-staging
+    runtime: node
+    region: frankfurt
+    plan: starter
+    branch: staging
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: staging
+      - key: DATABASE_URL
+        fromDatabase:
+          name: feedbackflow-db-staging
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false  # Set manually after frontend is created
+      - key: GOOGLE_CLIENT_ID
+        sync: false  # Set manually in dashboard
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false  # Set manually in dashboard
+
+  - type: web
+    name: feedbackflow-frontend-staging
+    runtime: static
+    branch: staging
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        sync: false  # Set manually after backend is created
+      - key: VITE_GOOGLE_CLIENT_ID
+        sync: false  # Set manually in dashboard
+
+  # ==========================================
+  # PRODUCTION ENVIRONMENT
+  # ==========================================
+  
+  - type: web
+    name: feedbackflow-backend
+    runtime: node
+    region: frankfurt
+    plan: standard
+    branch: main
+    autoDeploy: false  # CRITICAL: Manual deploys only!
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: feedbackflow-db
+          property: connectionString
+      - key: JWT_SECRET
+        sync: false  # Set manually - KEEP EXISTING VALUE
+      - key: FRONTEND_URL
+        sync: false  # Set manually
+      - key: GOOGLE_CLIENT_ID
+        sync: false  # Set manually
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false  # Set manually
+
+  - type: web
+    name: feedbackflow-frontend
+    runtime: static
+    branch: main
+    autoDeploy: false  # CRITICAL: Manual deploys only!
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        sync: false  # Set manually
+      - key: VITE_GOOGLE_CLIENT_ID
+        sync: false  # Set manually
+
+databases:
+  - name: feedbackflow-db-staging
+    plan: free
+    databaseName: feedbackflow_staging
+    user: feedbackflow
+    region: frankfurt
+
+  - name: feedbackflow-db
+    plan: starter
+    databaseName: feedbackflow
+    user: feedbackflow
+    region: frankfurt
+
