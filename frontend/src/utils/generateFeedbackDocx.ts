@@ -73,8 +73,8 @@ export interface DocxGenerationResult {
 export const createFeedbackDocxBlob = async (feedback: Feedback): Promise<DocxGenerationResult> => {
   const statusInfo = getStatusInfo(feedback.status);
 
-  // Build document sections (can contain both Paragraphs and Tables)
-  const sections: (Paragraph | Table)[] = [];
+  // Build document sections
+  const sections: Paragraph[] = [];
 
   // Title
   sections.push(
