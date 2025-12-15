@@ -207,53 +207,14 @@ export const createFeedbackDocxBlob = async (feedback: Feedback): Promise<DocxGe
     sections.push(new Paragraph({ text: '', spacing: { after: 200 } }));
   }
 
-  // Specific Examples
-  if (feedback.content?.specificExamples && feedback.content.specificExamples.length > 0) {
-    sections.push(
-      new Paragraph({
-        text: 'Specific Examples',
-        heading: HeadingLevel.HEADING_1,
-        spacing: { before: 400, after: 200 },
-      })
-    );
-    feedback.content.specificExamples.forEach((example) => {
-      sections.push(
-        new Paragraph({
-          text: example,
-          numbering: { reference: 'numbered-list', level: 0 },
-          spacing: { after: 100 },
-        })
-      );
-    });
-    sections.push(new Paragraph({ text: '', spacing: { after: 200 } }));
-  }
+  // Specific Examples - Hidden from export
+  // Recommendations - Hidden from export
 
-  // Recommendations
-  if (feedback.content?.recommendations && feedback.content.recommendations.length > 0) {
-    sections.push(
-      new Paragraph({
-        text: 'Recommendations',
-        heading: HeadingLevel.HEADING_1,
-        spacing: { before: 400, after: 200 },
-      })
-    );
-    feedback.content.recommendations.forEach((recommendation) => {
-      sections.push(
-        new Paragraph({
-          text: recommendation,
-          bullet: { level: 0 },
-          spacing: { after: 100 },
-        })
-      );
-    });
-    sections.push(new Paragraph({ text: '', spacing: { after: 200 } }));
-  }
-
-  // Development Goals
+  // Growth & Development (Goals)
   if (feedback.goals && feedback.goals.length > 0) {
     sections.push(
       new Paragraph({
-        text: 'Development Goals',
+        text: 'Growth & Development',
         heading: HeadingLevel.HEADING_1,
         spacing: { before: 400, after: 200 },
       })
@@ -280,10 +241,8 @@ export const createFeedbackDocxBlob = async (feedback: Feedback): Promise<DocxGe
         })
       );
 
-      // Goal details
+      // Goal details (Category and Priority hidden)
       const goalDetails = [
-        `Category: ${goal.category.replace('_', ' ')}`,
-        `Priority: ${goal.priority}`,
         `Target Date: ${formatDate(goal.targetDate)}`,
         `Status: ${getGoalStatusText(goal.status)}`,
         `Progress: ${goal.progress}%`,
@@ -300,6 +259,23 @@ export const createFeedbackDocxBlob = async (feedback: Feedback): Promise<DocxGe
 
       sections.push(new Paragraph({ text: '', spacing: { after: 200 } }));
     });
+  }
+
+  // Bottom Line
+  if (feedback.content?.bottomLine) {
+    sections.push(
+      new Paragraph({
+        text: 'Bottom Line',
+        heading: HeadingLevel.HEADING_1,
+        spacing: { before: 400, after: 200 },
+      })
+    );
+    sections.push(
+      new Paragraph({
+        text: feedback.content.bottomLine,
+        spacing: { after: 200 },
+      })
+    );
   }
 
   // Ratings

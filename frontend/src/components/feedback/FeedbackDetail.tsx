@@ -72,6 +72,7 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
         areasForImprovement: currentFeedback.content.areasForImprovement || [],
         specificExamples: currentFeedback.content.specificExamples || [],
         recommendations: currentFeedback.content.recommendations || [],
+        bottomLine: currentFeedback.content.bottomLine || '',
       });
     }
     if (currentFeedback?.colorClassification) {
@@ -477,116 +478,16 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
           </Card>
         )}
 
-      {/* Specific Examples */}
-      {(currentFeedback.content?.specificExamples &&
-        currentFeedback.content.specificExamples.length > 0 || isEditMode) && (
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-3">Specific Examples</h3>
-            {isEditMode ? (
-              <div className="space-y-2">
-                {editedContent?.specificExamples?.map((example, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <Input
-                      value={example}
-                      onChange={(e) => {
-                        const newExamples = [...(editedContent?.specificExamples || [])];
-                        newExamples[index] = e.target.value;
-                        setEditedContent(prev => prev ? { ...prev, specificExamples: newExamples } : undefined);
-                      }}
-                      placeholder="Provide a specific example..."
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        const newExamples = editedContent?.specificExamples?.filter((_, i) => i !== index) || [];
-                        setEditedContent(prev => prev ? { ...prev, specificExamples: newExamples } : undefined);
-                      }}
-                      icon={Trash2}
-                    />
-                  </div>
-                ))}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const newExamples = [...(editedContent?.specificExamples || []), ''];
-                    setEditedContent(prev => prev ? { ...prev, specificExamples: newExamples } : undefined);
-                  }}
-                >
-                  Add Specific Example
-                </Button>
-              </div>
-            ) : (
-              <ul className="space-y-2">
-                {currentFeedback.content?.specificExamples?.map((example, index) => (
-                  <li key={index} className="text-gray-700 pl-4 border-l-2 border-gray-200">
-                    {example}
-                  </li>
-                )) || <p className="text-gray-500 italic">No specific examples provided.</p>}
-              </ul>
-            )}
-          </Card>
-        )}
+      {/* Specific Examples - Hidden from UI but data preserved */}
 
-      {/* Recommendations */}
-      {(currentFeedback.content?.recommendations &&
-        currentFeedback.content.recommendations.length > 0 || isEditMode) && (
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-3">Recommendations</h3>
-            {isEditMode ? (
-              <div className="space-y-2">
-                {editedContent?.recommendations?.map((rec, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <Input
-                      value={rec}
-                      onChange={(e) => {
-                        const newRecs = [...(editedContent?.recommendations || [])];
-                        newRecs[index] = e.target.value;
-                        setEditedContent(prev => prev ? { ...prev, recommendations: newRecs } : undefined);
-                      }}
-                      placeholder="Provide a recommendation..."
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        const newRecs = editedContent?.recommendations?.filter((_, i) => i !== index) || [];
-                        setEditedContent(prev => prev ? { ...prev, recommendations: newRecs } : undefined);
-                      }}
-                      icon={Trash2}
-                    />
-                  </div>
-                ))}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const newRecs = [...(editedContent?.recommendations || []), ''];
-                    setEditedContent(prev => prev ? { ...prev, recommendations: newRecs } : undefined);
-                  }}
-                >
-                  Add Recommendation
-                </Button>
-              </div>
-            ) : (
-              <ul className="space-y-2">
-                {currentFeedback.content?.recommendations?.map((rec, index) => (
-                  <li key={index} className="text-gray-700 pl-4 border-l-2 border-green-200">
-                    {rec}
-                  </li>
-                )) || <p className="text-gray-500 italic">No recommendations provided.</p>}
-              </ul>
-            )}
-          </Card>
-        )}
+      {/* Recommendations - Hidden from UI but data preserved */}
 
-      {/* Goals */}
+      {/* Growth & Development (Goals) */}
       {currentFeedback.goals && currentFeedback.goals.length > 0 && (
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
             <Target className="w-5 h-5 text-purple-500" />
-            Development Goals
+            Growth & Development
           </h3>
           <ul className="space-y-4">
             {currentFeedback.goals.map((goal) => (
@@ -594,8 +495,7 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
                 <span className="font-medium text-gray-900">{goal.title}</span>
                 <p className="text-gray-700 mb-2">{goal.description}</p>
                 <div className="flex flex-wrap items-center gap-4 text-gray-600">
-                  <span className="capitalize">Category: {goal.category?.replace('_', ' ') || 'Unknown'}</span>
-                  <span className="capitalize">Priority: {goal.priority}</span>
+                  {/* Category and Priority hidden from UI */}
                   <span className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
                     Target: {new Date(goal.targetDate).toLocaleDateString()}
@@ -604,6 +504,23 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
               </li>
             ))}
           </ul>
+        </Card>
+      )}
+
+      {/* Bottom Line */}
+      {(currentFeedback.content?.bottomLine || isEditMode) && (
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-3">Bottom Line</h3>
+          {isEditMode ? (
+            <textarea
+              className="w-full p-3 border rounded-md min-h-24"
+              value={editedContent?.bottomLine || ''}
+              onChange={(e) => setEditedContent(prev => prev ? { ...prev, bottomLine: e.target.value } : undefined)}
+              placeholder="What is the key message or takeaway..."
+            />
+          ) : (
+            <p className="text-gray-700 whitespace-pre-wrap">{currentFeedback.content?.bottomLine}</p>
+          )}
         </Card>
       )}
 
