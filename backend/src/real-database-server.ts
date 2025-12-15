@@ -6540,6 +6540,46 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ success: false, error: 'Feedback not found' });
     }
     
+    // Handle goals update if provided
+    if (updates.goals !== undefined) {
+      // Map frontend category names to database-valid values
+      const mapCategory = (cat: string): string => {
+        const categoryMap: Record<string, string> = {
+          'career_development': 'development',
+          'technical_skills': 'technical',
+          'leadership': 'leadership',
+          'communication': 'communication',
+          'performance': 'performance',
+          'skill': 'skill',
+          'development': 'development'
+        };
+        return categoryMap[cat?.toLowerCase()] || 'development';
+      };
+      
+      // Delete existing goals for this feedback
+      await query('DELETE FROM feedback_goals WHERE feedback_response_id = $1', [id]);
+      
+      // Insert new goals if any
+      if (Array.isArray(updates.goals) && updates.goals.length > 0) {
+        for (const goal of updates.goals) {
+          await query(`
+            INSERT INTO feedback_goals (
+              feedback_response_id, title, description, category, priority, target_date, status, progress
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          `, [
+            id,
+            goal.title,
+            goal.description || '',
+            mapCategory(goal.category),
+            goal.priority || 'medium',
+            goal.targetDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+            goal.status || 'not_started',
+            goal.progress || 0
+          ]);
+        }
+      }
+    }
+    
     // Fetch the complete updated feedback with all related data
     const fullFeedbackQuery = `
       SELECT 
@@ -6573,6 +6613,28 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
     
     const fullResult = await query(fullFeedbackQuery, [id]);
     const row = fullResult.rows[0];
+    
+    // Fetch updated goals
+    const goalsResult = await query(`
+      SELECT id, title, description, category, priority, target_date, status, progress, created_at, updated_at
+      FROM feedback_goals
+      WHERE feedback_response_id = $1
+      ORDER BY created_at ASC
+    `, [id]);
+    
+    const updatedGoals = goalsResult.rows.map(g => ({
+      id: g.id,
+      feedbackId: id,
+      title: g.title,
+      description: g.description,
+      category: g.category,
+      priority: g.priority,
+      targetDate: g.target_date,
+      status: g.status,
+      progress: g.progress,
+      createdAt: g.created_at,
+      updatedAt: g.updated_at
+    }));
     
     // Parse content
     let parsedContent = {};
@@ -6629,7 +6691,7 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
           updatedAt: row.updatedAt
         }] : [],
         comments: [],
-        goals: [],
+        goals: updatedGoals,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
         isAnonymous: row.isAnonymous,
