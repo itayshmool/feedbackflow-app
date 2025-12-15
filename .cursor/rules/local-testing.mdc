@@ -1,0 +1,87 @@
+# Local Testing Rules
+
+> **Guidelines for testing FeedbackFlow locally**
+
+---
+
+## Pre-Test Checklist
+
+Before running any local tests, **ALWAYS verify both servers are running**:
+
+```bash
+# Check frontend (must be port 3006)
+curl -s http://localhost:3006 > /dev/null && echo "Frontend ✅" || echo "Frontend ❌"
+
+# Check backend (port 5000)
+curl -s http://localhost:5000/api/v1/health && echo "Backend ✅" || echo "Backend ❌"
+```
+
+If either server is not running:
+- Frontend: `cd frontend && npm run dev`
+- Backend: `cd backend && npm run build && npm start`
+
+---
+
+## Server Ports
+
+| Service | Port | URL |
+|---------|------|-----|
+| **Frontend** | 3006 | http://localhost:3006 |
+| **Backend** | 5000 | http://localhost:5000 |
+
+---
+
+## Authentication for Testing
+
+### Use Mock Login (Preferred)
+
+For local testing, use mock login with test users:
+
+- **Email**: `itays@wix.com`
+- **Password**: (any password works with mock)
+
+Navigate to login page and use the email/password form.
+
+### Google OAuth - DO NOT AUTOMATE
+
+**Never try to automate Google OAuth flows.**
+
+If a feature requires Google OAuth (login, Google Drive, etc.):
+1. **STOP** and ask the user to test manually
+2. Provide the URL and steps for manual testing
+3. Wait for user feedback before continuing
+
+---
+
+## Test Page URLs
+
+| Feature | URL |
+|---------|-----|
+| Login | http://localhost:3006/login |
+| Dashboard | http://localhost:3006/dashboard |
+| Google Drive Test | http://localhost:3006/test/google-drive |
+| Quote Test | http://localhost:3006/test/quote |
+
+---
+
+## Browser Testing Flow
+
+1. ✅ Verify servers are running (both frontend and backend)
+2. ✅ Navigate to the test URL
+3. ✅ For OAuth features → ask user to test manually
+4. ✅ For other features → test normally with mock login
+5. ✅ Clean up test files after testing (don't commit test pages)
+
+---
+
+## Example: Testing a New Feature
+
+```
+1. Check servers: curl localhost:3006 && curl localhost:5000/api/v1/health
+2. Create test page (if needed)
+3. Add route temporarily
+4. Navigate and test
+5. If OAuth needed → "Please test manually at http://localhost:3006/test/..."
+6. Remove test page and route
+7. Commit feature code only
+```
