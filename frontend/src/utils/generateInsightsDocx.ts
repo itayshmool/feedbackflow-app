@@ -5,17 +5,13 @@ import {
   HeadingLevel,
   AlignmentType,
   BorderStyle,
-  Table,
-  TableRow,
-  TableCell,
-  WidthType,
   Packer,
   convertInchesToTwip,
 } from 'docx';
 import { saveAs } from 'file-saver';
 
 // TeamInsight interface (matching ManagerDashboard)
-interface TeamInsight {
+export interface TeamInsight {
   generatedAt: string;
   summary: string;
   themes: string[];
@@ -78,11 +74,17 @@ const getConfidenceColor = (level: string): string => {
   return levelMap[level.toLowerCase()] || '6B7280';
 };
 
-// Main function to generate AI Insights DOCX
-export const generateInsightsDocx = async (
+// Result type for blob generation
+export interface DocxGenerationResult {
+  blob: Blob;
+  filename: string;
+}
+
+// Core function to create the DOCX document and return blob
+export const createInsightsDocxBlob = async (
   insights: TeamInsight,
   managerName?: string
-): Promise<void> => {
+): Promise<DocxGenerationResult> => {
   // Build document sections
   const sections: (Paragraph | Table)[] = [];
 
@@ -118,108 +120,40 @@ export const generateInsightsDocx = async (
     })
   );
 
-  // Metadata Section
-  const metadataRows: TableRow[] = [
-    new TableRow({
-      children: [
-        new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: 'Generated:', bold: true })] })],
-          width: { size: 30, type: WidthType.PERCENTAGE },
-        }),
-        new TableCell({
-          children: [new Paragraph(formatDate(insights.generatedAt))],
-          width: { size: 70, type: WidthType.PERCENTAGE },
-        }),
-      ],
-    }),
-    new TableRow({
-      children: [
-        new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: 'Team Size:', bold: true })] })],
-        }),
-        new TableCell({
-          children: [new Paragraph(`${insights.teamSize} members`)],
-        }),
-      ],
-    }),
-    new TableRow({
-      children: [
-        new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: 'Feedback Analyzed:', bold: true })] })],
-        }),
-        new TableCell({
-          children: [new Paragraph(`${insights.feedbackCount} feedback items`)],
-        }),
-      ],
-    }),
-    new TableRow({
-      children: [
-        new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: 'Confidence Level:', bold: true })] })],
-        }),
-        new TableCell({
-          children: [
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: insights.confidenceLevel.toUpperCase(),
-                  bold: true,
-                  color: getConfidenceColor(insights.confidenceLevel),
-                }),
-              ],
-            }),
-          ],
-        }),
-      ],
-    }),
-  ];
-
-  if (insights.teamHealthScore !== null) {
-    metadataRows.push(
-      new TableRow({
-        children: [
-          new TableCell({
-            children: [new Paragraph({ children: [new TextRun({ text: 'Team Health Score:', bold: true })] })],
-          }),
-          new TableCell({
-            children: [
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: `${insights.teamHealthScore}/100`,
-                    bold: true,
-                    color: insights.teamHealthScore >= 70 ? '10B981' : insights.teamHealthScore >= 50 ? 'F59E0B' : 'DC2626',
-                  }),
-                ],
-              }),
-            ],
-          }),
-        ],
-      })
-    );
-  }
+  // Metadata Section - Inline format for better readability
+  const metadataItems: { label: string; value: string; color?: string }[] = [];
 
   if (managerName) {
-    metadataRows.unshift(
-      new TableRow({
-        children: [
-          new TableCell({
-            children: [new Paragraph({ children: [new TextRun({ text: 'Manager:', bold: true })] })],
-          }),
-          new TableCell({
-            children: [new Paragraph(managerName)],
-          }),
-        ],
-      })
-    );
+    metadataItems.push({ label: 'Manager', value: managerName });
+  }
+  metadataItems.push({ label: 'Generated', value: formatDate(insights.generatedAt) });
+  metadataItems.push({ label: 'Team Size', value: `${insights.teamSize} members` });
+  metadataItems.push({ label: 'Feedback Analyzed', value: `${insights.feedbackCount} items` });
+  metadataItems.push({ 
+    label: 'Confidence', 
+    value: insights.confidenceLevel.toUpperCase(),
+    color: getConfidenceColor(insights.confidenceLevel)
+  });
+  if (insights.teamHealthScore !== null) {
+    metadataItems.push({ 
+      label: 'Health Score', 
+      value: `${insights.teamHealthScore}/100`,
+      color: insights.teamHealthScore >= 70 ? '10B981' : insights.teamHealthScore >= 50 ? 'F59E0B' : 'DC2626'
+    });
   }
 
-  sections.push(
-    new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      rows: metadataRows,
-    })
-  );
+  // Create readable metadata paragraphs - each item on its own line
+  metadataItems.forEach((item) => {
+    sections.push(
+      new Paragraph({
+        children: [
+          new TextRun({ text: `${item.label}: `, bold: true, size: 22 }),
+          new TextRun({ text: item.value, color: item.color, size: 22 }),
+        ],
+        spacing: { after: 80 },
+      })
+    );
+  });
 
   // Separator
   sections.push(
@@ -574,11 +508,21 @@ export const generateInsightsDocx = async (
   const date = new Date().toISOString().split('T')[0];
   const filename = `AI Team Insights - ${date}.docx`;
 
-  // Convert to blob and save
+  // Convert to blob with proper MIME type
   const blob = await Packer.toBlob(doc);
   const docxBlob = new Blob([blob], {
     type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   });
-  saveAs(docxBlob, filename);
+  
+  return { blob: docxBlob, filename };
+};
+
+// Main function to generate and download DOCX (backward compatible)
+export const generateInsightsDocx = async (
+  insights: TeamInsight,
+  managerName?: string
+): Promise<void> => {
+  const { blob, filename } = await createInsightsDocxBlob(insights, managerName);
+  saveAs(blob, filename);
 };
 

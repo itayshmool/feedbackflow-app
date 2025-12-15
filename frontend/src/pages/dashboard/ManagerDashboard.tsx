@@ -29,12 +29,13 @@ import {
   TrendingDown,
   Award,
   Zap,
-  Download,
   XCircle,
   Clock
 } from 'lucide-react';
 import { Select } from '../../components/ui/Select';
-import { generateInsightsDocx } from '../../utils/generateInsightsDocx';
+import { createInsightsDocxBlob } from '../../utils/generateInsightsDocx';
+import { ExportButtons } from '../../components/ui/ExportButtons';
+import { useDocxExport } from '../../hooks/useDocxExport';
 import QuoteOfTheDay from '../../components/dashboard/QuoteOfTheDay';
 import CycleInfoCard from '../../components/dashboard/CycleInfoCard';
 import FeedbackAcceptanceStatus from '../../components/dashboard/FeedbackAcceptanceStatus';
@@ -151,6 +152,9 @@ const ManagerDashboard: React.FC = () => {
   const [teamInsights, setTeamInsights] = useState<TeamInsight | null>(null);
   const [isInsightsLoading, setIsInsightsLoading] = useState(false);
   const [insightsError, setInsightsError] = useState<string | null>(null);
+  
+  // Export hook for AI Insights download and Google Drive
+  const { isDownloading, isUploadingToDrive, download, saveToDrive } = useDocxExport();
   
   // State for Analytics
   const [colorDistribution, setColorDistribution] = useState<ColorDistribution | null>(null);
@@ -1119,15 +1123,19 @@ const ManagerDashboard: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Download Button - only visible when insights exist */}
+          {/* Export Buttons - only visible when insights exist */}
           {teamInsights && !isInsightsLoading && (
-            <Button
-              onClick={() => generateInsightsDocx(teamInsights, user?.name)}
-              className="flex items-center gap-2 bg-white border border-purple-300 text-purple-700 hover:bg-purple-50 hover:border-purple-400 shadow-sm transition-all"
-            >
-              <Download className="h-4 w-4" />
-              Download
-            </Button>
+            <ExportButtons
+              onDownload={() => download(() => createInsightsDocxBlob(teamInsights, user?.name))}
+              onSaveToDrive={() => saveToDrive(
+                () => createInsightsDocxBlob(teamInsights, user?.name),
+                `AI Team Insights for ${user?.name || 'Team'}`
+              )}
+              downloadLoading={isDownloading}
+              driveLoading={isUploadingToDrive}
+              downloadTooltip="Download as DOCX"
+              driveTooltip="Save to Google Drive"
+            />
           )}
           
           {/* Generate/Refresh Button */}

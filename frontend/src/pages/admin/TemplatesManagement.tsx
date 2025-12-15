@@ -8,7 +8,11 @@ import { Select } from '../../components/ui/Select';
 import { Textarea } from '../../components/ui/Textarea';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import Badge from '../../components/ui/Badge';
-import { Upload, Download, Trash2, FileText, X } from 'lucide-react';
+import { Upload, Trash2, FileText, X } from 'lucide-react';
+import { ExportButtons } from '../../components/ui/ExportButtons';
+import { saveAs } from 'file-saver';
+import { googleDriveService } from '../../services/googleDrive.service';
+import toast from 'react-hot-toast';
 
 const TemplatesManagement: React.FC = () => {
   const { isAuthenticated } = useAuthStore();
@@ -26,6 +30,10 @@ const TemplatesManagement: React.FC = () => {
   });
   const [error, setError] = useState<string | null>(null);
   const [tagInput, setTagInput] = useState('');
+  
+  // Track loading states per template
+  const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
+  const [uploadingIds, setUploadingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     // Wait for auth to be ready before making API calls
@@ -116,18 +124,58 @@ const TemplatesManagement: React.FC = () => {
   };
 
   const handleDownload = async (id: string, fileName: string) => {
+    setDownloadingIds(prev => new Set(prev).add(id));
     try {
       const blob = await templatesService.downloadTemplate(id);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      saveAs(blob, fileName);
+      toast.success('Template downloaded!');
     } catch (err: any) {
-      setError('Failed to download template');
+      toast.error('Failed to download template');
+    } finally {
+      setDownloadingIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
+
+  const handleSaveToDrive = async (id: string, fileName: string, templateName: string) => {
+    setUploadingIds(prev => new Set(prev).add(id));
+    const toastId = toast.loading('Uploading to Google Drive...');
+    try {
+      const blob = await templatesService.downloadTemplate(id);
+      const result = await googleDriveService.uploadFile(blob, fileName, {
+        description: `Feedback template: ${templateName}`,
+      });
+      toast.dismiss(toastId);
+      toast.success(
+        <div className="flex flex-col gap-1">
+          <span className="font-medium">Saved to Google Drive!</span>
+          <a 
+            href={result.webViewLink} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-sm text-blue-600 hover:underline"
+          >
+            Open in Drive →
+          </a>
+        </div>,
+        { duration: 5000 }
+      );
+    } catch (err: any) {
+      toast.dismiss(toastId);
+      if (err.message?.includes('popup')) {
+        toast.error('Please allow the popup to sign in with Google');
+      } else {
+        toast.error('Failed to save to Drive');
+      }
+    } finally {
+      setUploadingIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   };
 
@@ -371,15 +419,15 @@ const TemplatesManagement: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
+                      <ExportButtons
+                        onDownload={() => handleDownload(template.id, template.file_name)}
+                        onSaveToDrive={() => handleSaveToDrive(template.id, template.file_name, template.name)}
+                        downloadLoading={downloadingIds.has(template.id)}
+                        driveLoading={uploadingIds.has(template.id)}
                         size="sm"
-                        onClick={() => handleDownload(template.id, template.file_name)}
-                        className="flex items-center gap-1"
-                      >
-                        <Download className="h-4 w-4" />
-                        Download
-                      </Button>
+                        downloadTooltip="Download template"
+                        driveTooltip="Save to Google Drive"
+                      />
                       <Button
                         variant="outline"
                         size="sm"

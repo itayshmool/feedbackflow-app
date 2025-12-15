@@ -22,9 +22,10 @@ import {
   Edit,
   X,
   TrendingUp,
-  Download,
 } from 'lucide-react';
-import { generateFeedbackDocx } from '../../utils/generateFeedbackDocx';
+import { createFeedbackDocxBlob } from '../../utils/generateFeedbackDocx';
+import { ExportButtons } from '../ui/ExportButtons';
+import { useDocxExport } from '../../hooks/useDocxExport';
 
 interface FeedbackDetailProps {
   feedbackId: string;
@@ -53,6 +54,9 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
     currentFeedback?.colorClassification as FeedbackColorClassification | undefined
   );
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Export hook for download and Google Drive
+  const { isDownloading, isUploadingToDrive, download, saveToDrive } = useDocxExport();
 
   useEffect(() => {
     fetchFeedbackById(feedbackId);
@@ -103,15 +107,15 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
     setIsEditMode(false);
   };
 
-  const handleDownloadDocx = async () => {
+  const handleDownload = () => {
     if (!currentFeedback) return;
-    
-    try {
-      await generateFeedbackDocx(currentFeedback);
-    } catch (error: any) {
-      console.error('Error generating DOCX:', error);
-      toast.error('Failed to generate document. Please try again.');
-    }
+    download(() => createFeedbackDocxBlob(currentFeedback));
+  };
+
+  const handleSaveToDrive = () => {
+    if (!currentFeedback) return;
+    const description = `Feedback from ${currentFeedback.fromUser?.name || 'Unknown'} to ${currentFeedback.toUser?.name || 'Unknown'}`;
+    saveToDrive(() => createFeedbackDocxBlob(currentFeedback), description);
   };
 
   const getStatusColor = (status: FeedbackStatus): 'blue' | 'yellow' | 'green' | 'gray' => {
@@ -235,13 +239,15 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
                 </Button>
               </>
             )}
-            <Button
-              onClick={handleDownloadDocx}
-              icon={Download}
+            <ExportButtons
+              onDownload={handleDownload}
+              onSaveToDrive={handleSaveToDrive}
+              downloadLoading={isDownloading}
+              driveLoading={isUploadingToDrive}
               disabled={!currentFeedback}
-            >
-              Download
-            </Button>
+              downloadTooltip="Download as DOCX"
+              driveTooltip="Save to Google Drive"
+            />
             <Button variant="ghost" onClick={onClose} icon={X}>
               Close
             </Button>
