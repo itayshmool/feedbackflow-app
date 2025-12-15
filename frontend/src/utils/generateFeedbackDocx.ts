@@ -67,8 +67,14 @@ const getGoalStatusText = (status: GoalStatus): string => {
 //   return priorityMap[priority.toLowerCase()] || '6B7280';
 // };
 
-// Main function to generate DOCX
-export const generateFeedbackDocx = async (feedback: Feedback): Promise<void> => {
+// Result type for blob generation
+export interface DocxGenerationResult {
+  blob: Blob;
+  filename: string;
+}
+
+// Core function to create the DOCX document and return blob
+export const createFeedbackDocxBlob = async (feedback: Feedback): Promise<DocxGenerationResult> => {
   const statusInfo = getStatusInfo(feedback.status);
 
   // Build document sections (can contain both Paragraphs and Tables)
@@ -600,11 +606,18 @@ export const generateFeedbackDocx = async (feedback: Feedback): Promise<void> =>
   const date = new Date().toISOString().split('T')[0];
   const filename = `Feedback - ${fromName} to ${toName} - ${date}.docx`;
 
-  // Convert to blob with proper MIME type and save
+  // Convert to blob with proper MIME type
   const blob = await Packer.toBlob(doc);
   const docxBlob = new Blob([blob], { 
     type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
   });
-  saveAs(docxBlob, filename);
+  
+  return { blob: docxBlob, filename };
+};
+
+// Main function to generate and download DOCX (backward compatible)
+export const generateFeedbackDocx = async (feedback: Feedback): Promise<void> => {
+  const { blob, filename } = await createFeedbackDocxBlob(feedback);
+  saveAs(blob, filename);
 };
 

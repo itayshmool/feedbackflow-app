@@ -15,7 +15,7 @@ import {
 import { saveAs } from 'file-saver';
 
 // TeamInsight interface (matching ManagerDashboard)
-interface TeamInsight {
+export interface TeamInsight {
   generatedAt: string;
   summary: string;
   themes: string[];
@@ -78,11 +78,17 @@ const getConfidenceColor = (level: string): string => {
   return levelMap[level.toLowerCase()] || '6B7280';
 };
 
-// Main function to generate AI Insights DOCX
-export const generateInsightsDocx = async (
+// Result type for blob generation
+export interface DocxGenerationResult {
+  blob: Blob;
+  filename: string;
+}
+
+// Core function to create the DOCX document and return blob
+export const createInsightsDocxBlob = async (
   insights: TeamInsight,
   managerName?: string
-): Promise<void> => {
+): Promise<DocxGenerationResult> => {
   // Build document sections
   const sections: (Paragraph | Table)[] = [];
 
@@ -574,11 +580,21 @@ export const generateInsightsDocx = async (
   const date = new Date().toISOString().split('T')[0];
   const filename = `AI Team Insights - ${date}.docx`;
 
-  // Convert to blob and save
+  // Convert to blob with proper MIME type
   const blob = await Packer.toBlob(doc);
   const docxBlob = new Blob([blob], {
     type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   });
-  saveAs(docxBlob, filename);
+  
+  return { blob: docxBlob, filename };
+};
+
+// Main function to generate and download DOCX (backward compatible)
+export const generateInsightsDocx = async (
+  insights: TeamInsight,
+  managerName?: string
+): Promise<void> => {
+  const { blob, filename } = await createInsightsDocxBlob(insights, managerName);
+  saveAs(blob, filename);
 };
 
