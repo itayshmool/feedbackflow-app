@@ -689,41 +689,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         </div>
       </Card>
 
-      {/* Specific Examples */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-semibold">Specific Examples</h3>
-            <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
-              <HelpCircle className="w-4 h-4" />
-              {getHelpText('examples')}
-            </p>
-          </div>
-          <Button variant="outline" size="sm" onClick={addExample} icon={Plus}>
-            Add
-          </Button>
-        </div>
-        <div className="space-y-2">
-          {specificExamples.map((example, index) => (
-            <div key={index} className="flex gap-2">
-              <textarea
-                value={example}
-                onChange={(e) => updateExample(index, e.target.value)}
-                placeholder="Provide a specific example..."
-                className="flex-1 p-3 border rounded-md min-h-20 resize-none"
-                rows={2}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => removeExample(index)}
-                icon={Trash2}
-                className="self-start mt-2"
-              />
-            </div>
-          ))}
-        </div>
-      </Card>
+      {/* Specific Examples - Hidden from UI but data structure preserved */}
 
       {/* Recommendations */}
       <Card className="p-6">
