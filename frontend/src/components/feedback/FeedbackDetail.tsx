@@ -22,8 +22,8 @@ import {
   Edit,
   X,
   TrendingUp,
-  Undo2,
 } from 'lucide-react';
+import { PenOff } from '../icons';
 import { createFeedbackDocxBlob } from '../../utils/generateFeedbackDocx';
 import { ExportButtons } from '../ui/ExportButtons';
 import { IconButton } from '../ui/IconButton';
@@ -226,7 +226,7 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
             {isEditMode && (
               <>
                 <IconButton
-                  icon={<Undo2 className="w-full h-full" />}
+                  icon={<PenOff className="w-full h-full" />}
                   tooltip="Cancel Edit"
                   onClick={handleCancelEdit}
                   variant="outline"
