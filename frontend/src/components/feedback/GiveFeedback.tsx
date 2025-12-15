@@ -732,10 +732,10 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-lg font-semibold">Development Goals</h3>
+              <h3 className="text-lg font-semibold">Growth & Development</h3>
               <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
                 <HelpCircle className="w-4 h-4" />
-                Set 3-5 SMART goals for the employee's growth and development
+                What is the main area you should focus on to grow and increase your impact in the upcoming period? (Skills to grow, things to do a bit differently, or where you can make more impact).
               </p>
             </div>
             <Button variant="outline" size="sm" onClick={addGoal} icon={Plus}>
@@ -768,29 +768,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
                 placeholder="Describe the goal..."
                 rows={2}
               />
-              <div className="grid grid-cols-3 gap-3">
-                <Select
-                  label="Category"
-                  value={goal.category}
-                  onChange={(e) => updateGoal(index, 'category', e.target.value as GoalCategory)}
-                >
-                  <option value={GoalCategory.TECHNICAL_SKILLS}>Technical Skills</option>
-                  <option value={GoalCategory.SOFT_SKILLS}>Soft Skills</option>
-                  <option value={GoalCategory.LEADERSHIP}>Leadership</option>
-                  <option value={GoalCategory.COMMUNICATION}>Communication</option>
-                  <option value={GoalCategory.PERFORMANCE}>Performance</option>
-                  <option value={GoalCategory.CAREER_DEVELOPMENT}>Career Development</option>
-                </Select>
-                <Select
-                  label="Priority"
-                  value={goal.priority}
-                  onChange={(e) => updateGoal(index, 'priority', e.target.value as GoalPriority)}
-                >
-                  <option value={GoalPriority.LOW}>Low</option>
-                  <option value={GoalPriority.MEDIUM}>Medium</option>
-                  <option value={GoalPriority.HIGH}>High</option>
-                  <option value={GoalPriority.CRITICAL}>Critical</option>
-                </Select>
+              <div className="max-w-xs">
                 <Input
                   label="Target Date"
                   type="date"
@@ -798,6 +776,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
                   onChange={(e) => updateGoal(index, 'targetDate', e.target.value)}
                 />
               </div>
+              {/* Category and Priority hidden from UI but preserved in data structure */}
             </div>
           ))}
         </div>
