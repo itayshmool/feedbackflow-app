@@ -2,4 +2,5 @@
 // Custom icon exports
 
 export { GoogleDriveLogo } from './GoogleDriveLogo';
+export { PenOff } from './PenOff';
 
