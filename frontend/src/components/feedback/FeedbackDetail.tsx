@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { createFeedbackDocxBlob } from '../../utils/generateFeedbackDocx';
 import { ExportButtons } from '../ui/ExportButtons';
+import { IconButton } from '../ui/IconButton';
 import { useDocxExport } from '../../hooks/useDocxExport';
 
 interface FeedbackDetailProps {
@@ -211,32 +212,34 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
           </div>
         </div>
         {onClose && (
-          <div className="flex gap-2">
+          <div className="flex items-center gap-1 md:gap-2">
             {currentFeedback?.status === FeedbackStatus.DRAFT && !isEditMode && (
-              <Button
-                variant="outline"
+              <IconButton
+                icon={<Edit className="w-full h-full" />}
+                tooltip="Edit Draft"
                 onClick={() => setIsEditMode(true)}
-                icon={Edit}
-              >
-                Edit Draft
-              </Button>
+                variant="outline"
+                size="sm"
+              />
             )}
             {isEditMode && (
               <>
-                <Button
-                  variant="outline"
+                <IconButton
+                  icon={<X className="w-full h-full" />}
+                  tooltip="Cancel Edit"
                   onClick={handleCancelEdit}
-                  icon={Edit}
-                >
-                  Cancel Edit
-                </Button>
-                <Button
+                  variant="outline"
+                  size="sm"
+                />
+                <IconButton
+                  icon={<CheckCircle className="w-full h-full" />}
+                  tooltip="Save Changes"
                   onClick={handleSaveEdit}
                   disabled={isSaving}
-                  icon={isSaving ? <LoadingSpinner size="sm" /> : undefined}
-                >
-                  {isSaving ? 'Saving...' : 'Save Changes'}
-                </Button>
+                  loading={isSaving}
+                  variant="primary"
+                  size="sm"
+                />
               </>
             )}
             <ExportButtons
@@ -247,10 +250,15 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
               disabled={!currentFeedback}
               downloadTooltip="Download as DOCX"
               driveTooltip="Save to Google Drive"
+              size="sm"
             />
-            <Button variant="ghost" onClick={onClose} icon={X}>
-              Close
-            </Button>
+            <IconButton
+              icon={<X className="w-full h-full" />}
+              tooltip="Close"
+              onClick={onClose}
+              variant="ghost"
+              size="sm"
+            />
           </div>
         )}
       </div>
