@@ -145,7 +145,7 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
     setEditedGoals([...editedGoals, {
       title: '',
       description: '',
-      category: GoalCategory.SKILL_DEVELOPMENT,
+      category: GoalCategory.CAREER_DEVELOPMENT,
       priority: GoalPriority.MEDIUM,
       targetDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 90 days from now
     }]);
