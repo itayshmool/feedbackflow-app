@@ -628,17 +628,19 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         <div className="space-y-2">
           {strengths.map((strength, index) => (
             <div key={index} className="flex gap-2">
-              <Input
+              <textarea
                 value={strength}
                 onChange={(e) => updateStrength(index, e.target.value)}
                 placeholder="Describe a strength..."
-                className="flex-1"
+                className="flex-1 p-3 border rounded-md min-h-20 resize-none"
+                rows={2}
               />
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => removeStrength(index)}
                 icon={Trash2}
+                className="self-start mt-2"
               />
             </div>
           ))}
@@ -662,17 +664,19 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         <div className="space-y-2">
           {areasForImprovement.map((area, index) => (
             <div key={index} className="flex gap-2">
-              <Input
+              <textarea
                 value={area}
                 onChange={(e) => updateAreaForImprovement(index, e.target.value)}
                 placeholder="Describe an area for improvement..."
-                className="flex-1"
+                className="flex-1 p-3 border rounded-md min-h-20 resize-none"
+                rows={2}
               />
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => removeAreaForImprovement(index)}
                 icon={Trash2}
+                className="self-start mt-2"
               />
             </div>
           ))}
@@ -696,17 +700,19 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         <div className="space-y-2">
           {specificExamples.map((example, index) => (
             <div key={index} className="flex gap-2">
-              <Input
+              <textarea
                 value={example}
                 onChange={(e) => updateExample(index, e.target.value)}
                 placeholder="Provide a specific example..."
-                className="flex-1"
+                className="flex-1 p-3 border rounded-md min-h-20 resize-none"
+                rows={2}
               />
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => removeExample(index)}
                 icon={Trash2}
+                className="self-start mt-2"
               />
             </div>
           ))}
@@ -730,17 +736,19 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         <div className="space-y-2">
           {recommendations.map((rec, index) => (
             <div key={index} className="flex gap-2">
-              <Input
+              <textarea
                 value={rec}
                 onChange={(e) => updateRecommendation(index, e.target.value)}
                 placeholder="Provide a recommendation..."
-                className="flex-1"
+                className="flex-1 p-3 border rounded-md min-h-20 resize-none"
+                rows={2}
               />
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => removeRecommendation(index)}
                 icon={Trash2}
+                className="self-start mt-2"
               />
             </div>
           ))}
