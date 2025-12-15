@@ -128,14 +128,14 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
   const getHelpText = (section: string): string => {
     const helpTexts = {
       manager: {
-        strengths: "What has this employee done exceptionally well? Focus on specific achievements and behaviors.",
-        improvements: "What skills or behaviors should they develop? Be constructive and actionable.",
+        strengths: "Which strengths, skills, or behaviors showed up clearly in your work? Please share examples.",
+        improvements: "Which areas or skills could be improved or handled differently? Where should you focus on doing better? Please share examples.",
         examples: "Provide concrete examples of situations that illustrate your feedback.",
         recommendations: "Suggest specific actions or resources for professional development."
       },
       project: {
-        strengths: "What went well in this collaboration? Highlight positive contributions.",
-        improvements: "What could improve in future projects? Keep it constructive and forward-looking.",
+        strengths: "Which strengths, skills, or behaviors showed up clearly in your work? Please share examples.",
+        improvements: "Which areas or skills could be improved or handled differently? Where should you focus on doing better? Please share examples.",
         examples: "Share specific instances from the project that stood out.",
         recommendations: "Suggestions for future collaborations or team processes."
       }
