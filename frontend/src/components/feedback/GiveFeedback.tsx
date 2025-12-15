@@ -600,7 +600,13 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
 
       {/* Overall Comment */}
       <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Overall Feedback</h3>
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold">Overall Feedback</h3>
+          <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
+            <HelpCircle className="w-4 h-4" />
+            How I experienced your work over the past few months - including standout contributions, efforts, or moments worth highlighting.
+          </p>
+        </div>
         <textarea
           className="w-full p-3 border rounded-md min-h-32"
           value={overallComment}
