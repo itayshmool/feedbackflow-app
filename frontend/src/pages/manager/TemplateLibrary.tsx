@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { templatesService, Template } from '../../services/templates.service';
 import { useAuthStore } from '../../stores/authStore';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
-import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import Badge from '../../components/ui/Badge';
-import { Download, Search, FileText } from 'lucide-react';
+import { Search, FileText } from 'lucide-react';
+import { ExportButtons } from '../../components/ui/ExportButtons';
+import { saveAs } from 'file-saver';
+import { googleDriveService } from '../../services/googleDrive.service';
+import toast from 'react-hot-toast';
 
 const TemplateLibrary: React.FC = () => {
   const { isAuthenticated } = useAuthStore();
@@ -16,6 +19,10 @@ const TemplateLibrary: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Track loading states per template
+  const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
+  const [uploadingIds, setUploadingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (hasHydrated && isAuthenticated) {
@@ -55,18 +62,58 @@ const TemplateLibrary: React.FC = () => {
   };
 
   const handleDownload = async (id: string, fileName: string) => {
+    setDownloadingIds(prev => new Set(prev).add(id));
     try {
       const blob = await templatesService.downloadTemplate(id);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      saveAs(blob, fileName);
+      toast.success('Template downloaded!');
     } catch (err: any) {
-      setError('Failed to download template');
+      toast.error('Failed to download template');
+    } finally {
+      setDownloadingIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
+
+  const handleSaveToDrive = async (id: string, fileName: string, templateName: string) => {
+    setUploadingIds(prev => new Set(prev).add(id));
+    const toastId = toast.loading('Uploading to Google Drive...');
+    try {
+      const blob = await templatesService.downloadTemplate(id);
+      const result = await googleDriveService.uploadFile(blob, fileName, {
+        description: `Feedback template: ${templateName}`,
+      });
+      toast.dismiss(toastId);
+      toast.success(
+        <div className="flex flex-col gap-1">
+          <span className="font-medium">Saved to Google Drive!</span>
+          <a 
+            href={result.webViewLink} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-sm text-blue-600 hover:underline"
+          >
+            Open in Drive →
+          </a>
+        </div>,
+        { duration: 5000 }
+      );
+    } catch (err: any) {
+      toast.dismiss(toastId);
+      if (err.message?.includes('popup')) {
+        toast.error('Please allow the popup to sign in with Google');
+      } else {
+        toast.error('Failed to save to Drive');
+      }
+    } finally {
+      setUploadingIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   };
 
@@ -175,15 +222,15 @@ const TemplateLibrary: React.FC = () => {
                   <span className="text-xs text-gray-500">
                     {formatFileSize(template.file_size)}
                   </span>
-                  <Button
-                    variant="outline"
+                  <ExportButtons
+                    onDownload={() => handleDownload(template.id, template.file_name)}
+                    onSaveToDrive={() => handleSaveToDrive(template.id, template.file_name, template.name)}
+                    downloadLoading={downloadingIds.has(template.id)}
+                    driveLoading={uploadingIds.has(template.id)}
                     size="sm"
-                    onClick={() => handleDownload(template.id, template.file_name)}
-                    className="flex items-center gap-1"
-                  >
-                    <Download className="h-4 w-4" />
-                    Download
-                  </Button>
+                    downloadTooltip="Download template"
+                    driveTooltip="Save to Google Drive"
+                  />
                 </div>
               </CardContent>
             </Card>
