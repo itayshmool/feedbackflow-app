@@ -86,7 +86,8 @@ export const createInsightsDocxBlob = async (
   managerName?: string
 ): Promise<DocxGenerationResult> => {
   // Build document sections
-  const sections: (Paragraph | Table)[] = [];
+  // Build document sections
+  const sections: Paragraph[] = [];
 
   // Title
   sections.push(
