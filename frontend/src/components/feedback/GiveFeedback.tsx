@@ -694,43 +694,65 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
 
       {/* Specific Examples - Hidden from UI but data structure preserved */}
 
-      {/* Recommendations */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-semibold">Recommendations</h3>
-            <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
-              <HelpCircle className="w-4 h-4" />
-              {getHelpText('recommendations')}
-            </p>
-          </div>
-          <Button variant="outline" size="sm" onClick={addRecommendation} icon={Plus}>
-            Add
-          </Button>
-        </div>
-        <div className="space-y-2">
-          {recommendations.map((rec, index) => (
-            <div key={index} className="flex gap-2">
-              <textarea
-                value={rec}
-                onChange={(e) => updateRecommendation(index, e.target.value)}
-                placeholder="Provide a recommendation..."
-                className="flex-1 p-3 border rounded-md min-h-20 resize-none"
-                rows={2}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => removeRecommendation(index)}
-                icon={Trash2}
-                className="self-start mt-2"
-              />
-            </div>
-          ))}
-        </div>
-      </Card>
+      {/* Recommendations - Hidden from UI but data structure preserved */}
 
-      {/* Bottom Line */}
+      {/* Growth & Development - Only show for Manager Reviews */}
+      {reviewType === ReviewType.MANAGER_REVIEW && (
+        <Card className="p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold">Growth & Development</h3>
+              <p className="text-sm text-gray-500 mt-1 flex items-start gap-1">
+                <HelpCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>What is the main area you should focus on to grow and increase your impact in the upcoming period? (Skills to grow, things to do a bit differently, or where you can make more impact).</span>
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={addGoal} icon={Plus} className="flex-shrink-0 whitespace-nowrap">
+              Add Goal
+            </Button>
+          </div>
+          <div className="space-y-4">
+            {goals.map((goal, index) => (
+              <div key={index} className="p-4 border rounded-md space-y-3">
+                <div className="flex items-start gap-3">
+                  <Input
+                    label="Goal Title"
+                    value={goal.title}
+                    onChange={(e) => updateGoal(index, 'title', e.target.value)}
+                    placeholder="e.g., Improve React skills"
+                    className="flex-1"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeGoal(index)}
+                    icon={Trash2}
+                    className="mt-6"
+                  />
+                </div>
+                <textarea
+                  className="w-full p-3 border rounded-md"
+                  value={goal.description}
+                  onChange={(e) => updateGoal(index, 'description', e.target.value)}
+                  placeholder="Describe the goal..."
+                  rows={2}
+                />
+                <div className="max-w-xs">
+                  <Input
+                    label="Target Date"
+                    type="date"
+                    value={goal.targetDate}
+                    onChange={(e) => updateGoal(index, 'targetDate', e.target.value)}
+                  />
+                </div>
+                {/* Category and Priority hidden from UI but preserved in data structure */}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Bottom Line - Last input field */}
       <Card className="p-6">
         <div className="mb-4">
           <h3 className="text-lg font-semibold">Bottom Line</h3>
@@ -746,62 +768,6 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
           placeholder="Share the key message or takeaway..."
         />
       </Card>
-
-      {/* Goals - Only show for Manager Reviews */}
-      {reviewType === ReviewType.MANAGER_REVIEW && (
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-lg font-semibold">Growth & Development</h3>
-              <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
-                <HelpCircle className="w-4 h-4" />
-                What is the main area you should focus on to grow and increase your impact in the upcoming period? (Skills to grow, things to do a bit differently, or where you can make more impact).
-              </p>
-            </div>
-            <Button variant="outline" size="sm" onClick={addGoal} icon={Plus}>
-              Add Goal
-            </Button>
-          </div>
-        <div className="space-y-4">
-          {goals.map((goal, index) => (
-            <div key={index} className="p-4 border rounded-md space-y-3">
-              <div className="flex items-start gap-3">
-                <Input
-                  label="Goal Title"
-                  value={goal.title}
-                  onChange={(e) => updateGoal(index, 'title', e.target.value)}
-                  placeholder="e.g., Improve React skills"
-                  className="flex-1"
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeGoal(index)}
-                  icon={Trash2}
-                  className="mt-6"
-                />
-              </div>
-              <textarea
-                className="w-full p-3 border rounded-md"
-                value={goal.description}
-                onChange={(e) => updateGoal(index, 'description', e.target.value)}
-                placeholder="Describe the goal..."
-                rows={2}
-              />
-              <div className="max-w-xs">
-                <Input
-                  label="Target Date"
-                  type="date"
-                  value={goal.targetDate}
-                  onChange={(e) => updateGoal(index, 'targetDate', e.target.value)}
-                />
-              </div>
-              {/* Category and Priority hidden from UI but preserved in data structure */}
-            </div>
-          ))}
-        </div>
-      </Card>
-      )}
 
       {/* Action Buttons */}
       <div className="flex gap-3 justify-end sticky bottom-0 bg-white py-4 border-t">
