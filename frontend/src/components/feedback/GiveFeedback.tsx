@@ -64,6 +64,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
   const [areasForImprovement, setAreasForImprovement] = useState<string[]>(['']);
   const [specificExamples, setSpecificExamples] = useState<string[]>(['']);
   const [recommendations, setRecommendations] = useState<string[]>(['']);
+  const [bottomLine, setBottomLine] = useState('');
   const [confidential, setConfidential] = useState(false);
   const [colorClassification, setColorClassification] = useState<FeedbackColorClassification | ''>('');
   const [ratings, setRatings] = useState<RatingInput[]>([]);
@@ -308,6 +309,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         areasForImprovement: areasForImprovement.filter((a) => a.trim()),
         specificExamples: specificExamples.filter((e) => e.trim()),
         recommendations: recommendations.filter((r) => r.trim()),
+        bottomLine: bottomLine.trim() || undefined,
         confidential,
       },
       ratings: [], // Ratings removed from UI
@@ -361,6 +363,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         areasForImprovement: areasForImprovement.filter((a) => a.trim()),
         specificExamples: specificExamples.filter((e) => e.trim()),
         recommendations: recommendations.filter((r) => r.trim()),
+        bottomLine: bottomLine.trim() || undefined,
         confidential,
       },
       ratings: [], // Ratings removed from UI
@@ -725,6 +728,23 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
             </div>
           ))}
         </div>
+      </Card>
+
+      {/* Bottom Line */}
+      <Card className="p-6">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold">Bottom Line</h3>
+          <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
+            <HelpCircle className="w-4 h-4" />
+            What is the key message or takeaway I want you to leave this conversation with?
+          </p>
+        </div>
+        <textarea
+          className="w-full p-3 border rounded-md min-h-24"
+          value={bottomLine}
+          onChange={(e) => setBottomLine(e.target.value)}
+          placeholder="Share the key message or takeaway..."
+        />
       </Card>
 
       {/* Goals - Only show for Manager Reviews */}
