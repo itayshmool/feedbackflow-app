@@ -5664,6 +5664,7 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
           areasForImprovement: parsedContent.areasForImprovement || [],
           specificExamples: parsedContent.specificExamples || [],
           recommendations: parsedContent.recommendations || [],
+          bottomLine: parsedContent.bottomLine || undefined,
           confidential: parsedContent.confidential || false,
           createdAt: row.createdAt,
           updatedAt: row.updatedAt
@@ -5962,6 +5963,7 @@ app.get('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
         areasForImprovement: parsedContent.areasForImprovement || [],
         specificExamples: parsedContent.specificExamples || [],
         recommendations: parsedContent.recommendations || [],
+        bottomLine: parsedContent.bottomLine || undefined,
         confidential: parsedContent.confidential || false,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt
@@ -6249,6 +6251,7 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
       areasForImprovement: content?.areasForImprovement || [],
       specificExamples: content?.specificExamples || [],
       recommendations: content?.recommendations || [],
+      bottomLine: content?.bottomLine || undefined,
       confidential: content?.confidential || false
     });
 
@@ -6352,6 +6355,7 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
         areasForImprovement: structuredContent.areasForImprovement,
         specificExamples: structuredContent.specificExamples,
         recommendations: structuredContent.recommendations,
+        bottomLine: structuredContent.bottomLine,
         confidential: structuredContent.confidential,
         createdAt: responseResult.rows[0].created_at,
         updatedAt: responseResult.rows[0].updated_at
@@ -6509,6 +6513,7 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
       areasForImprovement: updates.content?.areasForImprovement ?? existingContent.areasForImprovement ?? [],
       specificExamples: updates.content?.specificExamples ?? existingContent.specificExamples ?? [],
       recommendations: updates.content?.recommendations ?? existingContent.recommendations ?? [],
+      bottomLine: updates.content?.bottomLine ?? existingContent.bottomLine ?? undefined,
       confidential: updates.content?.confidential ?? existingContent.confidential ?? false
     });
     
@@ -6609,6 +6614,7 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
           areasForImprovement: parsedContent.areasForImprovement || [],
           specificExamples: parsedContent.specificExamples || [],
           recommendations: parsedContent.recommendations || [],
+          bottomLine: parsedContent.bottomLine || undefined,
           confidential: parsedContent.confidential || false,
           createdAt: row.createdAt,
           updatedAt: row.updatedAt
@@ -6837,6 +6843,7 @@ app.post('/api/v1/feedback/:id/submit', authenticateToken, async (req, res) => {
           areasForImprovement: parsedContent.areasForImprovement || [],
           specificExamples: parsedContent.specificExamples || [],
           recommendations: parsedContent.recommendations || [],
+          bottomLine: parsedContent.bottomLine || undefined,
           confidential: parsedContent.confidential || false,
           createdAt: row.createdAt,
           updatedAt: row.updatedAt
@@ -7012,6 +7019,7 @@ app.post('/api/v1/feedback/:id/complete', authenticateToken, async (req, res) =>
           areasForImprovement: parsedContent.areasForImprovement || [],
           specificExamples: parsedContent.specificExamples || [],
           recommendations: parsedContent.recommendations || [],
+          bottomLine: parsedContent.bottomLine || undefined,
           confidential: parsedContent.confidential || false,
           createdAt: row.createdAt,
           updatedAt: row.updatedAt
@@ -9061,12 +9069,12 @@ Write the feedback in a professional, supportive tone. The feedback should be:
 
 Return ONLY a JSON object with this exact structure (no markdown, no explanation):
 {
-  "strengths": ["First strength point", "Second strength point", "Third strength point"],
-  "areasForImprovement": ["First improvement area", "Second improvement area"],
-  "specificExamples": ["A specific example of good work or behavior", "Another concrete example"],
+  "strengths": ["First strength point with specific example", "Second strength point with specific example", "Third strength point with specific example"],
+  "areasForImprovement": ["First improvement area with suggestion", "Second improvement area with suggestion"],
   "recommendations": ["First actionable recommendation", "Second recommendation"],
   "developmentGoals": ["SMART goal 1 for next quarter", "SMART goal 2 for next quarter"],
-  "overallComment": "A 2-3 sentence summary tying it all together"
+  "overallComment": "A 2-3 sentence summary of how you experienced their work over the past few months",
+  "bottomLine": "The key message or takeaway you want them to leave this conversation with"
 }`;
 
     console.log('🤖 Generating AI feedback...');

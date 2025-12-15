@@ -248,8 +248,8 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         const { 
           strengths: aiStrengths, 
           areasForImprovement: aiAreas, 
-          specificExamples: aiExamples,
           recommendations: aiRecs,
+          bottomLine: aiBottomLine,
           developmentGoals: aiDevGoals,
           overallComment: aiComment 
         } = response.data.data;
@@ -261,11 +261,11 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         if (aiAreas) {
           setAreasForImprovement(Array.isArray(aiAreas) ? aiAreas : aiAreas.split('. ').filter((a: string) => a.trim()));
         }
-        if (aiExamples) {
-          setSpecificExamples(Array.isArray(aiExamples) ? aiExamples : aiExamples.split('. ').filter((e: string) => e.trim()));
-        }
         if (aiRecs) {
           setRecommendations(Array.isArray(aiRecs) ? aiRecs : aiRecs.split('. ').filter((r: string) => r.trim()));
+        }
+        if (aiBottomLine) {
+          setBottomLine(aiBottomLine);
         }
         if (aiComment) {
           setOverallComment(aiComment);
