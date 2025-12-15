@@ -226,22 +226,24 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
             )}
             {isEditMode && (
               <>
-                <IconButton
-                  icon={<PenOff className="w-full h-full" />}
-                  tooltip="Cancel Edit"
-                  onClick={handleCancelEdit}
+                <Button
                   variant="outline"
                   size="sm"
-                />
-                <IconButton
-                  icon={<CheckCircle className="w-full h-full" />}
-                  tooltip="Save Changes"
+                  onClick={handleCancelEdit}
+                  icon={PenOff}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={handleSaveEdit}
                   disabled={isSaving}
                   loading={isSaving}
-                  variant="primary"
-                  size="sm"
-                />
+                  icon={CheckCircle}
+                >
+                  Save
+                </Button>
               </>
             )}
             <ExportButtons
@@ -375,10 +377,10 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
             Strengths
           </h3>
           {isEditMode ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {editedContent?.strengths?.map((strength, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <Input
+                <div key={index} className="flex items-start gap-2">
+                  <textarea
                     value={strength}
                     onChange={(e) => {
                       const newStrengths = [...(editedContent?.strengths || [])];
@@ -386,6 +388,8 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
                       setEditedContent(prev => prev ? { ...prev, strengths: newStrengths } : undefined);
                     }}
                     placeholder="Describe a strength..."
+                    className="flex-1 p-3 border rounded-md min-h-20 resize-none"
+                    rows={2}
                   />
                   <Button
                     size="sm"
@@ -395,6 +399,7 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
                       setEditedContent(prev => prev ? { ...prev, strengths: newStrengths } : undefined);
                     }}
                     icon={Trash2}
+                    className="mt-2"
                   />
                 </div>
               ))}
@@ -431,10 +436,10 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
               Areas for Improvement
             </h3>
             {isEditMode ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {editedContent?.areasForImprovement?.map((area, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <Input
+                  <div key={index} className="flex items-start gap-2">
+                    <textarea
                       value={area}
                       onChange={(e) => {
                         const newAreas = [...(editedContent?.areasForImprovement || [])];
@@ -442,6 +447,8 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
                         setEditedContent(prev => prev ? { ...prev, areasForImprovement: newAreas } : undefined);
                       }}
                       placeholder="Describe an area for improvement..."
+                      className="flex-1 p-3 border rounded-md min-h-20 resize-none"
+                      rows={2}
                     />
                     <Button
                       size="sm"
@@ -451,6 +458,7 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
                         setEditedContent(prev => prev ? { ...prev, areasForImprovement: newAreas } : undefined);
                       }}
                       icon={Trash2}
+                      className="mt-2"
                     />
                   </div>
                 ))}
