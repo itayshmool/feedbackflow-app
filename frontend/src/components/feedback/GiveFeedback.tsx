@@ -1,4 +1,4 @@
-// Give Feedback Form Component
+// Give Feedback Form Component - Polished Version
 
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
@@ -15,7 +15,10 @@ import { Switch } from '../ui/Switch';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Autocomplete } from '../ui/Autocomplete';
 import { UserSearchResult } from '../../services/userSearch.service';
-import { Plus, Trash2, Save, Send, X, Calendar, Users, Target, HelpCircle, Sparkles, Loader2 } from 'lucide-react';
+import { 
+  Plus, Trash2, Save, Send, X, Calendar, Users, Target, HelpCircle, Sparkles, Loader2,
+  MessageSquare, TrendingUp, TrendingDown, Award, User, Mail, Building, FileText, Star
+} from 'lucide-react';
 import api from '../../lib/api';
 
 interface GiveFeedbackProps {
@@ -85,18 +88,16 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
 
   useEffect(() => {
     clearErrors();
-    // Fetch cycles filtered by user's organization (non-admins only see their org's cycles)
     if (user?.organizationId) {
       fetchCycles({ organizationId: user.organizationId });
     } else {
-      fetchCycles(); // Admins or users without org see all
+      fetchCycles();
     }
     if (user?.id) {
-      fetchDirectReports(user.id); // Fetch direct reports for the current user
+      fetchDirectReports(user.id);
     }
   }, [clearErrors, fetchCycles, user?.id, user?.organizationId, fetchDirectReports]);
 
-  // Initialize selectedUser when initialToUserEmail is provided and directReports are loaded
   useEffect(() => {
     if (initialToUserEmail && directReports.length > 0 && !selectedUser) {
       const matchingUser = directReports.find(emp => emp.email === initialToUserEmail);
@@ -111,7 +112,6 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
           isActive: true
         });
       } else if (toUserName) {
-        // If not in direct reports but we have the name, create a minimal user object
         setSelectedUser({
           id: '',
           name: toUserName,
@@ -125,13 +125,9 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
     }
   }, [initialToUserEmail, toUserName, directReports, selectedUser]);
 
-  // Get active cycles for selection (already filtered by organization from backend)
   const activeCycles = (cycles || []).filter(cycle => cycle.status === 'active');
-
-  // Determine if current review type requires direct reports only
   const requiresDirectReports = reviewType === ReviewType.MANAGER_REVIEW;
 
-  // Helper function to get contextual help text based on review type
   const getHelpText = (section: string): string => {
     const helpTexts = {
       manager: {
@@ -147,7 +143,6 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         recommendations: "Suggestions for future collaborations or team processes."
       }
     };
-    
     const type = reviewType === ReviewType.MANAGER_REVIEW ? 'manager' : 'project';
     return helpTexts[type][section as keyof typeof helpTexts.manager] || '';
   };
@@ -208,7 +203,6 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
     }
   };
 
-
   const addGoal = () => {
     setGoals([
       ...goals,
@@ -232,7 +226,6 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
     setGoals(updated);
   };
 
-  // AI Feedback Generation
   const handleGenerateAI = async () => {
     if (!selectedUser) {
       setAiError('Please select a recipient first');
@@ -260,7 +253,6 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
           overallComment: aiComment 
         } = response.data.data;
         
-        // Auto-fill form fields - handle both array and string formats
         if (aiStrengths) {
           setStrengths(Array.isArray(aiStrengths) ? aiStrengths : aiStrengths.split('. ').filter((s: string) => s.trim()));
         }
@@ -276,14 +268,13 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         if (aiComment) {
           setOverallComment(aiComment);
         }
-        // Development goals - add as goals if manager review
         if (aiDevGoals && reviewType === ReviewType.MANAGER_REVIEW) {
           const newGoals = (Array.isArray(aiDevGoals) ? aiDevGoals : [aiDevGoals]).map((title: string) => ({
             title,
             description: '',
             category: GoalCategory.PERFORMANCE,
             priority: GoalPriority.MEDIUM,
-            targetDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 90 days from now
+            targetDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
           }));
           setGoals(newGoals);
         }
@@ -308,7 +299,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
       cycleId: selectedCycleId,
       toUserEmail,
       reviewType,
-      colorClassification: colorClassification || undefined, // Internal triage color
+      colorClassification: colorClassification || undefined,
       content: {
         overallComment,
         strengths: strengths.filter((s) => s.trim()),
@@ -318,7 +309,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         bottomLine: bottomLine.trim() || undefined,
         confidential,
       },
-      ratings: [], // Ratings removed from UI
+      ratings: [],
       goals: goals.map((g) => ({
         title: g.title,
         description: g.description,
@@ -334,7 +325,6 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
       onSuccess?.();
       onClose?.();
     }
-    // Error toast is shown by api.ts interceptor
   };
 
   const handleSubmit = async () => {
@@ -362,7 +352,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
       cycleId: selectedCycleId,
       toUserEmail,
       reviewType,
-      colorClassification: colorClassification || undefined, // Internal triage color
+      colorClassification: colorClassification || undefined,
       content: {
         overallComment,
         strengths: strengths.filter((s) => s.trim()),
@@ -372,7 +362,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         bottomLine: bottomLine.trim() || undefined,
         confidential,
       },
-      ratings: [], // Ratings removed from UI
+      ratings: [],
       goals: goals.map((g) => ({
         title: g.title,
         description: g.description,
@@ -384,88 +374,161 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
 
     const result = await createFeedback(data);
     if (result) {
-      // After creating as draft, submit it immediately
       const submitted = await submitFeedback(result.id);
       if (submitted) {
         toast.success('Feedback submitted successfully');
         onSuccess?.();
         onClose?.();
       }
-      // Error toast for submit failure is shown by api.ts interceptor
     }
-    // Error toast for create failure is shown by api.ts interceptor
   };
 
   if (isLoadingDirectReports) {
     return (
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex justify-center items-center py-12">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex flex-col justify-center items-center py-20">
           <LoadingSpinner size="lg" />
-          <span className="ml-3 text-gray-600">Loading direct reports...</span>
+          <p className="mt-4 text-gray-600 font-medium">Loading team members...</p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Give Feedback</h2>
-        <div className="flex items-center gap-2">
-          {isAIEnabled && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleGenerateAI}
-              disabled={!selectedUser || isGeneratingAI}
-              className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white border-none hover:from-purple-600 hover:to-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isGeneratingAI ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Generate with AI
-                </>
-              )}
-            </Button>
-          )}
-          {onClose && (
-            <Button 
-              type="button"
-              variant="ghost" 
-              onClick={onClose}
-              icon={X}
-            >
-              Close
-            </Button>
-          )}
-        </div>
+  // Section header component for consistency
+  const SectionHeader = ({ icon: Icon, iconBg, title, subtitle }: { 
+    icon: React.ElementType; 
+    iconBg: string; 
+    title: string; 
+    subtitle?: string;
+  }) => (
+    <div className="flex items-start gap-3 mb-5">
+      <div className={`p-2.5 ${iconBg} rounded-xl shadow-md flex-shrink-0`}>
+        <Icon className="w-5 h-5 text-white" />
       </div>
+      <div className="flex-1 min-w-0">
+        <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+        {subtitle && (
+          <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+        )}
+      </div>
+    </div>
+  );
 
-      {aiError && (
-        <Card className="p-4 bg-red-50 border-red-200">
-          <p className="text-red-800">{aiError}</p>
-        </Card>
+  return (
+    <div className="max-w-4xl mx-auto pb-24">
+      {/* Header - Gradient when recipient selected */}
+      {selectedUser ? (
+        <div className="relative overflow-hidden rounded-2xl mb-6">
+          {/* Background gradient */}
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500" />
+          
+          {/* Decorative orbs */}
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
+          <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-pink-400/20 rounded-full blur-2xl" />
+          
+          {/* Content */}
+          <div className="relative p-6 text-white">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+              {/* Avatar */}
+              <div className="relative">
+                <div className="absolute inset-0 bg-white/30 rounded-full blur-lg scale-110" />
+                <div className="relative w-16 h-16 sm:w-20 sm:h-20 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center ring-4 ring-white/30 shadow-xl">
+                  <span className="text-2xl sm:text-3xl font-bold text-white">
+                    {selectedUser.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Info */}
+              <div className="flex-1">
+                <p className="text-white/70 text-sm font-medium mb-1">Giving feedback to</p>
+                <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">{selectedUser.name}</h2>
+                <div className="flex flex-wrap gap-3 mt-2 text-sm text-white/80">
+                  {selectedUser.position && (
+                    <span className="flex items-center gap-1.5 bg-white/10 px-2.5 py-1 rounded-full">
+                      <Building className="w-3.5 h-3.5" />
+                      {selectedUser.position}
+                    </span>
+                  )}
+                  <span className="flex items-center gap-1.5 bg-white/10 px-2.5 py-1 rounded-full">
+                    <Mail className="w-3.5 h-3.5" />
+                    {selectedUser.email}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Actions */}
+              <div className="flex items-center gap-2">
+                {isAIEnabled && (
+                  <Button
+                    type="button"
+                    onClick={handleGenerateAI}
+                    disabled={isGeneratingAI}
+                    className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm shadow-lg"
+                  >
+                    {isGeneratingAI ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <span className="hidden sm:inline">Generating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        <span className="hidden sm:inline">Generate with AI</span>
+                        <span className="sm:hidden">AI</span>
+                      </>
+                    )}
+                  </Button>
+                )}
+                {onClose && (
+                  <button 
+                    onClick={onClose}
+                    className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Give Feedback</h2>
+            <p className="text-gray-500 mt-1">Select a team member to get started</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {onClose && (
+              <Button variant="ghost" onClick={onClose} icon={X}>
+                Close
+              </Button>
+            )}
+          </div>
+        </div>
       )}
 
-      {/* Error messages are shown via toast notifications */}
+      {aiError && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+          <p className="text-red-800">{aiError}</p>
+        </div>
+      )}
 
-      {/* Basic Information */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
-        <div className="space-y-4">
-          {!initialToUserEmail && (
-            <>
+      <div className="space-y-6">
+        {/* Select Recipient - Only show if not pre-selected */}
+        {!initialToUserEmail && (
+          <Card className="p-6 bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-2xl">
+            <SectionHeader 
+              icon={User} 
+              iconBg="bg-gradient-to-br from-blue-500 to-indigo-600" 
+              title="Select Recipient" 
+              subtitle="Choose a team member to provide feedback to"
+            />
+            <div className="space-y-4">
               {requiresDirectReports ? (
-                // Manager Review - Only direct reports
                 directReports.length === 0 ? (
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-                    <p className="text-yellow-800">
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                    <p className="text-amber-800">
                       You don't have any direct reports. Manager reviews can only be given to direct reports.
                     </p>
                   </div>
@@ -485,7 +548,6 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
                   </Select>
                 )
               ) : (
-                // Peer Review, Project Review - Anyone in organization
                 <Autocomplete
                   label="Recipient Email"
                   value={toUserEmail}
@@ -496,47 +558,23 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
                   organizationId={user?.organizationId}
                 />
               )}
-            </>
-          )}
-          {(toUserName || selectedUser) && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Recipient
-              </label>
-              <div className="p-3 bg-gray-50 rounded-md border">
-                <p className="text-gray-900 font-medium">
-                  {selectedUser?.name || toUserName}
-                </p>
-                <p className="text-sm text-gray-600">{toUserEmail}</p>
-                {selectedUser && (
-                  <div className="mt-2 flex items-center space-x-4 text-xs text-gray-500">
-                    {selectedUser.department && (
-                      <span>Department: {selectedUser.department}</span>
-                    )}
-                    {selectedUser.position && (
-                      <span>Position: {selectedUser.position}</span>
-                    )}
-                  </div>
-                )}
-              </div>
             </div>
-          )}
-          {/* Review type is hidden - always Manager Review */}
-        </div>
-      </Card>
+          </Card>
+        )}
 
-      {/* Cycle Selection */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Calendar className="h-5 w-5" />
-          Feedback Cycle
-        </h3>
-        <div className="space-y-4">
+        {/* Cycle Selection */}
+        <Card className="p-6 bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-2xl">
+          <SectionHeader 
+            icon={Calendar} 
+            iconBg="bg-gradient-to-br from-purple-500 to-pink-600" 
+            title="Feedback Cycle" 
+            subtitle="Select the performance cycle for this feedback"
+          />
           <Select
-            label="Select Cycle"
             value={selectedCycleId}
             onChange={(e) => setSelectedCycleId(e.target.value)}
             required
+            className="mb-4"
           >
             <option value="">Choose a feedback cycle...</option>
             {activeCycles.map((cycle) => (
@@ -546,253 +584,290 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
             ))}
           </Select>
           {selectedCycleId && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-2">
-                <Users className="h-4 w-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-800">Cycle Details</span>
+                <Users className="h-4 w-4 text-purple-600" />
+                <span className="text-sm font-semibold text-purple-800">Cycle Details</span>
               </div>
               {(() => {
                 const selectedCycle = activeCycles.find(c => c.id === selectedCycleId);
                 return selectedCycle ? (
-                  <div className="text-sm text-blue-700">
+                  <div className="text-sm text-purple-700 space-y-1">
                     <p><strong>Type:</strong> {selectedCycle.type}</p>
                     <p><strong>Duration:</strong> {new Date(selectedCycle.startDate).toLocaleDateString()} - {new Date(selectedCycle.endDate).toLocaleDateString()}</p>
                     <p><strong>Participants:</strong> {selectedCycle.participants || 0}</p>
-                    {selectedCycle.description && (
-                      <p><strong>Description:</strong> {selectedCycle.description}</p>
-                    )}
                   </div>
                 ) : null;
               })()}
             </div>
           )}
-        </div>
-      </Card>
+        </Card>
 
-      {/* Performance Classification - Internal Use Only */}
-      <Card className="p-6">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold">
-            Performance Classification <span className="text-red-500">*</span>
-          </h3>
-          <p className="text-sm text-gray-500 mt-1">
-            🔒 This classification is for internal use only and will <strong>not</strong> be visible to the recipient.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          {[
-            { value: FeedbackColorClassification.GREEN, label: 'Exceeds Expectations', bgColor: 'bg-green-500', hoverColor: 'hover:bg-green-600', ringColor: 'ring-green-500' },
-            { value: FeedbackColorClassification.YELLOW, label: 'Meets Expectations', bgColor: 'bg-yellow-500', hoverColor: 'hover:bg-yellow-600', ringColor: 'ring-yellow-500' },
-            { value: FeedbackColorClassification.RED, label: 'Needs Improvement', bgColor: 'bg-red-500', hoverColor: 'hover:bg-red-600', ringColor: 'ring-red-500' },
-          ].map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => setColorClassification(colorClassification === option.value ? '' : option.value)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
-                colorClassification === option.value
-                  ? `${option.bgColor} text-white border-transparent ring-2 ${option.ringColor} ring-offset-2`
-                  : `bg-white border-gray-300 hover:border-gray-400 text-gray-700`
-              }`}
-            >
-              <div className={`w-3 h-3 rounded-full ${option.bgColor}`} />
-              <span className="font-medium">{option.label}</span>
-            </button>
-          ))}
-        </div>
-        {!colorClassification && (
-          <p className="text-sm text-red-500 mt-3">
-            * Required: Please select a color classification
-          </p>
-        )}
-      </Card>
-
-      {/* Overall Comment */}
-      <Card className="p-6">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold">Overall Feedback</h3>
-          <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
-            <HelpCircle className="w-4 h-4" />
-            How I experienced your work over the past few months - including standout contributions, efforts, or moments worth highlighting.
-          </p>
-        </div>
-        <textarea
-          className="w-full p-3 border rounded-md min-h-32"
-          value={overallComment}
-          onChange={(e) => setOverallComment(e.target.value)}
-          placeholder="Provide your overall feedback..."
-          required
-        />
-      </Card>
-
-
-      {/* Strengths */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-semibold">Strengths</h3>
-            <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
-              <HelpCircle className="w-4 h-4" />
-              {getHelpText('strengths')}
-            </p>
+        {/* Performance Classification */}
+        <Card className="p-6 bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-2xl">
+          <SectionHeader 
+            icon={Target} 
+            iconBg="bg-gradient-to-br from-gray-700 to-gray-900" 
+            title="Performance Classification" 
+            subtitle="🔒 Internal use only - not visible to recipient"
+          />
+          <div className="flex flex-wrap gap-3">
+            {[
+              { 
+                value: FeedbackColorClassification.GREEN, 
+                label: 'Exceeds Expectations', 
+                icon: TrendingUp,
+                gradient: 'from-emerald-500 to-emerald-600',
+                ring: 'ring-emerald-400',
+                lightBg: 'bg-emerald-50 border-emerald-200 hover:border-emerald-400'
+              },
+              { 
+                value: FeedbackColorClassification.YELLOW, 
+                label: 'Meets Expectations', 
+                icon: Award,
+                gradient: 'from-amber-500 to-amber-600',
+                ring: 'ring-amber-400',
+                lightBg: 'bg-amber-50 border-amber-200 hover:border-amber-400'
+              },
+              { 
+                value: FeedbackColorClassification.RED, 
+                label: 'Needs Improvement', 
+                icon: TrendingDown,
+                gradient: 'from-rose-500 to-rose-600',
+                ring: 'ring-rose-400',
+                lightBg: 'bg-rose-50 border-rose-200 hover:border-rose-400'
+              },
+            ].map((option) => {
+              const isSelected = colorClassification === option.value;
+              const Icon = option.icon;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setColorClassification(isSelected ? '' : option.value)}
+                  className={`relative flex items-center gap-3 px-5 py-3.5 rounded-xl border-2 transition-all duration-300 ${
+                    isSelected
+                      ? `bg-gradient-to-r ${option.gradient} text-white border-transparent shadow-lg ring-4 ${option.ring} ring-opacity-30`
+                      : `${option.lightBg} text-gray-700`
+                  }`}
+                >
+                  <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-white/20' : `bg-gradient-to-r ${option.gradient}`}`}>
+                    <Icon className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-white'}`} />
+                  </div>
+                  <span className="font-semibold">{option.label}</span>
+                </button>
+              );
+            })}
           </div>
-          <Button variant="outline" size="sm" onClick={addStrength} icon={Plus}>
-            Add
-          </Button>
-        </div>
-        <div className="space-y-2">
-          {strengths.map((strength, index) => (
-            <div key={index} className="flex gap-2">
-              <textarea
-                value={strength}
-                onChange={(e) => updateStrength(index, e.target.value)}
-                placeholder="Describe a strength..."
-                className="flex-1 p-3 border rounded-md min-h-20 resize-none"
-                rows={2}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => removeStrength(index)}
-                icon={Trash2}
-                className="self-start mt-2"
-              />
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Areas for Improvement */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-semibold">Areas for Improvement</h3>
-            <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
-              <HelpCircle className="w-4 h-4" />
-              {getHelpText('improvements')}
+          {!colorClassification && (
+            <p className="text-sm text-rose-500 mt-4 font-medium">
+              ⚠️ Required: Please select a performance classification
             </p>
-          </div>
-          <Button variant="outline" size="sm" onClick={addAreaForImprovement} icon={Plus}>
-            Add
-          </Button>
-        </div>
-        <div className="space-y-2">
-          {areasForImprovement.map((area, index) => (
-            <div key={index} className="flex gap-2">
-              <textarea
-                value={area}
-                onChange={(e) => updateAreaForImprovement(index, e.target.value)}
-                placeholder="Describe an area for improvement..."
-                className="flex-1 p-3 border rounded-md min-h-20 resize-none"
-                rows={2}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => removeAreaForImprovement(index)}
-                icon={Trash2}
-                className="self-start mt-2"
-              />
-            </div>
-          ))}
-        </div>
-      </Card>
+          )}
+        </Card>
 
-      {/* Specific Examples - Hidden from UI but data structure preserved */}
+        {/* Overall Comment */}
+        <Card className="p-6 bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-2xl">
+          <SectionHeader 
+            icon={MessageSquare} 
+            iconBg="bg-gradient-to-br from-blue-500 to-cyan-600" 
+            title="Overall Feedback" 
+            subtitle="How I experienced your work over the past few months - including standout contributions, efforts, or moments worth highlighting."
+          />
+          <textarea
+            className="w-full p-4 border border-gray-200 rounded-xl min-h-36 resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-gray-50 hover:bg-white focus:bg-white"
+            value={overallComment}
+            onChange={(e) => setOverallComment(e.target.value)}
+            placeholder="Share your overall feedback..."
+            required
+          />
+        </Card>
 
-      {/* Recommendations - Hidden from UI but data structure preserved */}
-
-      {/* Growth & Development - Only show for Manager Reviews */}
-      {reviewType === ReviewType.MANAGER_REVIEW && (
-        <Card className="p-6">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
-            <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-semibold">Growth & Development</h3>
-              <p className="text-sm text-gray-500 mt-1 flex items-start gap-1">
-                <HelpCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                <span>What are the focus areas and key actions we agreed on to support your growth over the next few months?</span>
-              </p>
-            </div>
-            <Button variant="outline" size="sm" onClick={addGoal} icon={Plus} className="flex-shrink-0 whitespace-nowrap">
-              Add Goal
+        {/* Strengths */}
+        <Card className="p-6 bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-2xl">
+          <div className="flex items-start justify-between mb-5">
+            <SectionHeader 
+              icon={Star} 
+              iconBg="bg-gradient-to-br from-emerald-500 to-teal-600" 
+              title="Strengths" 
+              subtitle={getHelpText('strengths')}
+            />
+            <Button variant="outline" size="sm" onClick={addStrength} className="flex-shrink-0 rounded-xl">
+              <Plus className="w-4 h-4 mr-1" />
+              Add
             </Button>
           </div>
-          <div className="space-y-4">
-            {goals.map((goal, index) => (
-              <div key={index} className="p-4 border rounded-md space-y-3">
-                <div className="flex items-start gap-3">
-                  <Input
-                    label="Goal Title"
-                    value={goal.title}
-                    onChange={(e) => updateGoal(index, 'title', e.target.value)}
-                    placeholder="e.g., Improve React skills"
-                    className="flex-1"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeGoal(index)}
-                    icon={Trash2}
-                    className="mt-6"
-                  />
-                </div>
+          <div className="space-y-3">
+            {strengths.map((strength, index) => (
+              <div key={index} className="flex gap-2 group">
                 <textarea
-                  className="w-full p-3 border rounded-md"
-                  value={goal.description}
-                  onChange={(e) => updateGoal(index, 'description', e.target.value)}
-                  placeholder="Describe the goal..."
+                  value={strength}
+                  onChange={(e) => updateStrength(index, e.target.value)}
+                  placeholder="Describe a strength..."
+                  className="flex-1 p-4 border border-gray-200 rounded-xl min-h-20 resize-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all bg-gray-50 hover:bg-white focus:bg-white"
                   rows={2}
                 />
-                <div className="max-w-xs">
-                  <Input
-                    label="Target Date"
-                    type="date"
-                    value={goal.targetDate}
-                    onChange={(e) => updateGoal(index, 'targetDate', e.target.value)}
-                  />
-                </div>
-                {/* Category and Priority hidden from UI but preserved in data structure */}
+                <button
+                  onClick={() => removeStrength(index)}
+                  className="p-2 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100 self-start mt-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             ))}
           </div>
         </Card>
-      )}
 
-      {/* Bottom Line - Last input field */}
-      <Card className="p-6">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold">Bottom Line</h3>
-          <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
-            <HelpCircle className="w-4 h-4" />
-            What is the key message or takeaway I want you to leave this conversation with?
-          </p>
+        {/* Areas for Improvement */}
+        <Card className="p-6 bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-2xl">
+          <div className="flex items-start justify-between mb-5">
+            <SectionHeader 
+              icon={TrendingUp} 
+              iconBg="bg-gradient-to-br from-amber-500 to-orange-600" 
+              title="Areas for Improvement" 
+              subtitle={getHelpText('improvements')}
+            />
+            <Button variant="outline" size="sm" onClick={addAreaForImprovement} className="flex-shrink-0 rounded-xl">
+              <Plus className="w-4 h-4 mr-1" />
+              Add
+            </Button>
+          </div>
+          <div className="space-y-3">
+            {areasForImprovement.map((area, index) => (
+              <div key={index} className="flex gap-2 group">
+                <textarea
+                  value={area}
+                  onChange={(e) => updateAreaForImprovement(index, e.target.value)}
+                  placeholder="Describe an area for improvement..."
+                  className="flex-1 p-4 border border-gray-200 rounded-xl min-h-20 resize-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all bg-gray-50 hover:bg-white focus:bg-white"
+                  rows={2}
+                />
+                <button
+                  onClick={() => removeAreaForImprovement(index)}
+                  className="p-2 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100 self-start mt-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Growth & Development */}
+        {reviewType === ReviewType.MANAGER_REVIEW && (
+          <Card className="p-6 bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-2xl">
+            <div className="flex items-start justify-between mb-5">
+              <SectionHeader 
+                icon={Target} 
+                iconBg="bg-gradient-to-br from-purple-500 to-indigo-600" 
+                title="Growth & Development" 
+                subtitle="What are the focus areas and key actions we agreed on to support your growth over the next few months?"
+              />
+              <Button variant="outline" size="sm" onClick={addGoal} className="flex-shrink-0 rounded-xl whitespace-nowrap">
+                <Plus className="w-4 h-4 mr-1" />
+                Add Goal
+              </Button>
+            </div>
+            <div className="space-y-4">
+              {goals.map((goal, index) => (
+                <div key={index} className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl space-y-3 group">
+                  <div className="flex items-start gap-3">
+                    <Input
+                      label="Goal Title"
+                      value={goal.title}
+                      onChange={(e) => updateGoal(index, 'title', e.target.value)}
+                      placeholder="e.g., Improve React skills"
+                      className="flex-1"
+                    />
+                    <button
+                      onClick={() => removeGoal(index)}
+                      className="p-2 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100 mt-6"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <textarea
+                    className="w-full p-4 border border-gray-200 rounded-xl resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white"
+                    value={goal.description}
+                    onChange={(e) => updateGoal(index, 'description', e.target.value)}
+                    placeholder="Describe the goal and expected outcomes..."
+                    rows={2}
+                  />
+                  <div className="max-w-xs">
+                    <Input
+                      label="Target Date"
+                      type="date"
+                      value={goal.targetDate}
+                      onChange={(e) => updateGoal(index, 'targetDate', e.target.value)}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Bottom Line */}
+        <Card className="p-6 bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-2xl">
+          <SectionHeader 
+            icon={FileText} 
+            iconBg="bg-gradient-to-br from-rose-500 to-pink-600" 
+            title="Bottom Line" 
+            subtitle="What is the key message or takeaway I want you to leave this conversation with?"
+          />
+          <textarea
+            className="w-full p-4 border border-gray-200 rounded-xl min-h-28 resize-none focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all bg-gray-50 hover:bg-white focus:bg-white"
+            value={bottomLine}
+            onChange={(e) => setBottomLine(e.target.value)}
+            placeholder="Share the key message or takeaway..."
+          />
+        </Card>
+      </div>
+
+      {/* Floating Action Bar */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-2xl z-50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
+          <div className="flex items-center justify-between gap-3">
+            <Button 
+              variant="ghost" 
+              onClick={onClose} 
+              disabled={isCreating}
+              className="text-gray-600"
+            >
+              Cancel
+            </Button>
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                onClick={handleSaveAsDraft} 
+                disabled={isCreating}
+                className="rounded-xl"
+              >
+                {isCreating ? <LoadingSpinner size="sm" /> : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    <span className="hidden sm:inline">Save Draft</span>
+                    <span className="sm:hidden">Draft</span>
+                  </>
+                )}
+              </Button>
+              <Button 
+                onClick={handleSubmit} 
+                disabled={isCreating}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg rounded-xl px-6"
+              >
+                {isCreating ? <LoadingSpinner size="sm" /> : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    <span className="hidden sm:inline">Submit Feedback</span>
+                    <span className="sm:hidden">Submit</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
-        <textarea
-          className="w-full p-3 border rounded-md min-h-24"
-          value={bottomLine}
-          onChange={(e) => setBottomLine(e.target.value)}
-          placeholder="Share the key message or takeaway..."
-        />
-      </Card>
-
-      {/* Action Buttons */}
-      <div className="flex gap-3 justify-end sticky bottom-0 bg-white py-4 border-t">
-        <Button variant="outline" onClick={onClose} disabled={isCreating}>
-          Cancel
-        </Button>
-        <Button 
-          variant="outline" 
-          onClick={handleSaveAsDraft} 
-          disabled={isCreating}
-          icon={Save}
-        >
-          {isCreating ? <LoadingSpinner size="sm" /> : 'Save as Draft'}
-        </Button>
-        <Button onClick={handleSubmit} disabled={isCreating} icon={Send}>
-          {isCreating ? <LoadingSpinner size="sm" /> : 'Submit Feedback'}
-        </Button>
       </div>
     </div>
   );
 };
-
