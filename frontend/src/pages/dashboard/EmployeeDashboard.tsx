@@ -434,6 +434,7 @@ const EmployeeDashboard: React.FC = () => {
     const completedCount = allGoals.filter(g => g.status === 'completed').length;
     const pendingCount = allGoals.filter(g => g.status !== 'completed').length;
     const hasActiveFilters = goalsCycleFilter || goalsStatusFilter;
+    const progressPercent = allGoals.length > 0 ? Math.round((completedCount / allGoals.length) * 100) : 0;
 
     const toggleGoalComplete = async (goalId: string, currentStatus: string) => {
       const completed = currentStatus !== 'completed';
@@ -454,24 +455,80 @@ const EmployeeDashboard: React.FC = () => {
 
     return (
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">My Development Goals</h2>
-          
-          {/* Stats Pills */}
-          {allGoals.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
-                {allGoals.length} Total
-              </span>
-              <span className="px-3 py-1.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">
-                {completedCount} Done
-              </span>
-              <span className="px-3 py-1.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
-                {pendingCount} Pending
-              </span>
-            </div>
-          )}
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">My Development Goals</h2>
+            {allGoals.length > 0 && (
+              <p className="text-sm text-gray-500 mt-1">
+                {completedCount} of {allGoals.length} goals completed
+              </p>
+            )}
+          </div>
         </div>
+
+        {/* Gradient Stats Cards */}
+        {allGoals.length > 0 && (
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+            {/* Total Goals - Slate */}
+            <div className="group relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-slate-500 to-slate-600 p-3 sm:p-5 shadow-lg shadow-slate-500/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 h-20 w-20 rounded-full bg-white/10 blur-2xl" />
+              <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+                <div className="order-2 sm:order-1">
+                  <p className="text-xs font-medium text-slate-200">Total</p>
+                  <p className="text-xl sm:text-3xl font-bold text-white">{allGoals.length}</p>
+                </div>
+                <div className="order-1 sm:order-2 flex h-8 w-8 sm:h-11 sm:w-11 items-center justify-center rounded-lg sm:rounded-xl bg-white/20 backdrop-blur-sm">
+                  <Target className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                </div>
+              </div>
+            </div>
+
+            {/* Completed - Emerald */}
+            <div className="group relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 p-3 sm:p-5 shadow-lg shadow-emerald-500/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 h-20 w-20 rounded-full bg-white/10 blur-2xl" />
+              <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+                <div className="order-2 sm:order-1">
+                  <p className="text-xs font-medium text-emerald-100">Done</p>
+                  <p className="text-xl sm:text-3xl font-bold text-white">{completedCount}</p>
+                </div>
+                <div className="order-1 sm:order-2 flex h-8 w-8 sm:h-11 sm:w-11 items-center justify-center rounded-lg sm:rounded-xl bg-white/20 backdrop-blur-sm">
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                </div>
+              </div>
+            </div>
+
+            {/* Pending - Amber */}
+            <div className="group relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 p-3 sm:p-5 shadow-lg shadow-amber-500/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 h-20 w-20 rounded-full bg-white/10 blur-2xl" />
+              <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+                <div className="order-2 sm:order-1">
+                  <p className="text-xs font-medium text-amber-100">Pending</p>
+                  <p className="text-xl sm:text-3xl font-bold text-white">{pendingCount}</p>
+                </div>
+                <div className="order-1 sm:order-2 flex h-8 w-8 sm:h-11 sm:w-11 items-center justify-center rounded-lg sm:rounded-xl bg-white/20 backdrop-blur-sm">
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Progress Bar */}
+        {allGoals.length > 0 && (
+          <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">Overall Progress</span>
+              <span className="text-sm font-bold text-purple-600">{progressPercent}%</span>
+            </div>
+            <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Filters */}
         {allGoals.length > 0 && (
@@ -520,49 +577,68 @@ const EmployeeDashboard: React.FC = () => {
             <LoadingSpinner />
           </div>
         ) : filteredGoals.length > 0 ? (
-          <div className="space-y-2 sm:space-y-3">
+          <div className="space-y-3">
             {filteredGoals.map((goal) => (
               <div 
                 key={goal.id}
-                className={`bg-white rounded-lg sm:rounded-xl border border-gray-200 p-4 sm:p-5 transition-all duration-200 ${goal.status === 'completed' ? 'bg-gray-50/50' : ''}`}
+                className={`bg-white rounded-xl border border-gray-200 border-l-4 p-4 sm:p-5 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer ${
+                  goal.status === 'completed' 
+                    ? 'border-l-emerald-400 bg-emerald-50/30' 
+                    : 'border-l-purple-400'
+                }`}
               >
                 <div className="flex items-start gap-3 sm:gap-4">
+                  {/* Icon Badge */}
+                  <div className={`p-2 rounded-lg shadow-md flex-shrink-0 ${
+                    goal.status === 'completed'
+                      ? 'bg-gradient-to-br from-emerald-500 to-emerald-600'
+                      : 'bg-gradient-to-br from-purple-500 to-indigo-600'
+                  }`}>
+                    <Target className="w-4 h-4 text-white" />
+                  </div>
+
+                  {/* Checkbox */}
                   <button
-                    onClick={() => toggleGoalComplete(goal.id, goal.status)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleGoalComplete(goal.id, goal.status);
+                    }}
                     className={`mt-0.5 w-6 h-6 rounded-lg border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
                       goal.status === 'completed' 
                         ? 'bg-emerald-500 border-emerald-500 text-white' 
-                        : 'border-gray-300 hover:border-emerald-400 bg-white'
+                        : 'border-gray-300 hover:border-purple-400 hover:bg-purple-50 bg-white'
                     }`}
                   >
                     {goal.status === 'completed' && (
                       <CheckCircle className="w-4 h-4" />
                     )}
                   </button>
+
+                  {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-start justify-between gap-2">
-                      <h3 className={`text-sm sm:text-base font-medium ${goal.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                      <p className={`text-sm sm:text-base ${goal.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
                         {goal.title}
-                      </h3>
+                      </p>
                       {goal.cycleName && (
-                        <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs whitespace-nowrap">
+                        <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs whitespace-nowrap font-medium">
                           {goal.cycleName}
                         </span>
                       )}
                     </div>
                     {goal.description && (
-                      <p className={`text-sm mt-1.5 leading-relaxed ${goal.status === 'completed' ? 'text-gray-400' : 'text-gray-600'}`}>
+                      <p className={`text-sm mt-2 leading-relaxed ${goal.status === 'completed' ? 'text-gray-400' : 'text-gray-600'}`}>
                         {goal.description}
                       </p>
                     )}
                     <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-3 text-xs text-gray-400">
                       {goal.targetDate && (
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1.5 bg-gray-100 px-2 py-1 rounded-full">
                           <Calendar className="w-3.5 h-3.5" />
                           {new Date(goal.targetDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </span>
                       )}
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1.5">
                         <User className="w-3.5 h-3.5" />
                         {goal.feedbackFrom}
                       </span>
@@ -594,9 +670,9 @@ const EmployeeDashboard: React.FC = () => {
         ) : (
           /* No goals at all */
           <div className="relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl sm:rounded-2xl p-8 sm:p-12 text-center">
-            <div className="absolute inset-0 bg-grid-pattern opacity-5" />
+            <div className="absolute inset-0 grid-pattern-bg opacity-50" />
             <div className="relative">
-              <div className="mx-auto w-14 h-14 sm:w-20 sm:h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6 shadow-lg shadow-purple-500/20">
+              <div className="mx-auto w-14 h-14 sm:w-20 sm:h-20 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6 shadow-lg shadow-purple-500/20">
                 <Target className="w-7 h-7 sm:w-10 sm:h-10 text-white" />
               </div>
               <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">No goals yet</h3>
