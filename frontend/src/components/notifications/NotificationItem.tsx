@@ -34,29 +34,51 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
       await markAsRead(notification.id);
     }
     
-    // Close dropdown first
-    onNavigate?.();
+    // Determine navigation path based on notification type
+    let navigationPath: string | null = null;
     
-    // Navigate based on notification type
     switch (notification.type) {
+      // Feedback-related notifications
       case NotificationType.FEEDBACK_RECEIVED:
       case NotificationType.FEEDBACK_REMINDER:
+      case NotificationType.FEEDBACK_SUBMITTED:
+      case NotificationType.FEEDBACK_ACKNOWLEDGED:
+      case NotificationType.REVIEW_REQUESTED:
+      case NotificationType.REVIEW_COMPLETED:
         if (notification.data?.feedbackId) {
-          navigate(`/feedback/${notification.data.feedbackId}`);
+          navigationPath = `/feedback/${notification.data.feedbackId}`;
         } else {
-          navigate('/feedback');
+          navigationPath = '/feedback';
         }
         break;
+      
+      // Cycle-related notifications
       case NotificationType.CYCLE_STARTED:
       case NotificationType.CYCLE_ENDING:
-        navigate('/dashboard');
+      case NotificationType.CYCLE_COMPLETED:
+        navigationPath = '/dashboard';
         break;
+      
+      // Goal-related notifications
       case NotificationType.GOAL_ASSIGNED:
-        navigate('/myself');
+      case NotificationType.GOAL_COMPLETED:
+        navigationPath = '/myself';
         break;
-      // USER_INVITED and SYSTEM_ANNOUNCEMENT - no navigation needed
+      
+      // USER_INVITED, USER_JOINED, SYSTEM_ANNOUNCEMENT - no navigation needed
       default:
         break;
+    }
+    
+    // Close dropdown first, then navigate
+    onNavigate?.();
+    
+    // Navigate after closing dropdown
+    if (navigationPath) {
+      // Small delay to ensure dropdown closes smoothly
+      setTimeout(() => {
+        navigate(navigationPath!);
+      }, 50);
     }
   };
 
