@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { useFeedbackStore } from '../../stores/feedbackStore';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { Select } from '../../components/ui/Select';
@@ -14,9 +13,13 @@ import {
   FileText,
   Calendar,
   User,
-  Filter,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Inbox,
+  Send,
+  CheckCircle,
+  RotateCcw,
+  ArrowRight
 } from 'lucide-react';
 import api from '../../lib/api';
 import QuoteOfTheDay from '../../components/dashboard/QuoteOfTheDay';
@@ -69,129 +72,140 @@ const EmployeeDashboard: React.FC = () => {
   ];
 
   const renderOverview = () => (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-6">
       {/* Daily Growth Quote */}
       {!isMyselfRoute && <QuoteOfTheDay />}
 
-      {/* Stats Cards */}
-      <div className={`grid grid-cols-1 gap-3 sm:gap-6 ${isManager ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
-        <Card 
-          className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
+      {/* Stats Cards - Modern Gradient Design */}
+      <div className={`grid gap-2 sm:gap-4 ${isManager ? 'grid-cols-3' : 'grid-cols-2'}`}>
+        {/* Feedback Received - Blue Theme */}
+        <div 
+          className="group relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 p-3 sm:p-5 shadow-lg shadow-blue-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5 cursor-pointer"
           onClick={() => navigate('/feedback?tab=received')}
         >
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-center">
-              <div className="p-2 sm:p-3 bg-blue-100 rounded-xl flex-shrink-0">
-                <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
-              </div>
-              <div className="ml-3 sm:ml-4 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Feedback Received</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900">
-                  {isFeedbackLoading ? '...' : feedbackStats?.received || 0}
-                </p>
-              </div>
+          <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+          <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="order-2 sm:order-1">
+              <p className="text-xs sm:text-sm font-medium text-blue-100">Received</p>
+              <p className="text-2xl sm:text-3xl font-bold text-white">
+                {isFeedbackLoading ? '...' : feedbackStats?.received || 0}
+              </p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="order-1 sm:order-2 flex h-9 w-9 sm:h-12 sm:w-12 items-center justify-center rounded-lg sm:rounded-xl bg-white/20 backdrop-blur-sm">
+              <Inbox className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
+            </div>
+          </div>
+        </div>
 
-        {/* Feedback Given - Only visible to managers */}
+        {/* Feedback Given - Emerald Theme (Managers only) */}
         {isManager && (
-          <Card 
-            className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
+          <div 
+            className="group relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 p-3 sm:p-5 shadow-lg shadow-emerald-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/30 hover:-translate-y-0.5 cursor-pointer"
             onClick={() => navigate('/feedback?tab=given')}
           >
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center">
-                <div className="p-2 sm:p-3 bg-green-100 rounded-xl flex-shrink-0">
-                  <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
-                </div>
-                <div className="ml-3 sm:ml-4 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Feedback Given</p>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-900">
-                    {isFeedbackLoading ? '...' : feedbackStats?.given || 0}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        <Card 
-          className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
-          onClick={() => navigate('/feedback?tab=waiting')}
-        >
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-center">
-              <div className="p-2 sm:p-3 bg-orange-100 rounded-xl flex-shrink-0">
-                <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600" />
-              </div>
-              <div className="ml-3 sm:ml-4 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Waiting for Acknowledgement</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900">
-                  {isFeedbackLoading ? '...' : feedbackStats?.pending || 0}
+            <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+            <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="order-2 sm:order-1">
+                <p className="text-xs sm:text-sm font-medium text-emerald-100">Given</p>
+                <p className="text-2xl sm:text-3xl font-bold text-white">
+                  {isFeedbackLoading ? '...' : feedbackStats?.given || 0}
                 </p>
               </div>
+              <div className="order-1 sm:order-2 flex h-9 w-9 sm:h-12 sm:w-12 items-center justify-center rounded-lg sm:rounded-xl bg-white/20 backdrop-blur-sm">
+                <Send className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        )}
+
+        {/* Waiting for Acknowledgement - Amber Theme */}
+        <div 
+          className="group relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 p-3 sm:p-5 shadow-lg shadow-amber-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-amber-500/30 hover:-translate-y-0.5 cursor-pointer"
+          onClick={() => navigate('/feedback?tab=waiting')}
+        >
+          <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+          <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="order-2 sm:order-1">
+              <p className="text-xs sm:text-sm font-medium text-amber-100">Waiting</p>
+              <p className="text-2xl sm:text-3xl font-bold text-white">
+                {isFeedbackLoading ? '...' : feedbackStats?.pending || 0}
+              </p>
+            </div>
+            <div className="order-1 sm:order-2 flex h-9 w-9 sm:h-12 sm:w-12 items-center justify-center rounded-lg sm:rounded-xl bg-white/20 backdrop-blur-sm">
+              <Clock className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Recent Feedback Received */}
-        <Card className="transform transition-all duration-200 hover:shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center">
-                <MessageSquare className="h-5 w-5 mr-2 text-blue-600" />
-                Recent Feedback
+        <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="p-4 sm:p-5 border-b border-gray-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100">
+                  <MessageSquare className="h-4 w-4 text-blue-600" />
+                </div>
+                <h3 className="font-semibold text-gray-900">Recent Feedback</h3>
               </div>
               <Link to="/feedback">
-                <Button variant="outline" size="sm">View All</Button>
+                <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg">
+                  View All
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
               </Link>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+            </div>
+          </div>
+          <div className="p-4 sm:p-5">
             {isFeedbackLoading ? (
               <div className="flex justify-center py-8">
                 <LoadingSpinner size="md" />
               </div>
             ) : recentFeedback && recentFeedback.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {recentFeedback.slice(0, 3).map((feedback) => (
                   <div 
                     key={feedback.id} 
-                    className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-150 cursor-pointer"
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors duration-150 cursor-pointer group"
                     onClick={() => navigate(`/feedback?view=${feedback.id}`)}
                   >
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{feedback.fromUser?.name || 'Anonymous'}</p>
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-sm font-medium shrink-0">
+                      {(feedback.fromUser?.name || 'A').charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{feedback.fromUser?.name || 'Anonymous'}</p>
                       <p className="text-xs text-gray-500">
-                        {new Date(feedback.createdAt).toLocaleDateString()}
+                        {new Date(feedback.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </p>
                     </div>
+                    <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                <MessageSquare className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-                <p>No feedback received yet</p>
+              <div className="text-center py-8">
+                <div className="mx-auto w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-3">
+                  <MessageSquare className="w-6 h-6 text-gray-400" />
+                </div>
+                <p className="text-sm text-gray-500">No feedback received yet</p>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* My Goals & Development */}
-        <Card className="transform transition-all duration-200 hover:shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Target className="h-5 w-5 mr-2 text-purple-600" />
-              My Development Goals
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="p-4 sm:p-5 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100">
+                <Target className="h-4 w-4 text-purple-600" />
+              </div>
+              <h3 className="font-semibold text-gray-900">My Development Goals</h3>
+            </div>
+          </div>
+          <div className="p-4 sm:p-5">
             {(() => {
               const allGoals = recentFeedback?.flatMap(feedback => 
                 (feedback.goals || []).map(goal => ({
@@ -200,7 +214,7 @@ const EmployeeDashboard: React.FC = () => {
                   cycleName: feedback.cycle?.name,
                 }))
               ) || [];
-              const displayGoals = allGoals.slice(0, 3); // Show max 3 in overview
+              const displayGoals = allGoals.slice(0, 3);
               
               return (
                 <div className="space-y-3">
@@ -208,15 +222,13 @@ const EmployeeDashboard: React.FC = () => {
                     <>
                       {displayGoals.map((goal) => (
                         <div key={goal.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                          <div className={`mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                          <div className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                             goal.status === 'completed' 
-                              ? 'bg-green-500 border-green-500' 
-                              : 'border-gray-300'
+                              ? 'bg-emerald-500 border-emerald-500' 
+                              : 'border-gray-300 bg-white'
                           }`}>
                             {goal.status === 'completed' && (
-                              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
+                              <CheckCircle className="w-3.5 h-3.5 text-white" />
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -225,35 +237,38 @@ const EmployeeDashboard: React.FC = () => {
                                 {goal.title}
                               </p>
                               {goal.cycleName && (
-                                <span className="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded text-xs whitespace-nowrap flex-shrink-0">
+                                <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-xs whitespace-nowrap flex-shrink-0">
                                   {goal.cycleName}
                                 </span>
                               )}
                             </div>
                             {goal.targetDate && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                Target: {new Date(goal.targetDate).toLocaleDateString()}
+                              <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                {new Date(goal.targetDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                               </p>
                             )}
                           </div>
                         </div>
                       ))}
                       {allGoals.length > 3 && (
-                        <p className="text-xs text-gray-500 text-center">
+                        <p className="text-xs text-gray-400 text-center pt-1">
                           +{allGoals.length - 3} more goals
                         </p>
                       )}
                     </>
                   ) : (
-                    <div className="text-center py-4 text-gray-500">
-                      <Target className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                      <p className="text-sm">No goals yet</p>
+                    <div className="text-center py-6">
+                      <div className="mx-auto w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-3">
+                        <Target className="w-6 h-6 text-gray-400" />
+                      </div>
+                      <p className="text-sm text-gray-500">No goals yet</p>
                     </div>
                   )}
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="w-full mt-2"
+                    className="w-full mt-2 rounded-lg"
                     onClick={() => setActiveTab('goals')}
                   >
                     <Target className="w-4 h-4 mr-2" />
@@ -262,8 +277,8 @@ const EmployeeDashboard: React.FC = () => {
                 </div>
               );
             })()}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -274,7 +289,9 @@ const EmployeeDashboard: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-900">My Feedback History</h2>
         <Link to="/feedback" className="w-full sm:w-auto">
-          <Button className="w-full sm:w-auto">View All Feedback</Button>
+          <Button className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/25">
+            View All Feedback
+          </Button>
         </Link>
       </div>
 
@@ -283,36 +300,47 @@ const EmployeeDashboard: React.FC = () => {
           <LoadingSpinner />
         </div>
       ) : recentFeedback && recentFeedback.length > 0 ? (
-        <div className="space-y-4">
-          {recentFeedback.map((feedback) => (
-            <Card 
-              key={feedback.id} 
-              className="hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => navigate(`/feedback?view=${feedback.id}`)}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <User className="w-4 h-4 text-gray-400" />
-                      <span className="font-medium text-gray-900">
-                        From: {feedback.fromUser?.name || 'Unknown'}
+        <div className="space-y-2 sm:space-y-3">
+          {recentFeedback.map((feedback) => {
+            const borderColor = feedback.status === 'completed' 
+              ? 'border-l-emerald-400' 
+              : feedback.status === 'submitted'
+              ? 'border-l-amber-400'
+              : 'border-l-gray-400';
+              
+            return (
+              <div 
+                key={feedback.id} 
+                className={`bg-white rounded-lg sm:rounded-xl border border-gray-200 border-l-4 ${borderColor} p-4 sm:p-5 hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer active:bg-gray-50`}
+                onClick={() => navigate(`/feedback?view=${feedback.id}`)}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    {/* Header */}
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xs font-medium shrink-0">
+                        {(feedback.fromUser?.name || 'A').charAt(0).toUpperCase()}
+                      </div>
+                      <span className="font-medium text-gray-900 text-sm">
+                        {feedback.fromUser?.name || 'Unknown'}
                       </span>
-                      <span className={`px-2 py-0.5 text-xs rounded-full ${
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                         feedback.status === 'completed' 
-                          ? 'bg-green-100 text-green-700'
+                          ? 'bg-emerald-100 text-emerald-700'
                           : feedback.status === 'submitted'
-                          ? 'bg-yellow-100 text-yellow-700'
+                          ? 'bg-amber-100 text-amber-700'
                           : 'bg-gray-100 text-gray-700'
                       }`}>
                         {feedback.status === 'completed' ? 'Acknowledged' : 
-                         feedback.status === 'submitted' ? 'Waiting for Acknowledgement' : 
+                         feedback.status === 'submitted' ? 'Waiting' : 
                          feedback.status}
                       </span>
                     </div>
-                    <div>
-                      <p className={`text-gray-600 text-sm ${
-                        expandedFeedback[feedback.id] ? '' : 'line-clamp-3'
+                    
+                    {/* Content */}
+                    <div className="mt-2">
+                      <p className={`text-gray-600 text-sm leading-relaxed ${
+                        expandedFeedback[feedback.id] ? '' : 'line-clamp-2'
                       }`}>
                         {getContentText(feedback)}
                       </p>
@@ -327,44 +355,48 @@ const EmployeeDashboard: React.FC = () => {
                               [feedback.id]: !prev[feedback.id]
                             }));
                           }}
-                          className="mt-1.5 text-xs font-medium text-primary-600 hover:text-primary-700 hover:underline flex items-center gap-1 transition-colors relative z-10"
+                          className="mt-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-0.5 transition-colors min-h-[32px] sm:min-h-0"
                         >
                           {expandedFeedback[feedback.id] ? (
-                            <>
-                              Show less
-                              <ChevronUp className="w-3 h-3" />
-                            </>
+                            <>Show less <ChevronUp className="w-3.5 h-3.5" /></>
                           ) : (
-                            <>
-                              Read more
-                              <ChevronDown className="w-3 h-3" />
-                            </>
+                            <>Read more <ChevronDown className="w-3.5 h-3.5" /></>
                           )}
                         </button>
                       )}
                     </div>
-                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                    
+                    {/* Meta */}
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-3 text-xs text-gray-400">
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
-                        {new Date(feedback.createdAt).toLocaleDateString()}
+                        {new Date(feedback.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </span>
                       {feedback.cycle?.name && (
-                        <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded">
+                        <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">
                           {feedback.cycle.name}
                         </span>
                       )}
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+              </div>
+            );
+          })}
         </div>
       ) : (
-        <div className="text-center py-16 text-gray-500">
-          <MessageSquare className="w-20 h-20 mx-auto mb-4 text-gray-400" />
-          <p className="text-lg mb-4">No feedback received yet</p>
-          <p className="text-sm text-gray-600 mb-6">Feedback you receive will appear here</p>
+        /* Modern Empty State */
+        <div className="relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl sm:rounded-2xl p-8 sm:p-12 text-center">
+          <div className="absolute inset-0 bg-grid-pattern opacity-5" />
+          <div className="relative">
+            <div className="mx-auto w-14 h-14 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6 shadow-lg shadow-blue-500/20">
+              <MessageSquare className="w-7 h-7 sm:w-10 sm:h-10 text-white" />
+            </div>
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">No feedback received yet</h3>
+            <p className="text-sm sm:text-base text-gray-500 max-w-sm mx-auto">
+              Feedback you receive from your manager will appear here.
+            </p>
+          </div>
         </div>
       )}
     </div>
@@ -381,61 +413,76 @@ const EmployeeDashboard: React.FC = () => {
       }))
     ) || [];
 
-    // Get unique cycles for filter dropdown (include "No Cycle" option)
+    // Get unique cycles for filter dropdown
     const uniqueCycles = Array.from(
       new Map(allGoals.map(g => [g.cycleId || 'no-cycle', { id: g.cycleId || 'no-cycle', name: g.cycleName || 'No Cycle' }])).values()
     );
 
-    // Filter goals by selected cycle and status
+    // Filter goals
     let filteredGoals = allGoals;
-    
-    // Apply cycle filter
     if (goalsCycleFilter) {
       filteredGoals = goalsCycleFilter === 'no-cycle'
         ? filteredGoals.filter(g => !g.cycleId)
         : filteredGoals.filter(g => g.cycleId === goalsCycleFilter);
     }
-    
-    // Apply status filter
     if (goalsStatusFilter) {
       filteredGoals = goalsStatusFilter === 'completed'
         ? filteredGoals.filter(g => g.status === 'completed')
         : filteredGoals.filter(g => g.status !== 'completed');
     }
 
-    // Count for filter badges
     const completedCount = allGoals.filter(g => g.status === 'completed').length;
     const pendingCount = allGoals.filter(g => g.status !== 'completed').length;
+    const hasActiveFilters = goalsCycleFilter || goalsStatusFilter;
 
     const toggleGoalComplete = async (goalId: string, currentStatus: string) => {
       const completed = currentStatus !== 'completed';
       try {
         await api.put(`/goals/${goalId}`, { completed });
-        // Refresh feedback to get updated goals
         if (user?.id) {
           fetchFeedbackList({ toUserId: user.id }, 1, 10);
         }
       } catch (error: any) {
         console.error('Failed to update goal:', error);
-        // Toast is shown by api.ts interceptor
       }
+    };
+
+    const clearGoalFilters = () => {
+      setGoalsCycleFilter('');
+      setGoalsStatusFilter('');
     };
 
     return (
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h2 className="text-2xl font-bold text-gray-900">My Development Goals</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">My Development Goals</h2>
           
-          {/* Filters */}
+          {/* Stats Pills */}
           {allGoals.length > 0 && (
-            <div className="flex flex-wrap items-center gap-3">
-              <Filter className="w-4 h-4 text-gray-500" />
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
+                {allGoals.length} Total
+              </span>
+              <span className="px-3 py-1.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">
+                {completedCount} Done
+              </span>
+              <span className="px-3 py-1.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
+                {pendingCount} Pending
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Filters */}
+        {allGoals.length > 0 && (
+          <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl p-4 shadow-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Select
                 value={goalsCycleFilter}
                 onChange={(e) => setGoalsCycleFilter(e.target.value)}
-                className="w-44"
+                label="Cycle"
               >
-                <option value="">All Cycles ({allGoals.length})</option>
+                <option value="">All Cycles</option>
                 {uniqueCycles.map(cycle => (
                   <option key={cycle.id} value={cycle.id}>
                     {cycle.name}
@@ -445,144 +492,155 @@ const EmployeeDashboard: React.FC = () => {
               <Select
                 value={goalsStatusFilter}
                 onChange={(e) => setGoalsStatusFilter(e.target.value)}
-                className="w-40"
+                label="Status"
               >
                 <option value="">All Status</option>
-                <option value="pending">Pending ({pendingCount})</option>
-                <option value="completed">Completed ({completedCount})</option>
+                <option value="pending">Pending</option>
+                <option value="completed">Completed</option>
               </Select>
             </div>
-          )}
-        </div>
+            {hasActiveFilters && (
+              <div className="flex justify-end mt-4 pt-4 border-t border-gray-100">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={clearGoalFilters}
+                  icon={RotateCcw}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  Clear Filters
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
 
         {isFeedbackLoading ? (
           <div className="flex justify-center py-12">
             <LoadingSpinner />
           </div>
         ) : filteredGoals.length > 0 ? (
-          <div className="space-y-4">
+          <div className="space-y-2 sm:space-y-3">
             {filteredGoals.map((goal) => (
-              <Card 
+              <div 
                 key={goal.id}
-                className={`transition-all duration-200 ${goal.status === 'completed' ? 'bg-gray-50' : ''}`}
+                className={`bg-white rounded-lg sm:rounded-xl border border-gray-200 p-4 sm:p-5 transition-all duration-200 ${goal.status === 'completed' ? 'bg-gray-50/50' : ''}`}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-4">
-                    <input
-                      type="checkbox"
-                      checked={goal.status === 'completed'}
-                      onChange={() => toggleGoalComplete(goal.id, goal.status)}
-                      className="mt-1 h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between">
-                        <h3 className={`text-base font-medium ${goal.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
-                          {goal.title}
-                        </h3>
-                        {goal.cycleName && (
-                          <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-xs ml-2 whitespace-nowrap">
-                            {goal.cycleName}
-                          </span>
-                        )}
-                      </div>
-                      {goal.description && (
-                        <p className={`text-sm mt-1 ${goal.status === 'completed' ? 'text-gray-400' : 'text-gray-600'}`}>
-                          {goal.description}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
-                        {goal.targetDate && (
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            Target: {new Date(goal.targetDate).toLocaleDateString()}
-                          </span>
-                        )}
-                        <span className="flex items-center gap-1">
-                          <User className="w-4 h-4" />
-                          From: {goal.feedbackFrom}
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <button
+                    onClick={() => toggleGoalComplete(goal.id, goal.status)}
+                    className={`mt-0.5 w-6 h-6 rounded-lg border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
+                      goal.status === 'completed' 
+                        ? 'bg-emerald-500 border-emerald-500 text-white' 
+                        : 'border-gray-300 hover:border-emerald-400 bg-white'
+                    }`}
+                  >
+                    {goal.status === 'completed' && (
+                      <CheckCircle className="w-4 h-4" />
+                    )}
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <h3 className={`text-sm sm:text-base font-medium ${goal.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                        {goal.title}
+                      </h3>
+                      {goal.cycleName && (
+                        <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs whitespace-nowrap">
+                          {goal.cycleName}
                         </span>
-                      </div>
+                      )}
+                    </div>
+                    {goal.description && (
+                      <p className={`text-sm mt-1.5 leading-relaxed ${goal.status === 'completed' ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {goal.description}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-3 text-xs text-gray-400">
+                      {goal.targetDate && (
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5" />
+                          {new Date(goal.targetDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <User className="w-3.5 h-3.5" />
+                        {goal.feedbackFrom}
+                      </span>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         ) : allGoals.length > 0 ? (
-          <Card>
-            <CardContent className="py-12">
-              <div className="text-center text-gray-500">
-                <Filter className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                <p className="text-lg mb-2">No goals match the selected filters</p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => {
-                    setGoalsCycleFilter('');
-                    setGoalsStatusFilter('');
-                  }}
-                >
-                  Clear Filters
-                </Button>
+          /* No matches for filters */
+          <div className="relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl sm:rounded-2xl p-8 sm:p-12 text-center">
+            <div className="relative">
+              <div className="mx-auto w-14 h-14 bg-gray-200 rounded-xl flex items-center justify-center mb-4">
+                <Target className="w-7 h-7 text-gray-400" />
               </div>
-            </CardContent>
-          </Card>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No goals match filters</h3>
+              <p className="text-sm text-gray-500 mb-6">Try adjusting your filter criteria</p>
+              <Button 
+                variant="outline" 
+                onClick={clearGoalFilters}
+                className="rounded-xl"
+                icon={RotateCcw}
+              >
+                Clear Filters
+              </Button>
+            </div>
+          </div>
         ) : (
-          <Card>
-            <CardContent className="py-16">
-              <div className="text-center text-gray-500">
-                <Target className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                <p className="text-lg mb-2">No goals yet</p>
-                <p className="text-sm text-gray-600">Goals from your feedback will appear here</p>
+          /* No goals at all */
+          <div className="relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl sm:rounded-2xl p-8 sm:p-12 text-center">
+            <div className="absolute inset-0 bg-grid-pattern opacity-5" />
+            <div className="relative">
+              <div className="mx-auto w-14 h-14 sm:w-20 sm:h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6 shadow-lg shadow-purple-500/20">
+                <Target className="w-7 h-7 sm:w-10 sm:h-10 text-white" />
               </div>
-            </CardContent>
-          </Card>
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">No goals yet</h3>
+              <p className="text-sm sm:text-base text-gray-500 max-w-sm mx-auto">
+                Goals from your feedback will appear here once your manager adds them.
+              </p>
+            </div>
+          </div>
         )}
       </div>
     );
   };
 
   return (
-    <div className="bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">My Dashboard</h1>
-              <p className="text-gray-600">Track your performance and development</p>
-            </div>
-          </div>
-        </div>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">My Dashboard</h1>
+        <p className="text-gray-500 mt-1">Track your performance and development</p>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="px-6">
-          <nav className="flex space-x-8">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
-                    activeTab === tab.id
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <Icon className="w-4 h-4 mr-2" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
+      {/* Modern Pill Tabs */}
+      <div className="bg-gray-100/80 p-1 rounded-xl inline-flex gap-0.5 sm:gap-1 overflow-x-auto scrollbar-hide max-w-full">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-200 min-h-[40px] flex items-center gap-1.5 sm:gap-2 ${
+                activeTab === tab.id
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Main Content */}
-      <div className="p-6">
+      <div>
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'my-feedback' && renderMyFeedback()}
         {activeTab === 'goals' && renderGoals()}
