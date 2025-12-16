@@ -6,7 +6,6 @@ import { useFeedbackStore } from '../../stores/feedbackStore';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
-import { HierarchyNode } from '../../types/hierarchy.types';
 import api from '../../lib/api';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { 
@@ -108,29 +107,13 @@ const ManagerDashboard: React.FC = () => {
   const { user } = useAuthStore();
   const {
     directReports,
-    hierarchyTree,
     stats,
     isLoading,
     error,
     fetchDirectReports,
-    fetchHierarchyTree,
     fetchHierarchyStats
   } = useHierarchyStore();
   
-  // State for expanded tree nodes
-  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
-  
-  const toggleNode = (nodeId: string) => {
-    setExpandedNodes(prev => {
-      const next = new Set(prev);
-      if (next.has(nodeId)) {
-        next.delete(nodeId);
-      } else {
-        next.add(nodeId);
-      }
-      return next;
-    });
-  };
   const {
     feedbackStats,
     feedbackList: recentFeedback,
@@ -139,11 +122,11 @@ const ManagerDashboard: React.FC = () => {
     fetchFeedbackList
   } = useFeedbackStore();
 
-  // Support URL parameter for direct tab linking (e.g., /dashboard?tab=team)
-  type TabType = 'overview' | 'team' | 'analytics' | 'insights';
+  // Support URL parameter for direct tab linking (e.g., /dashboard?tab=analytics)
+  type TabType = 'overview' | 'analytics' | 'insights';
   const [searchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
-  const validTabs: TabType[] = ['overview', 'team', 'analytics', 'insights'];
+  const validTabs: TabType[] = ['overview', 'analytics', 'insights'];
   const initialTab: TabType = validTabs.includes(tabParam as TabType) ? (tabParam as TabType) : 'overview';
 
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
@@ -344,35 +327,15 @@ const ManagerDashboard: React.FC = () => {
       fetchFeedbackStats();
       // Fetch recent team feedback (feedback given by manager)
       fetchFeedbackList({ fromUserId: user.id }, 1, 5);
-      // Fetch hierarchy tree for team view
-      if (user.organizationId) {
-        fetchHierarchyTree(user.organizationId);
-      }
       // Fetch completion data for overview card
       fetchAnalyticsData();
       // Fetch active cycles
       fetchActiveCycles();
     }
-  }, [user, fetchDirectReports, fetchHierarchyTree, fetchHierarchyStats, fetchFeedbackStats, fetchFeedbackList]);
+  }, [user, fetchDirectReports, fetchHierarchyStats, fetchFeedbackStats, fetchFeedbackList]);
   
-  // Set initial expanded state when hierarchy tree loads (collapsed by default)
-  useEffect(() => {
-    if (hierarchyTree && user?.id) {
-      // Find the current user's node in the hierarchy
-      const userNode = findUserNode(hierarchyTree, user.id);
-      if (userNode) {
-        // Only expand the user's own node to show first-level direct reports
-        setExpandedNodes(new Set([userNode.id]));
-      } else {
-        // Fallback: just expand root
-        setExpandedNodes(new Set([hierarchyTree.id]));
-      }
-    }
-  }, [hierarchyTree, user?.id]);
-
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
-    { id: 'team', label: 'Team', icon: Users },
     { id: 'insights', label: 'AI Insights', icon: Sparkles },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   ];
@@ -384,10 +347,10 @@ const ManagerDashboard: React.FC = () => {
 
       {/* Stats Cards - Gradient design */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4">
-        {/* Direct Reports - Click to switch to Team tab */}
+        {/* Direct Reports - Click to go to Team page */}
         <Card 
           className="bg-gradient-to-br from-blue-500 to-blue-600 border-0 shadow-lg hover:shadow-xl transform transition-all duration-200 hover:-translate-y-1 cursor-pointer active:scale-[0.98]"
-          onClick={() => setActiveTab('team')}
+          onClick={() => navigate('/team')}
         >
           <CardContent className="p-4 sm:p-5">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -563,275 +526,6 @@ const ManagerDashboard: React.FC = () => {
       </div>
     </div>
   );
-
-  // Avatar color gradients by level
-  const avatarGradients = [
-    'from-emerald-500 to-teal-600',      // Level 0 - Current user
-    'from-blue-500 to-indigo-600',        // Level 1
-    'from-purple-500 to-pink-600',        // Level 2
-    'from-orange-500 to-red-600',         // Level 3
-    'from-cyan-500 to-blue-600',          // Level 4+
-  ];
-  
-  const getAvatarGradient = (level: number, isCurrentUser: boolean) => {
-    if (isCurrentUser) return avatarGradients[0];
-    return avatarGradients[Math.min(level, avatarGradients.length - 1)];
-  };
-
-  // Recursive function to render hierarchy tree nodes
-  const renderHierarchyNode = (node: HierarchyNode, level: number = 0, isCurrentUser: boolean = false): React.ReactNode => {
-    const isExpanded = expandedNodes.has(node.id);
-    const hasChildren = node.directReports && node.directReports.length > 0;
-    const isDirectReport = directReports.some(dr => dr.id === node.id);
-    
-    // Limit indentation on mobile
-    const mobileIndent = Math.min(level, 4);
-    const indentPx = mobileIndent * 24;
-    
-    // Handle click on the row - only for direct reports
-    const handleRowClick = () => {
-      if (isDirectReport && !isCurrentUser) {
-        navigate(`/team/${node.id}`);
-      }
-    };
-    
-    return (
-      <div key={node.id} className="select-none">
-        {/* Node card */}
-        <div 
-          className={`
-            relative flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl mb-2 
-            transition-all duration-200 ease-out
-            ${isCurrentUser 
-              ? 'bg-white border-l-4 border-l-emerald-500 border border-emerald-200 shadow-md' 
-              : isDirectReport
-                ? 'bg-white border border-gray-200 hover:border-primary-400 hover:shadow-lg hover:bg-primary-50/30 hover:-translate-y-0.5 cursor-pointer group'
-                : 'bg-gray-50/80 border border-gray-100'
-            }
-          `}
-          style={{ marginLeft: `${indentPx}px` }}
-          onClick={handleRowClick}
-        >
-          {/* Connecting line to parent */}
-          {level > 0 && (
-            <div 
-              className="hidden sm:block absolute -left-3 top-1/2 w-3 h-px bg-gray-300"
-              style={{ marginLeft: `${-indentPx + 12}px` }}
-            />
-          )}
-          
-          {/* Expand/collapse button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              hasChildren && toggleNode(node.id);
-            }}
-            className={`
-              p-1.5 rounded-lg transition-all duration-200
-              ${hasChildren 
-                ? 'hover:bg-gray-100 cursor-pointer active:scale-95' 
-                : 'opacity-0'
-              }
-            `}
-            disabled={!hasChildren}
-          >
-            {hasChildren && (
-              <div className={`transform transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>
-                <ChevronRight className="w-4 h-4 text-gray-500" />
-              </div>
-            )}
-          </button>
-          
-          {/* Avatar */}
-          <div className={`
-            relative w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0
-            bg-gradient-to-br ${getAvatarGradient(level, isCurrentUser)}
-            shadow-md ring-2 ring-white
-            ${isDirectReport && !isCurrentUser ? 'group-hover:ring-primary-200 group-hover:shadow-lg transition-all duration-200' : ''}
-          `}>
-            <span className="text-base sm:text-lg font-bold text-white drop-shadow-sm">
-              {node.name.charAt(0).toUpperCase()}
-            </span>
-            {/* Manager badge - improved contrast */}
-            {hasChildren && (
-              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 sm:w-5 sm:h-5 bg-indigo-500 rounded-full flex items-center justify-center ring-2 ring-white shadow-sm">
-                <Users className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
-              </div>
-            )}
-          </div>
-          
-          {/* Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h4 className={`font-semibold text-sm sm:text-base ${isCurrentUser ? 'text-emerald-700' : 'text-gray-900'} ${isDirectReport && !isCurrentUser ? 'group-hover:text-primary-700 transition-colors' : ''}`}>
-                {node.name}
-              </h4>
-              {isCurrentUser && (
-                <span className="text-xs px-2.5 py-0.5 bg-emerald-500 text-white rounded-full font-medium shadow-sm">
-                  You
-                </span>
-              )}
-              {isDirectReport && !isCurrentUser && (
-                <span className="text-xs px-2 py-0.5 bg-primary-100 text-primary-700 rounded-full font-medium group-hover:bg-primary-200 transition-colors">
-                  Direct
-                </span>
-              )}
-              {hasChildren && (
-                <span className="text-xs px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full font-medium hidden sm:inline-flex items-center gap-1.5 border border-slate-200">
-                  <Users className="w-3 h-3" />
-                  {node.directReports.length} {node.directReports.length === 1 ? 'report' : 'reports'}
-                </span>
-              )}
-            </div>
-            <p className={`text-xs sm:text-sm text-gray-500 truncate mt-0.5 ${isDirectReport && !isCurrentUser ? 'group-hover:text-gray-600 transition-colors' : ''}`}>
-              {node.position || 'Team Member'}
-              {node.department && <span className="hidden sm:inline text-gray-400"> • {node.department}</span>}
-            </p>
-          </div>
-          
-          {/* Clickable indicator for direct reports - enhanced hover */}
-          {isDirectReport && !isCurrentUser && (
-            <div className="flex items-center text-gray-300 group-hover:text-primary-500 transition-colors">
-              <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
-            </div>
-          )}
-          
-          {/* Mobile team count - improved contrast */}
-          {hasChildren && (
-            <span className="sm:hidden text-xs px-2 py-1 bg-slate-100 text-slate-700 rounded-full font-medium border border-slate-200">
-              {node.directReports.length}
-            </span>
-          )}
-        </div>
-        
-        {/* Children with animation */}
-        {hasChildren && (
-          <div 
-            className={`
-              relative overflow-hidden transition-all duration-300 ease-out
-              ${isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}
-            `}
-          >
-            {/* Vertical connecting line */}
-            <div 
-              className="hidden sm:block absolute top-0 bottom-4 w-0.5 bg-gradient-to-b from-gray-300 to-transparent rounded-full"
-              style={{ left: `${indentPx + 32}px` }}
-            />
-            {node.directReports.map((child) => renderHierarchyNode(child, level + 1, false))}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // Find the current user's node in the hierarchy tree
-  const findUserNode = (tree: HierarchyNode | null, userId: string): HierarchyNode | null => {
-    if (!tree) return null;
-    if (tree.id === userId) return tree;
-    for (const child of tree.directReports || []) {
-      const found = findUserNode(child, userId);
-      if (found) return found;
-    }
-    return null;
-  };
-
-  const renderTeam = () => {
-    // Find current user's position in the tree to show their subtree
-    const userNode = user?.id ? findUserNode(hierarchyTree, user.id) : null;
-    
-    // Count total team members (recursive)
-    const countTeamMembers = (node: HierarchyNode | null): number => {
-      if (!node) return 0;
-      let count = 0;
-      for (const child of node.directReports || []) {
-        count += 1 + countTeamMembers(child);
-      }
-      return count;
-    };
-    const totalTeamSize = userNode ? countTeamMembers(userNode) : directReports.length;
-    
-    return (
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Team Hierarchy</h2>
-            <p className="text-sm text-gray-600 mt-1 flex items-center gap-2">
-              <Users className="w-4 h-4 text-blue-500" />
-              <span className="font-medium">{directReports.length}</span> direct report{directReports.length !== 1 ? 's' : ''}
-              {totalTeamSize > directReports.length && (
-                <span className="text-gray-400">• <span className="font-medium">{totalTeamSize}</span> total</span>
-              )}
-            </p>
-          </div>
-          
-          {/* Expand/Collapse all */}
-          {userNode && userNode.directReports?.length > 0 && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  // Expand all nodes
-                  const allIds = new Set<string>();
-                  const collectIds = (n: HierarchyNode) => {
-                    allIds.add(n.id);
-                    (n.directReports || []).forEach(collectIds);
-                  };
-                  collectIds(userNode);
-                  setExpandedNodes(allIds);
-                }}
-                className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                Expand All
-              </button>
-              <button
-                onClick={() => setExpandedNodes(new Set([userNode.id]))}
-                className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                Collapse
-              </button>
-            </div>
-          )}
-        </div>
-
-        {isLoading ? (
-          <div className="flex justify-center items-center py-16">
-            <div className="text-center">
-              <LoadingSpinner size="lg" />
-              <p className="text-gray-500 mt-4">Loading team hierarchy...</p>
-            </div>
-          </div>
-        ) : error ? (
-          <Card className="p-6 border-red-200 bg-red-50">
-            <div className="flex items-center">
-              <AlertCircle className="h-5 w-5 text-red-500 mr-3" />
-              <p className="text-red-800">{error}</p>
-            </div>
-          </Card>
-        ) : userNode ? (
-          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-4 sm:p-6 border border-gray-200">
-            <div className="space-y-2">
-              {renderHierarchyNode(userNode, 0, true)}
-            </div>
-          </div>
-        ) : directReports.length > 0 ? (
-          // Fallback to direct reports if no hierarchy tree
-          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-4 sm:p-6 border border-gray-200">
-            <div className="space-y-2">
-              {directReports.map((member) => renderHierarchyNode(member, 0, false))}
-            </div>
-          </div>
-        ) : (
-          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-12 border border-gray-200 text-center">
-            <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Users className="h-8 w-8 text-gray-400" />
-            </div>
-            <h3 className="text-lg font-medium text-gray-700 mb-2">No Team Members</h3>
-            <p className="text-gray-500">Your team hierarchy will appear here once team members are added.</p>
-          </div>
-        )}
-      </div>
-    );
-  };
 
   const renderAnalytics = () => {
     // Color chart data with short names for external labels
@@ -1451,7 +1145,6 @@ const ManagerDashboard: React.FC = () => {
       {/* Main Content - Responsive padding */}
       <div className="px-4 sm:px-6 lg:px-8 pb-8">
         {activeTab === 'overview' && renderOverview()}
-        {activeTab === 'team' && renderTeam()}
         {activeTab === 'insights' && renderInsights()}
         {activeTab === 'analytics' && renderAnalytics()}
       </div>

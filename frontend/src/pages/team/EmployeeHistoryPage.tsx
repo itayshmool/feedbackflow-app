@@ -12,13 +12,15 @@ import {
   MessageSquare,
   Calendar,
   TrendingUp,
+  TrendingDown,
   User,
   Mail,
-  Briefcase,
   Building,
-  Clock,
   Eye,
   ChevronRight,
+  Award,
+  Target,
+  AlertCircle,
 } from 'lucide-react';
 
 interface FeedbackHistoryItem {
@@ -90,33 +92,42 @@ export default function EmployeeHistoryPage() {
   const getColorBadge = (color?: string) => {
     switch (color) {
       case 'green':
-        return <span className="w-3 h-3 rounded-full bg-green-500" title="Exceeds Expectations" />;
+        return (
+          <div className="w-3 h-3 rounded-full bg-gradient-to-br from-green-400 to-green-600 shadow-sm" title="Exceeds Expectations" />
+        );
       case 'yellow':
-        return <span className="w-3 h-3 rounded-full bg-yellow-500" title="Meets Expectations" />;
+        return (
+          <div className="w-3 h-3 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-sm" title="Meets Expectations" />
+        );
       case 'red':
-        return <span className="w-3 h-3 rounded-full bg-red-500" title="Needs Improvement" />;
+        return (
+          <div className="w-3 h-3 rounded-full bg-gradient-to-br from-red-400 to-red-600 shadow-sm" title="Needs Improvement" />
+        );
       default:
-        return <span className="w-3 h-3 rounded-full bg-gray-300" title="No classification" />;
+        return (
+          <div className="w-3 h-3 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 shadow-sm" title="No classification" />
+        );
     }
   };
 
   const getStatusBadge = (status: string) => {
-    const statusColors: Record<string, string> = {
-      completed: 'bg-green-100 text-green-700',
-      submitted: 'bg-blue-100 text-blue-700',
-      draft: 'bg-gray-100 text-gray-700',
-      acknowledged: 'bg-purple-100 text-purple-700',
+    const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
+      completed: { bg: 'bg-green-100', text: 'text-green-700', label: 'Completed' },
+      submitted: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Submitted' },
+      draft: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Draft' },
+      acknowledged: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Acknowledged' },
     };
+    const config = statusConfig[status] || { bg: 'bg-gray-100', text: 'text-gray-700', label: status };
     return (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[status] || 'bg-gray-100 text-gray-700'}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+      <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${config.bg} ${config.text}`}>
+        {config.label}
       </span>
     );
   };
 
   if (isLoading) {
     return (
-      <div className="bg-gray-50 flex items-center justify-center py-20">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center">
         <div className="text-center">
           <LoadingSpinner size="lg" />
           <p className="mt-4 text-gray-600">Loading employee history...</p>
@@ -127,19 +138,23 @@ export default function EmployeeHistoryPage() {
 
   if (error || !data) {
     return (
-      <div className="bg-gray-50 p-6">
-        <Button variant="outline" onClick={() => navigate(-1)} className="mb-6">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-        <Card className="max-w-md mx-auto">
-          <CardContent className="p-8 text-center">
-            <User className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Unable to Load</h2>
-            <p className="text-gray-600 mb-4">{error || 'Employee not found'}</p>
-            <Button onClick={fetchEmployeeHistory}>Try Again</Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 p-4 sm:p-6">
+        <div className="max-w-2xl mx-auto">
+          <Button variant="outline" onClick={() => navigate('/team')} className="mb-6">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Team
+          </Button>
+          <Card className="bg-white/80 backdrop-blur-sm border border-gray-200 shadow-lg">
+            <CardContent className="p-8 sm:p-12 text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                <User className="w-8 h-8 text-gray-400" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Unable to Load</h2>
+              <p className="text-gray-600 mb-6">{error || 'Employee not found'}</p>
+              <Button onClick={fetchEmployeeHistory}>Try Again</Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -147,50 +162,52 @@ export default function EmployeeHistoryPage() {
   const { employee, feedbackHistory, stats } = data;
 
   return (
-    <div className="bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="px-6 py-4">
-          <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4 -ml-2">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      {/* Header with gradient */}
+      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* Back button */}
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/team')} 
+            className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Team
           </Button>
           
-          {/* Mobile-responsive layout: stacks button below on small screens */}
-          <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-            {/* Avatar + Info row stays together */}
-            <div className="flex items-start gap-4 flex-1 min-w-0">
-              {/* Avatar - slightly smaller on mobile */}
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
-                <span className="text-2xl sm:text-3xl font-bold text-white">
-                  {employee.name.charAt(0).toUpperCase()}
-                </span>
-              </div>
+          {/* Employee info */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+            {/* Avatar */}
+            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center flex-shrink-0 ring-4 ring-white/30 shadow-xl">
+              <span className="text-3xl sm:text-4xl font-bold text-white">
+                {employee.name.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            
+            {/* Info */}
+            <div className="flex-1">
+              <h1 className="text-2xl sm:text-3xl font-bold">{employee.name}</h1>
+              <p className="text-white/80 text-base sm:text-lg mt-1">{employee.position || 'Team Member'}</p>
               
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{employee.name}</h1>
-                <p className="text-gray-600 text-sm sm:text-base">{employee.position || 'Team Member'}</p>
-                
-                <div className="flex flex-wrap gap-2 sm:gap-4 mt-2 sm:mt-3 text-xs sm:text-sm text-gray-500">
-                  <span className="flex items-center gap-1">
-                    <Mail className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span className="truncate max-w-[180px] sm:max-w-none">{employee.email}</span>
+              <div className="flex flex-wrap gap-3 sm:gap-4 mt-3 text-sm text-white/70">
+                <span className="flex items-center gap-1.5">
+                  <Mail className="w-4 h-4" />
+                  <span className="truncate max-w-[200px]">{employee.email}</span>
+                </span>
+                {employee.department && (
+                  <span className="flex items-center gap-1.5">
+                    <Building className="w-4 h-4" />
+                    {employee.department}
                   </span>
-                  {employee.department && (
-                    <span className="flex items-center gap-1">
-                      <Building className="w-3 h-3 sm:w-4 sm:h-4" />
-                      {employee.department}
-                    </span>
-                  )}
-                </div>
+                )}
               </div>
             </div>
             
-            {/* Give Feedback Button - full width on mobile, auto on desktop */}
+            {/* Give Feedback Button */}
             <Button
-              onClick={() => navigate(`/feedback?action=give&recipient=${encodeURIComponent(employee.email)}&name=${encodeURIComponent(employee.name)}`)}
-              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 flex-shrink-0"
+              onClick={() => navigate(`/feedback/give?recipient=${encodeURIComponent(employee.email)}&name=${encodeURIComponent(employee.name)}`)}
+              className="w-full sm:w-auto bg-white text-indigo-600 hover:bg-white/90 font-semibold shadow-lg"
             >
               <MessageSquare className="w-4 h-4 mr-2" />
               Give Feedback
@@ -200,60 +217,60 @@ export default function EmployeeHistoryPage() {
       </div>
 
       {/* Content */}
-      <div className="p-6 max-w-6xl mx-auto">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
-          <Card>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Stats Cards - Gradient Design */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 -mt-8">
+          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 border-0 shadow-lg">
             <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <MessageSquare className="w-5 h-5 text-blue-600" />
+              <div className="flex flex-col gap-2">
+                <div className="p-2 bg-white/20 rounded-lg w-fit">
+                  <MessageSquare className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalFeedback}</p>
-                  <p className="text-xs text-gray-500">Total Feedback</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-white">{stats.totalFeedback}</p>
+                  <p className="text-xs sm:text-sm font-medium text-blue-100">Total Feedback</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 border-0 shadow-lg">
             <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <TrendingUp className="w-5 h-5 text-green-600" />
+              <div className="flex flex-col gap-2">
+                <div className="p-2 bg-white/20 rounded-lg w-fit">
+                  <Award className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats.greenCount}</p>
-                  <p className="text-xs text-gray-500">Exceeds</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-white">{stats.greenCount}</p>
+                  <p className="text-xs sm:text-sm font-medium text-emerald-100">Exceeds</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="bg-gradient-to-br from-amber-500 to-amber-600 border-0 shadow-lg">
             <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-yellow-100 rounded-lg">
-                  <TrendingUp className="w-5 h-5 text-yellow-600" />
+              <div className="flex flex-col gap-2">
+                <div className="p-2 bg-white/20 rounded-lg w-fit">
+                  <Target className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats.yellowCount}</p>
-                  <p className="text-xs text-gray-500">Meets</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-white">{stats.yellowCount}</p>
+                  <p className="text-xs sm:text-sm font-medium text-amber-100">Meets</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="bg-gradient-to-br from-rose-500 to-rose-600 border-0 shadow-lg">
             <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <TrendingUp className="w-5 h-5 text-red-600" />
+              <div className="flex flex-col gap-2">
+                <div className="p-2 bg-white/20 rounded-lg w-fit">
+                  <TrendingDown className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats.redCount}</p>
-                  <p className="text-xs text-gray-500">Needs Improvement</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-white">{stats.redCount}</p>
+                  <p className="text-xs sm:text-sm font-medium text-rose-100">Needs Imp.</p>
                 </div>
               </div>
             </CardContent>
@@ -262,54 +279,65 @@ export default function EmployeeHistoryPage() {
 
         {/* Performance Timeline */}
         {feedbackHistory.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-purple-600" />
+          <Card className="bg-white/80 backdrop-blur-sm border border-gray-200 shadow-lg mb-6">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg sm:text-xl font-bold flex items-center gap-2">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Calendar className="w-5 h-5 text-purple-600" />
+                </div>
                 Performance Timeline
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                {feedbackHistory.slice(0, 8).map((feedback, index) => (
-                  <div
+              <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                {feedbackHistory.slice(0, 10).map((feedback, index) => (
+                  <button
                     key={feedback.id}
-                    className="flex flex-col items-center min-w-[80px] cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={() => navigate(`/feedback?view=${feedback.id}`)}
+                    className="flex flex-col items-center min-w-[70px] sm:min-w-[80px] p-2 rounded-xl hover:bg-gray-50 transition-all cursor-pointer group"
+                    onClick={() => navigate(`/feedback/${feedback.id}`)}
                   >
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      feedback.colorClassification === 'green' ? 'bg-green-100' :
-                      feedback.colorClassification === 'yellow' ? 'bg-yellow-100' :
-                      feedback.colorClassification === 'red' ? 'bg-red-100' : 'bg-gray-100'
+                    <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center shadow-md transition-transform group-hover:scale-110 ${
+                      feedback.colorClassification === 'green' ? 'bg-gradient-to-br from-green-100 to-green-200 ring-2 ring-green-300' :
+                      feedback.colorClassification === 'yellow' ? 'bg-gradient-to-br from-yellow-100 to-yellow-200 ring-2 ring-yellow-300' :
+                      feedback.colorClassification === 'red' ? 'bg-gradient-to-br from-red-100 to-red-200 ring-2 ring-red-300' : 
+                      'bg-gradient-to-br from-gray-100 to-gray-200 ring-2 ring-gray-300'
                     }`}>
                       {getColorBadge(feedback.colorClassification)}
                     </div>
-                    <p className="text-xs text-gray-500 mt-1 text-center">
+                    <p className="text-xs text-gray-500 mt-2 text-center font-medium">
                       {new Date(feedback.createdAt).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}
                     </p>
-                  </div>
+                  </button>
                 ))}
               </div>
+              <p className="text-xs text-gray-400 mt-2 text-center">Click on a point to view feedback details</p>
             </CardContent>
           </Card>
         )}
 
         {/* Feedback History List */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-blue-600" />
+        <Card className="bg-white/80 backdrop-blur-sm border border-gray-200 shadow-lg">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg sm:text-xl font-bold flex items-center gap-2">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <MessageSquare className="w-5 h-5 text-blue-600" />
+              </div>
               Feedback History
             </CardTitle>
           </CardHeader>
           <CardContent>
             {feedbackHistory.length === 0 ? (
-              <div className="text-center py-12">
-                <MessageSquare className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Feedback Yet</h3>
-                <p className="text-gray-500 mb-4">You haven't given any feedback to {employee.name} yet.</p>
+              <div className="text-center py-12 sm:py-16">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <MessageSquare className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
+                </div>
+                <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">No Feedback Yet</h3>
+                <p className="text-gray-500 mb-6 max-w-sm mx-auto">
+                  You haven't given any feedback to {employee.name} yet. Start building their growth story!
+                </p>
                 <Button
-                  onClick={() => navigate(`/feedback?action=give&recipient=${encodeURIComponent(employee.email)}&name=${encodeURIComponent(employee.name)}`)}
+                  onClick={() => navigate(`/feedback/give?recipient=${encodeURIComponent(employee.email)}&name=${encodeURIComponent(employee.name)}`)}
+                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
                 >
                   <MessageSquare className="w-4 h-4 mr-2" />
                   Give First Feedback
@@ -318,15 +346,26 @@ export default function EmployeeHistoryPage() {
             ) : (
               <div className="space-y-3">
                 {feedbackHistory.map((feedback) => (
-                  <div
+                  <button
                     key={feedback.id}
-                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                    onClick={() => navigate(`/feedback?view=${feedback.id}`)}
+                    className={`w-full flex items-center justify-between p-4 rounded-xl transition-all hover:shadow-md text-left group ${
+                      feedback.colorClassification === 'green' ? 'bg-white border-l-4 border-l-green-500 border border-gray-200 hover:border-green-300' :
+                      feedback.colorClassification === 'yellow' ? 'bg-white border-l-4 border-l-yellow-500 border border-gray-200 hover:border-yellow-300' :
+                      feedback.colorClassification === 'red' ? 'bg-white border-l-4 border-l-red-500 border border-gray-200 hover:border-red-300' :
+                      'bg-white border-l-4 border-l-gray-300 border border-gray-200 hover:border-gray-300'
+                    }`}
+                    onClick={() => navigate(`/feedback/${feedback.id}`)}
                   >
                     <div className="flex items-center gap-4">
-                      {getColorBadge(feedback.colorClassification)}
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        feedback.colorClassification === 'green' ? 'bg-green-100' :
+                        feedback.colorClassification === 'yellow' ? 'bg-yellow-100' :
+                        feedback.colorClassification === 'red' ? 'bg-red-100' : 'bg-gray-100'
+                      }`}>
+                        {getColorBadge(feedback.colorClassification)}
+                      </div>
                       <div>
-                        <p className="font-medium text-gray-900">
+                        <p className="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
                           {feedback.cycleName || 'Performance Review'}
                         </p>
                         <p className="text-sm text-gray-500">
@@ -340,9 +379,9 @@ export default function EmployeeHistoryPage() {
                     </div>
                     <div className="flex items-center gap-3">
                       {getStatusBadge(feedback.status)}
-                      <ChevronRight className="w-5 h-5 text-gray-400" />
+                      <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -352,4 +391,3 @@ export default function EmployeeHistoryPage() {
     </div>
   );
 }
-
