@@ -1,0 +1,110 @@
+# Bug Fix TDD Approach
+
+This rule defines the required process for fixing bugs using Test-Driven Development (TDD).
+
+---
+
+## The Problem This Solves
+
+AI agents often claim a bug is "fixed" after making code changes, without actually verifying the fix works. This leads to:
+- False confidence
+- Bugs that persist after "fixes"
+- Wasted time debugging the same issue multiple times
+
+---
+
+## Required Process for Bug Fixes
+
+### Step 1: INVESTIGATE (Don't Jump to Solutions)
+- When a bug is reported, **investigate first**
+- Find the **root cause** before writing any fix
+- Ask: "Where is this actually broken?" (frontend? backend? database?)
+
+### Step 2: WRITE A FAILING TEST
+- Create a test that **reproduces the bug**
+- The test should demonstrate the exact broken behavior
+- Use manual test scripts if integration tests are complex
+
+### Step 3: RUN THE TEST → Must FAIL ❌
+- Execute the test
+- **Verify it fails** for the expected reason
+- A failing test = proof the bug exists
+
+### Step 4: FIX THE BUG
+- Now implement the actual fix
+- Focus only on making the failing test pass
+
+### Step 5: RE-RUN THE TEST → Must PASS ✅
+- Execute the same test again
+- **Verify it passes**
+- A passing test = proof the fix works
+
+### Step 6: CLAIM FIXED (With Evidence)
+- Only now can you say "the bug is fixed"
+- Show the test output as evidence
+- Include before/after results
+
+---
+
+## Example Flow
+
+```
+User: "Deleting a goal doesn't work - it reappears after refresh"
+
+AI Agent Process:
+1. INVESTIGATE    → Check frontend, backend, database
+                  → Found: Backend PUT endpoint ignores `goals` array
+                  
+2. WRITE TEST     → Create test-goal-updates.mjs
+                  → Test: Create 2 goals, delete 1, verify only 1 remains
+                  
+3. RUN TEST       → ❌ FAILED
+                  → "Expected 1 goal, got 0" (backend returns empty)
+                  
+4. FIX            → Add goal handling to PUT endpoint
+                  
+5. RE-RUN TEST    → ✅ PASSED
+                  → "All 6 tests passed!"
+                  
+6. REPORT         → "Bug fixed. Evidence: test-goal-updates.mjs passes"
+```
+
+---
+
+## Anti-Patterns (DON'T Do These)
+
+❌ **"I fixed the bug"** (without running any test)
+
+❌ **"It should work now"** (without verification)
+
+❌ **Fixing frontend when bug is in backend** (investigate first!)
+
+❌ **Skipping the failing test step** (you need proof the bug exists)
+
+❌ **Claiming fixed after code change alone** (always verify with test)
+
+---
+
+## Quick Reference
+
+| Step | Action | Outcome |
+|------|--------|---------|
+| 1 | Investigate | Root cause identified |
+| 2 | Write test | Test reproduces bug |
+| 3 | Run test | ❌ Test FAILS |
+| 4 | Fix bug | Code change made |
+| 5 | Re-run test | ✅ Test PASSES |
+| 6 | Report | Evidence provided |
+
+---
+
+## When to Apply This Rule
+
+- **All bug fixes** - no exceptions
+- **Behavioral issues** - especially when user reports "X doesn't work"
+- **Data persistence issues** - saving, updating, deleting
+- **Integration issues** - frontend ↔ backend ↔ database
+
+---
+
+**Remember:** A bug is not fixed until a test proves it's fixed.
