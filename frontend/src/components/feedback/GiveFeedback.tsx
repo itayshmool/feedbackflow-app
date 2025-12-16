@@ -68,7 +68,13 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
   const [confidential, setConfidential] = useState(false);
   const [colorClassification, setColorClassification] = useState<FeedbackColorClassification | ''>('');
   const [ratings, setRatings] = useState<RatingInput[]>([]);
-  const [goals, setGoals] = useState<GoalInput[]>([]);
+  const [goals, setGoals] = useState<GoalInput[]>([{
+    title: '',
+    description: '',
+    category: GoalCategory.CAREER_DEVELOPMENT,
+    priority: GoalPriority.MEDIUM,
+    targetDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  }]);
   
   // AI Generation state
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
@@ -704,7 +710,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
               <h3 className="text-lg font-semibold">Growth & Development</h3>
               <p className="text-sm text-gray-500 mt-1 flex items-start gap-1">
                 <HelpCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                <span>What is the main area you should focus on to grow and increase your impact in the upcoming period? (Skills to grow, things to do a bit differently, or where you can make more impact).</span>
+                <span>What are the focus areas and key actions we agreed on to support your growth over the next few months?</span>
               </p>
             </div>
             <Button variant="outline" size="sm" onClick={addGoal} icon={Plus} className="flex-shrink-0 whitespace-nowrap">
