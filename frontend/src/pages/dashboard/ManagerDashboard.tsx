@@ -542,49 +542,28 @@ const ManagerDashboard: React.FC = () => {
       }
     };
 
-    // Custom label showing count + short name outside the pie
-    const RADIAN = Math.PI / 180;
-    const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, value, shortName }: any) => {
-      const radius = outerRadius + 25;
-      const x = cx + radius * Math.cos(-midAngle * RADIAN);
-      const y = cy + radius * Math.sin(-midAngle * RADIAN);
-      
-      return (
-        <text 
-          x={x} 
-          y={y} 
-          textAnchor={x > cx ? 'start' : 'end'} 
-          dominantBaseline="central" 
-          className="text-xs font-semibold"
-          fill="#374151"
-        >
-          {value} {shortName}
-        </text>
-      );
-    };
-
     // Custom legend with counts and percentages - clickable to filter
     const renderCustomLegend = (props: any) => {
       const { payload } = props;
       const total = colorDistribution?.total || 0;
       
       return (
-        <div className="flex flex-wrap justify-center gap-3 mt-2">
+        <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-2">
           {payload.map((entry: any, index: number) => {
             const percentage = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;
             return (
               <button
                 key={`legend-${index}`}
                 onClick={() => handlePieClick(entry.payload)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer group border border-transparent hover:border-gray-200"
+                className="flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer group border border-transparent hover:border-gray-200"
               >
                 <div 
-                  className="w-3 h-3 rounded-full flex-shrink-0" 
+                  className="w-3 h-3 rounded-full flex-shrink-0 shadow-sm" 
                   style={{ backgroundColor: entry.color }}
                 />
-                <span className="text-sm text-gray-700 group-hover:text-gray-900">
+                <span className="text-xs sm:text-sm text-gray-700 group-hover:text-gray-900">
                   <span className="font-semibold">{entry.payload.value}</span>
-                  {' '}{entry.payload.shortName}
+                  {' '}<span className="hidden sm:inline">{entry.payload.shortName}</span>
                   <span className="text-gray-400 ml-1">({percentage}%)</span>
                 </span>
               </button>
@@ -594,15 +573,77 @@ const ManagerDashboard: React.FC = () => {
       );
     };
 
+    const completionPercent = completionData?.summary?.percentage || 0;
+
     return (
       <div className="space-y-6">
-        <div className="flex flex-col gap-4">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Team Analytics</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <div className="p-2 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg">
+                <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+              </div>
+              Team Analytics
+            </h2>
             <p className="text-sm text-gray-600 mt-1">Track feedback distribution and team progress</p>
           </div>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-gray-200">
-            {/* Cycle Filter */}
+        </div>
+
+        {/* Summary Stats Cards */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-4">
+          {/* Total Feedback */}
+          <div className="group relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 p-3 sm:p-5 shadow-lg shadow-blue-500/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
+            <div className="absolute top-0 right-0 -mt-4 -mr-4 h-20 w-20 rounded-full bg-white/10 blur-2xl" />
+            <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+              <div className="order-2 sm:order-1">
+                <p className="text-xs font-medium text-blue-100">Total</p>
+                <p className="text-xl sm:text-3xl font-bold text-white">
+                  {isAnalyticsLoading ? '...' : colorDistribution?.total || 0}
+                </p>
+              </div>
+              <div className="order-1 sm:order-2 flex h-8 w-8 sm:h-11 sm:w-11 items-center justify-center rounded-lg sm:rounded-xl bg-white/20 backdrop-blur-sm">
+                <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              </div>
+            </div>
+          </div>
+
+          {/* Completion Rate */}
+          <div className="group relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 p-3 sm:p-5 shadow-lg shadow-emerald-500/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
+            <div className="absolute top-0 right-0 -mt-4 -mr-4 h-20 w-20 rounded-full bg-white/10 blur-2xl" />
+            <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+              <div className="order-2 sm:order-1">
+                <p className="text-xs font-medium text-emerald-100">Complete</p>
+                <p className="text-xl sm:text-3xl font-bold text-white">
+                  {isAnalyticsLoading ? '...' : `${completionPercent}%`}
+                </p>
+              </div>
+              <div className="order-1 sm:order-2 flex h-8 w-8 sm:h-11 sm:w-11 items-center justify-center rounded-lg sm:rounded-xl bg-white/20 backdrop-blur-sm">
+                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              </div>
+            </div>
+          </div>
+
+          {/* Team Size */}
+          <div className="group relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 p-3 sm:p-5 shadow-lg shadow-purple-500/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5">
+            <div className="absolute top-0 right-0 -mt-4 -mr-4 h-20 w-20 rounded-full bg-white/10 blur-2xl" />
+            <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+              <div className="order-2 sm:order-1">
+                <p className="text-xs font-medium text-purple-100">Team</p>
+                <p className="text-xl sm:text-3xl font-bold text-white">
+                  {isAnalyticsLoading ? '...' : completionData?.teamMembers?.length || 0}
+                </p>
+              </div>
+              <div className="order-1 sm:order-2 flex h-8 w-8 sm:h-11 sm:w-11 items-center justify-center rounded-lg sm:rounded-xl bg-white/20 backdrop-blur-sm">
+                <Users className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Filter Panel */}
+        <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl p-4 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1">
               <label className="text-sm font-medium text-gray-700">Cycle:</label>
               <Select
@@ -631,18 +672,21 @@ const ManagerDashboard: React.FC = () => {
         </div>
 
         {analyticsError && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 flex-shrink-0" />
             {analyticsError}
           </div>
         )}
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Color Distribution Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-blue-600" />
-                Feedback Color Distribution
+          <Card className="bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-xl sm:rounded-2xl overflow-hidden">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-md">
+                  <BarChart3 className="h-4 w-4 text-white" />
+                </div>
+                <span className="text-base sm:text-lg">Color Distribution</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -652,7 +696,6 @@ const ManagerDashboard: React.FC = () => {
                 </div>
               ) : colorDistribution && colorDistribution.total > 0 ? (
                 <div>
-                  {/* Responsive height: smaller on mobile */}
                   <div className="h-48 sm:h-56">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
@@ -690,7 +733,7 @@ const ManagerDashboard: React.FC = () => {
                           contentStyle={{
                             backgroundColor: 'white',
                             border: '1px solid #e5e7eb',
-                            borderRadius: '8px',
+                            borderRadius: '12px',
                             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                           }}
                         />
@@ -698,16 +741,18 @@ const ManagerDashboard: React.FC = () => {
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
-                  <p className="text-xs text-gray-500 text-center mt-1">
-                    Click segment or legend to filter feedback by color
+                  <p className="text-xs text-gray-500 text-center mt-2 bg-gray-50 rounded-lg py-2">
+                    💡 Click segment or legend to filter feedback
                   </p>
                 </div>
               ) : (
-                <div className="h-64 flex items-center justify-center text-gray-500">
+                <div className="h-64 flex items-center justify-center">
                   <div className="text-center">
-                    <BarChart3 className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <p>No feedback data available</p>
-                    <p className="text-sm mt-1">Feedback with color classifications will appear here</p>
+                    <div className="mx-auto w-14 h-14 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center mb-4">
+                      <BarChart3 className="h-7 w-7 text-blue-500" />
+                    </div>
+                    <p className="font-medium text-gray-700">No feedback data</p>
+                    <p className="text-sm text-gray-500 mt-1">Color classifications will appear here</p>
                   </div>
                 </div>
               )}
@@ -715,14 +760,16 @@ const ManagerDashboard: React.FC = () => {
           </Card>
 
           {/* Feedback Completion Progress */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-blue-600" />
-                Feedback Completion Status
+          <Card className="bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-xl sm:rounded-2xl overflow-hidden">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg shadow-md">
+                  <Target className="h-4 w-4 text-white" />
+                </div>
+                <span className="text-base sm:text-lg">Completion Status</span>
                 {analyticsCycleId && activeCycles.length > 0 && (
-                  <span className="text-xs font-normal text-gray-500 ml-1">
-                    ({activeCycles.find(c => c.id === analyticsCycleId)?.name || 'Selected Cycle'})
+                  <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                    {activeCycles.find(c => c.id === analyticsCycleId)?.name || 'Cycle'}
                   </span>
                 )}
               </CardTitle>
@@ -735,74 +782,86 @@ const ManagerDashboard: React.FC = () => {
               ) : completionData && completionData.teamMembers.length > 0 ? (
                 <div className="space-y-4">
                   {/* Progress Summary */}
-                  <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-100">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-gray-700">
                         Your Feedback Progress
                       </span>
-                      <span className="text-sm font-semibold text-blue-600">
+                      <span className="text-sm font-bold text-emerald-600">
                         {completionData.summary.completed} / {completionData.summary.total}
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div className="w-full bg-emerald-100 rounded-full h-3 overflow-hidden">
                       <div 
-                        className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                        className="bg-gradient-to-r from-emerald-500 to-teal-500 h-3 rounded-full transition-all duration-500 ease-out"
                         style={{ width: `${completionData.summary.percentage}%` }}
-                      ></div>
+                      />
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {completionData.summary.percentage}% of your direct reports have received feedback from you
+                    <p className="text-xs text-gray-600 mt-2">
+                      {completionData.summary.percentage}% of direct reports have received feedback
                     </p>
                   </div>
 
                   {/* Team Members List */}
-                  <div className="max-h-48 overflow-y-auto space-y-2">
-                    {completionData.teamMembers.map((member) => (
-                      <div 
-                        key={member.userId}
-                        className={`flex items-center justify-between p-3 rounded-lg border ${
-                          member.hasReceivedFeedback 
-                            ? 'bg-green-50 border-green-200' 
-                            : 'bg-gray-50 border-gray-200'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-medium text-gray-600">
-                            {member.name.charAt(0).toUpperCase()}
+                  <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
+                    {completionData.teamMembers.map((member, index) => {
+                      const avatarColors = [
+                        'from-blue-500 to-indigo-600',
+                        'from-purple-500 to-pink-600',
+                        'from-emerald-500 to-teal-600',
+                        'from-orange-500 to-red-600',
+                        'from-cyan-500 to-blue-600',
+                      ];
+                      const avatarGradient = avatarColors[index % avatarColors.length];
+                      
+                      return (
+                        <div 
+                          key={member.userId}
+                          className={`flex items-center justify-between p-3 rounded-xl border transition-all duration-200 hover:shadow-md ${
+                            member.hasReceivedFeedback 
+                              ? 'bg-emerald-50/50 border-emerald-200 hover:border-emerald-300' 
+                              : 'bg-white border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${avatarGradient} flex items-center justify-center text-sm font-medium text-white shadow-md`}>
+                              {member.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{member.name}</p>
+                              <p className="text-xs text-gray-500">{member.position}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{member.name}</p>
-                            <p className="text-xs text-gray-500">{member.position}</p>
+                          <div className="flex items-center gap-2">
+                            {member.hasReceivedFeedback ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-emerald-600 font-medium bg-emerald-100 px-2 py-0.5 rounded-full">
+                                  {member.feedbackCount} ✓
+                                </span>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => navigate(`/feedback?action=give&recipient=${encodeURIComponent(member.email)}&name=${encodeURIComponent(member.name)}`)}
+                                className="px-3 py-1.5 text-xs font-medium text-emerald-600 hover:text-white bg-emerald-50 hover:bg-emerald-600 border border-emerald-200 hover:border-emerald-600 rounded-lg transition-all duration-200 flex items-center gap-1.5 shadow-sm hover:shadow-md"
+                              >
+                                <MessageSquare className="w-3 h-3" />
+                                Give
+                              </button>
+                            )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {member.hasReceivedFeedback ? (
-                            <>
-                              <span className="text-xs text-green-600 font-medium">
-                                {member.feedbackCount} feedback{member.feedbackCount !== 1 ? 's' : ''}
-                              </span>
-                              <CheckCircle className="h-5 w-5 text-green-500" />
-                            </>
-                          ) : (
-                            <button
-                              onClick={() => navigate(`/feedback?action=give&recipient=${encodeURIComponent(member.email)}&name=${encodeURIComponent(member.name)}`)}
-                              className="px-3 py-1 text-xs font-medium text-green-600 hover:text-white bg-green-50 hover:bg-green-600 border border-green-200 hover:border-green-600 rounded-lg transition-all duration-200 flex items-center gap-1"
-                            >
-                              <MessageSquare className="w-3 h-3" />
-                              Give Feedback
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ) : (
-                <div className="h-64 flex items-center justify-center text-gray-500">
+                <div className="h-64 flex items-center justify-center">
                   <div className="text-center">
-                    <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <p>No direct reports found</p>
-                    <p className="text-sm mt-1">Your team members will appear here</p>
+                    <div className="mx-auto w-14 h-14 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-xl flex items-center justify-center mb-4">
+                      <Users className="h-7 w-7 text-emerald-500" />
+                    </div>
+                    <p className="font-medium text-gray-700">No direct reports</p>
+                    <p className="text-sm text-gray-500 mt-1">Team members will appear here</p>
                   </div>
                 </div>
               )}
