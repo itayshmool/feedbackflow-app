@@ -20,7 +20,6 @@ import CyclesPage from './pages/cycles/CyclesPage';
 import CreateCycle from './pages/cycles/CreateCycle';
 import CycleDetailPage from './pages/cycles/CycleDetailPage';
 import FeedbackPage from './pages/feedback/FeedbackPage';
-import GiveFeedback from './pages/feedback/GiveFeedback';
 import ReceiveFeedback from './pages/feedback/ReceiveFeedback';
 import FeedbackDetailPage from './pages/feedback/FeedbackDetailPage';
 import TeamFeedbackPage from './pages/feedback/TeamFeedbackPage';
@@ -134,10 +133,6 @@ const AppRouter: React.FC = () => {
             {
               index: true,
               element: <FeedbackPage />,
-            },
-            {
-              path: 'give',
-              element: <GiveFeedback />,
             },
             {
               path: 'receive',

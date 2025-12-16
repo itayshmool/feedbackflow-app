@@ -121,7 +121,7 @@ export default function TeamPage() {
     // Handle give feedback click
     const handleGiveFeedback = (e: React.MouseEvent) => {
       e.stopPropagation();
-      navigate(`/feedback/give?recipient=${encodeURIComponent(node.email || '')}&name=${encodeURIComponent(node.name)}`);
+      navigate(`/feedback?action=give&recipient=${encodeURIComponent(node.email || '')}&name=${encodeURIComponent(node.name)}`);
     };
     
     return (

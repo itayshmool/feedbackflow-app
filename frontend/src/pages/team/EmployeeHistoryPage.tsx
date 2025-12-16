@@ -238,7 +238,7 @@ export default function EmployeeHistoryPage() {
             
             {/* Give Feedback Button */}
             <Button
-              onClick={() => navigate(`/feedback/give?recipient=${encodeURIComponent(employee.email)}&name=${encodeURIComponent(employee.name)}`)}
+              onClick={() => navigate(`/feedback?action=give&recipient=${encodeURIComponent(employee.email)}&name=${encodeURIComponent(employee.name)}`)}
               className="w-full sm:w-auto bg-white text-indigo-600 hover:bg-white/90 font-bold shadow-xl hover:shadow-2xl transition-all hover:scale-105 px-6 py-3"
             >
               <MessageSquare className="w-5 h-5 mr-2" />
@@ -383,7 +383,7 @@ export default function EmployeeHistoryPage() {
                   Start {employee.name.split(' ')[0]}'s growth journey with your first feedback!
                 </p>
                 <Button
-                  onClick={() => navigate(`/feedback/give?recipient=${encodeURIComponent(employee.email)}&name=${encodeURIComponent(employee.name)}`)}
+                  onClick={() => navigate(`/feedback?action=give&recipient=${encodeURIComponent(employee.email)}&name=${encodeURIComponent(employee.name)}`)}
                   className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all hover:scale-105 px-8 py-3 text-lg font-bold"
                 >
                   <MessageSquare className="w-5 h-5 mr-2" />
