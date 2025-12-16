@@ -53,9 +53,9 @@ export default function MobileBottomNav() {
     { name: 'Feedback', href: '/feedback', icon: MessageSquare },
   ]
   
-  // Add My Team for all managers (links to dashboard Team tab)
+  // Add My Team for all managers (dedicated team page)
   if (isManager) {
-    coreNav.push({ name: 'My Team', href: '/dashboard?tab=team', icon: Users })
+    coreNav.push({ name: 'My Team', href: '/team', icon: Users })
   }
   
   // Add Notifications with badge
@@ -94,16 +94,13 @@ export default function MobileBottomNav() {
 
   // Check if a nav item is active
   const isNavActive = (href: string) => {
-    // Handle My Team tab (/dashboard?tab=team)
-    if (href === '/dashboard?tab=team') {
-      const searchParams = new URLSearchParams(location.search)
-      return location.pathname === '/dashboard' && searchParams.get('tab') === 'team'
+    // Team page - also active when viewing team member history
+    if (href === '/team') {
+      return location.pathname === '/team' || location.pathname.startsWith('/team/')
     }
-    // Dashboard is only active when no tab param or on overview
+    // Dashboard is only active when on dashboard itself
     if (href === '/dashboard') {
-      const searchParams = new URLSearchParams(location.search)
-      const tab = searchParams.get('tab')
-      return location.pathname === '/dashboard' && (!tab || tab === 'overview')
+      return location.pathname === '/dashboard'
     }
     return location.pathname.startsWith(href)
   }
