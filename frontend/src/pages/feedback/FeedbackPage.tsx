@@ -8,9 +8,8 @@ import { FeedbackDetail } from '../../components/feedback/FeedbackDetail';
 import { useFeedbackStore } from '../../stores/feedbackStore';
 import { useAuthStore } from '../../stores/authStore';
 import { Feedback } from '../../types/feedback.types';
-import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { MessageSquare, TrendingUp, Users } from 'lucide-react';
+import { Send, Inbox, Clock } from 'lucide-react';
 
 export default function FeedbackPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -109,41 +108,60 @@ export default function FeedbackPage() {
       {/* Header with Stats */}
       {view === 'list' && (
         <>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Feedback</h1>
-            <p className="text-gray-600">Give and receive performance feedback</p>
+          {/* Page Header */}
+          <div className="relative">
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Feedback</h1>
+                <p className="text-gray-500 mt-1">Give and receive performance feedback</p>
+              </div>
+            </div>
           </div>
 
-          {/* Stats Cards */}
+          {/* Stats Cards - Modern Gradient Design */}
           {feedbackStats && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">Given</p>
-                    <p className="text-2xl font-bold text-gray-900">{feedbackStats.given}</p>
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
+              {/* Given Card - Blue Theme */}
+              <div className="group relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 p-3 sm:p-5 shadow-lg shadow-blue-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5">
+                <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+                <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="order-2 sm:order-1">
+                    <p className="text-xs sm:text-sm font-medium text-blue-100">Given</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-white">{feedbackStats.given}</p>
                   </div>
-                  <MessageSquare className="w-8 h-8 text-blue-500" />
-                </div>
-              </Card>
-              <Card className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">Received</p>
-                    <p className="text-2xl font-bold text-gray-900">{feedbackStats.received}</p>
+                  <div className="order-1 sm:order-2 flex h-9 w-9 sm:h-12 sm:w-12 items-center justify-center rounded-lg sm:rounded-xl bg-white/20 backdrop-blur-sm">
+                    <Send className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
                   </div>
-                  <Users className="w-8 h-8 text-green-500" />
                 </div>
-              </Card>
-              <Card className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">Pending</p>
-                    <p className="text-2xl font-bold text-gray-900">{feedbackStats.pending}</p>
+              </div>
+
+              {/* Received Card - Emerald Theme */}
+              <div className="group relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 p-3 sm:p-5 shadow-lg shadow-emerald-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/30 hover:-translate-y-0.5">
+                <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+                <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="order-2 sm:order-1">
+                    <p className="text-xs sm:text-sm font-medium text-emerald-100">Received</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-white">{feedbackStats.received}</p>
                   </div>
-                  <TrendingUp className="w-8 h-8 text-yellow-500" />
+                  <div className="order-1 sm:order-2 flex h-9 w-9 sm:h-12 sm:w-12 items-center justify-center rounded-lg sm:rounded-xl bg-white/20 backdrop-blur-sm">
+                    <Inbox className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
+                  </div>
                 </div>
-              </Card>
+              </div>
+
+              {/* Pending Card - Amber Theme */}
+              <div className="group relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 p-3 sm:p-5 shadow-lg shadow-amber-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-amber-500/30 hover:-translate-y-0.5">
+                <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+                <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="order-2 sm:order-1">
+                    <p className="text-xs sm:text-sm font-medium text-amber-100">Pending</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-white">{feedbackStats.pending}</p>
+                  </div>
+                  <div className="order-1 sm:order-2 flex h-9 w-9 sm:h-12 sm:w-12 items-center justify-center rounded-lg sm:rounded-xl bg-white/20 backdrop-blur-sm">
+                    <Clock className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </>

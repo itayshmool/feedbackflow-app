@@ -7,11 +7,10 @@ import { Feedback, FeedbackStatus, FeedbackFilters } from '../../types/feedback.
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { HighlightText } from '../ui/HighlightText';
-import { MessageSquare, Calendar, User, Filter, Download, Eye, Edit, Trash2, RotateCcw, Search, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { MessageSquare, Calendar, User, Filter, Download, Eye, Edit, Trash2, RotateCcw, Search, X, ChevronDown, ChevronUp, FileText, Target } from 'lucide-react';
 
 interface FeedbackListProps {
   onSelectFeedback?: (feedback: Feedback, editMode?: boolean) => void;
@@ -288,156 +287,200 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header with Search */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h2 className="text-2xl font-bold">Feedback</h2>
-        <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-          {/* Search Bar - Always visible */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+      {/* Header with Search - Modern Glass Design */}
+      <div className="flex flex-col gap-4">
+        {/* Search and Actions Row */}
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
+          {/* Search Bar - Enhanced Design */}
+          <div className="relative flex-1 max-w-md">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
             <input
               type="text"
-              placeholder="Search feedback..."
+              placeholder="Search feedback by name or content..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleSearchKeyDown}
-              className="pl-10 pr-8 py-2 w-full sm:w-64 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-11 pr-10 py-3 bg-white border border-gray-200 rounded-xl text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
             />
             {searchQuery && (
               <button
                 onClick={handleClearSearch}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 rounded"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center"
               >
-                <X className="w-4 h-4 text-gray-400" />
+                <div className="p-1 hover:bg-gray-100 rounded-full transition-colors">
+                  <X className="h-4 w-4 text-gray-400" />
+                </div>
               </button>
             )}
           </div>
-        <div className="flex gap-2">
-          {showFilters && (
-            <Button
-              variant="outline"
-              onClick={() => setShowFilterPanel(!showFilterPanel)}
-              icon={Filter}
+          
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            {showFilters && (
+              <Button
+                variant="outline"
+                onClick={() => setShowFilterPanel(!showFilterPanel)}
+                className={`rounded-lg sm:rounded-xl transition-all duration-200 min-h-[44px] min-w-[44px] ${showFilterPanel ? 'bg-gray-100 border-gray-300' : ''}`}
+                icon={Filter}
+              >
+                <span className="hidden sm:inline">Filters</span>
+              </Button>
+            )}
+            <Button 
+              variant="outline" 
+              onClick={handleExport} 
+              icon={Download}
+              className="rounded-lg sm:rounded-xl min-h-[44px] min-w-[44px]"
             >
-              Filters
+              <span className="hidden sm:inline">Export</span>
             </Button>
-          )}
-          <Button variant="outline" onClick={handleExport} icon={Download}>
-            Export
-          </Button>
-          {onGiveFeedback && (
-            <Button onClick={onGiveFeedback}>Give Feedback</Button>
-          )}
+            {onGiveFeedback && (
+              <Button 
+                onClick={onGiveFeedback}
+                className="rounded-lg sm:rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-200 min-h-[44px] text-sm sm:text-base"
+              >
+                <span className="hidden sm:inline">Give Feedback</span>
+                <span className="sm:hidden">New</span>
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Tabs - with horizontal scroll for mobile */}
+      {/* Modern Pill Tabs - Mobile Optimized */}
       {userId && (
-        <div className="flex gap-2 border-b overflow-x-auto scrollbar-hide">
+        <div className="bg-gray-100/80 p-1 rounded-xl inline-flex gap-0.5 sm:gap-1 overflow-x-auto scrollbar-hide max-w-full">
           {isManager ? (
             // Manager tabs: Received, Given, Drafts, All
             <>
               <button
-                className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+                className={`px-2.5 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-200 min-h-[40px] ${
                   activeTab === 'received'
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
                 }`}
                 onClick={() => setActiveTab('received')}
               >
-                Received ({feedbackStats?.received || 0})
+                <span className="hidden sm:inline">Received</span>
+                <span className="sm:hidden">In</span>
+                <span className={`ml-1 sm:ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${
+                  activeTab === 'received' ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {feedbackStats?.received || 0}
+                </span>
               </button>
               <button
-                className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+                className={`px-2.5 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-200 min-h-[40px] ${
                   activeTab === 'given'
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
                 }`}
                 onClick={() => setActiveTab('given')}
               >
-                Given ({feedbackStats?.given || 0})
+                <span className="hidden sm:inline">Given</span>
+                <span className="sm:hidden">Out</span>
+                <span className={`ml-1 sm:ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${
+                  activeTab === 'given' ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {feedbackStats?.given || 0}
+                </span>
               </button>
               <button
-                className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+                className={`px-2.5 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-200 min-h-[40px] ${
                   activeTab === 'drafts'
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
                 }`}
                 onClick={() => setActiveTab('drafts')}
               >
-                Drafts ({feedbackStats?.drafts || 0})
+                Drafts
+                <span className={`ml-1 sm:ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${
+                  activeTab === 'drafts' ? 'bg-amber-100 text-amber-700' : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {feedbackStats?.drafts || 0}
+                </span>
               </button>
               <button
-                className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+                className={`px-2.5 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-200 min-h-[40px] ${
                   activeTab === 'all'
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
                 }`}
                 onClick={() => setActiveTab('all')}
               >
-                All ({(feedbackStats?.given || 0) + (feedbackStats?.received || 0) + (feedbackStats?.drafts || 0)})
+                All
+                <span className={`ml-1 sm:ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${
+                  activeTab === 'all' ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {(feedbackStats?.given || 0) + (feedbackStats?.received || 0) + (feedbackStats?.drafts || 0)}
+                </span>
               </button>
             </>
           ) : (
             // Employee tabs: Waiting for Acknowledgement, Acknowledged, All Received
-            // Use shorter labels on mobile for better fit
             <>
               <button
-                className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+                className={`px-2.5 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-200 min-h-[40px] ${
                   activeTab === 'waiting'
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
                 }`}
                 onClick={() => setActiveTab('waiting')}
               >
-                <span className="sm:hidden">Waiting ({feedbackStats?.pending || 0})</span>
-                <span className="hidden sm:inline">Waiting for Acknowledgement ({feedbackStats?.pending || 0})</span>
+                <span className="hidden sm:inline">Waiting</span>
+                <span className="sm:hidden">New</span>
+                <span className={`ml-1 sm:ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${
+                  activeTab === 'waiting' ? 'bg-amber-100 text-amber-700' : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {feedbackStats?.pending || 0}
+                </span>
               </button>
               <button
-                className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+                className={`px-2.5 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-200 min-h-[40px] ${
                   activeTab === 'acknowledged'
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
                 }`}
                 onClick={() => setActiveTab('acknowledged')}
               >
-                Acknowledged ({feedbackStats?.acknowledged || 0})
+                <span className="hidden sm:inline">Acknowledged</span>
+                <span className="sm:hidden">Done</span>
+                <span className={`ml-1 sm:ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${
+                  activeTab === 'acknowledged' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {feedbackStats?.acknowledged || 0}
+                </span>
               </button>
               <button
-                className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap ${
+                className={`px-2.5 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-200 min-h-[40px] ${
                   activeTab === 'received'
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
                 }`}
                 onClick={() => setActiveTab('received')}
               >
-                <span className="sm:hidden">All ({feedbackStats?.received || 0})</span>
-                <span className="hidden sm:inline">All Received ({feedbackStats?.received || 0})</span>
+                All
+                <span className={`ml-1 sm:ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${
+                  activeTab === 'received' ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {feedbackStats?.received || 0}
+                </span>
               </button>
             </>
           )}
         </div>
       )}
 
-      {/* Filter Panel - Dropdowns auto-apply on change */}
+      {/* Filter Panel - Modern Glass Design */}
       {showFilters && showFilterPanel && (
-        <Card className="p-4">
-          {/* 
-            Filter visibility rules:
-            - Color filter: Only for managers on "given" or "drafts" tabs (their own feedback)
-            - Status filter: Only for managers (employees use tabs for status filtering)
-            - Cycle filter: Visible to everyone
-          */}
+        <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl p-4 shadow-sm">
           {(() => {
             const showColorFilter = isManager && (activeTab === 'given' || activeTab === 'drafts');
-            // Status filter only for managers - employees use tabs for status (waiting/acknowledged/all)
             const showStatusFilter = isManager;
-            // Determine if Draft status option should be shown:
-            // - For managers: only on "given", "drafts", or "all" tabs (not on "received")
             const showDraftStatus = isManager && activeTab !== 'received';
             
-            // Calculate grid columns: 1 for cycle, +1 for status (managers), +1 for color (managers on given/drafts)
             const columnCount = 1 + (showStatusFilter ? 1 : 0) + (showColorFilter ? 1 : 0);
             const gridClass = columnCount === 1 
               ? 'grid-cols-1' 
@@ -459,7 +502,6 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
                     </option>
                   ))}
                 </Select>
-                {/* Status filter - only for managers (employees use tabs for status) */}
                 {showStatusFilter && (
                   <Select
                     label="Status"
@@ -467,7 +509,6 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
                     onChange={(e) => setStatusFilter(e.target.value as FeedbackStatus)}
                   >
                     <option value="">All Statuses</option>
-                    {/* Draft option only for managers on appropriate tabs */}
                     {showDraftStatus && (
                       <option value={FeedbackStatus.DRAFT}>Draft</option>
                     )}
@@ -475,16 +516,13 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
                     <option value={FeedbackStatus.COMPLETED}>Completed</option>
                   </Select>
                 )}
-                {/* Type filter removed - single feedback type (Manager Review) */}
-                {/* Color filter - only visible to managers on "given" or "drafts" tabs
-                    This prevents exposing the color classification of feedback they received */}
                 {showColorFilter && (
                   <Select
-                    label="Color"
+                    label="Performance"
                     value={colorFilter}
                     onChange={(e) => setColorFilter(e.target.value)}
                   >
-                    <option value="">All Colors</option>
+                    <option value="">All Levels</option>
                     <option value="green">🟢 Exceeds Expectations</option>
                     <option value="yellow">🟡 Meets Expectations</option>
                     <option value="red">🔴 Needs Improvement</option>
@@ -494,13 +532,19 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
             );
           })()}
           {(cycleFilter || (isManager && statusFilter) || (isManager && (activeTab === 'given' || activeTab === 'drafts') && colorFilter)) && (
-            <div className="flex justify-end mt-4">
-              <Button variant="outline" size="sm" onClick={handleClearFilters} icon={RotateCcw}>
-              Clear Filters
-            </Button>
-          </div>
+            <div className="flex justify-end mt-4 pt-4 border-t border-gray-100">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleClearFilters} 
+                icon={RotateCcw}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                Clear Filters
+              </Button>
+            </div>
           )}
-        </Card>
+        </div>
       )}
 
       {/* Loading State */}
@@ -512,190 +556,225 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
 
       {/* Feedback List */}
       {!isLoading && (
-        <div className="space-y-4">
+        <div className="space-y-2 sm:space-y-3">
           {visibleFeedbackList.length === 0 ? (
-            <Card className="p-12 text-center">
-              <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No feedback found</h3>
-              <p className="text-gray-600 mb-6">
-                {activeTab === 'received'
-                  ? "You haven't received any feedback yet."
-                  : activeTab === 'drafts'
-                  ? "You don't have any draft feedback yet."
-                  : "You haven't given any feedback yet."}
-              </p>
-              {onGiveFeedback && (
-                <Button onClick={onGiveFeedback}>Give Feedback</Button>
-              )}
-            </Card>
+            /* Modern Empty State - Mobile Optimized */
+            <div className="relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl sm:rounded-2xl p-8 sm:p-12 text-center">
+              <div className="absolute inset-0 bg-grid-pattern opacity-5" />
+              <div className="relative">
+                <div className="mx-auto w-14 h-14 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6 shadow-lg shadow-blue-500/20">
+                  <FileText className="w-7 h-7 sm:w-10 sm:h-10 text-white" />
+                </div>
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">No feedback found</h3>
+                <p className="text-sm sm:text-base text-gray-500 mb-6 sm:mb-8 max-w-sm mx-auto">
+                  {activeTab === 'received'
+                    ? "You haven't received any feedback yet."
+                    : activeTab === 'drafts'
+                    ? "You don't have any drafts yet."
+                    : activeTab === 'waiting'
+                    ? "No feedback waiting. You're all caught up!"
+                    : "You haven't given any feedback yet."}
+                </p>
+                {onGiveFeedback && (
+                  <Button 
+                    onClick={onGiveFeedback}
+                    className="rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/25"
+                  >
+                    Give Feedback
+                  </Button>
+                )}
+              </div>
+            </div>
           ) : (
-            visibleFeedbackList.map((feedback) => (
-              <Card
-                key={feedback.id}
-                className="p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => onSelectFeedback?.(feedback)}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <Badge color={getStatusColor(feedback.status)}>
-                        {feedback.status?.replace('_', ' ') || 'Unknown'}
-                      </Badge>
-                      {/* Type badge removed - single feedback type (Manager Review) */}
-                      {feedback.content?.confidential && (
-                        <Badge color="gray">Confidential</Badge>
-                      )}
-                    </div>
+            visibleFeedbackList.map((feedback) => {
+              // Determine border color based on status
+              const borderColor = feedback.status === FeedbackStatus.DRAFT 
+                ? 'border-l-gray-400' 
+                : feedback.status === FeedbackStatus.SUBMITTED || feedback.status === FeedbackStatus.UNDER_REVIEW
+                ? 'border-l-amber-400'
+                : feedback.status === FeedbackStatus.COMPLETED || feedback.status === FeedbackStatus.ACKNOWLEDGED
+                ? 'border-l-emerald-400'
+                : 'border-l-blue-400';
 
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <User className="w-4 h-4" />
-                        <span>
-                          {activeTab === 'received' ? 'From: ' : 'To: '}
-                          <HighlightText
-                            text={activeTab === 'received'
-                              ? (feedback.fromUser?.name || feedback.fromUserEmail || feedback.fromUserId || '')
-                              : (feedback.toUser?.name || feedback.toUserEmail || feedback.toUserId || '')}
-                            highlight={searchQuery}
-                          />
-                        </span>
-                      </div>
-
-                      {feedback.cycle && (
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Calendar className="w-4 h-4" />
-                          <span>Cycle: {feedback.cycle.name}</span>
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Calendar className="w-4 h-4" />
-                        <span>{new Date(feedback.createdAt).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-
-                    {feedback.content?.overallComment && (
-                      <div className="mt-3">
-                        <p className={`text-gray-700 ${
-                          expandedCards[feedback.id] ? '' : 'line-clamp-3'
-                        }`}>
-                          <HighlightText 
-                            text={feedback.content.overallComment} 
-                            highlight={searchQuery}
-                          />
-                        </p>
-                        {isLongContent(feedback.content.overallComment) && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              e.preventDefault();
-                              setExpandedCards(prev => ({
-                                ...prev,
-                                [feedback.id]: !prev[feedback.id]
-                              }));
-                            }}
-                            className="mt-2 text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline flex items-center gap-1 transition-colors relative z-10"
-                          >
-                            {expandedCards[feedback.id] ? (
-                              <>
-                                Show less
-                                <ChevronUp className="w-4 h-4" />
-                              </>
-                            ) : (
-                              <>
-                                Read more
-                                <ChevronDown className="w-4 h-4" />
-                              </>
-                            )}
-                          </button>
+              return (
+                <div
+                  key={feedback.id}
+                  className={`group bg-white rounded-lg sm:rounded-xl border border-gray-200 border-l-4 ${borderColor} p-4 sm:p-5 hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer active:bg-gray-50`}
+                  onClick={() => onSelectFeedback?.(feedback)}
+                >
+                  <div className="flex items-start justify-between gap-3 sm:gap-4">
+                    <div className="flex-1 min-w-0">
+                      {/* Header Row */}
+                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+                        <Badge 
+                          color={getStatusColor(feedback.status)}
+                          className="capitalize text-xs"
+                        >
+                          {feedback.status?.replace('_', ' ') || 'Unknown'}
+                        </Badge>
+                        {feedback.content?.confidential && (
+                          <Badge color="gray" className="bg-gray-100 text-gray-600 text-xs">
+                            🔒
+                          </Badge>
                         )}
                       </div>
-                    )}
 
-                    <div className="flex items-center gap-6 mt-4">
-                      {feedback.comments && feedback.comments.length > 0 && (
-                        <div className="flex items-center gap-1 text-gray-600">
-                          <MessageSquare className="w-4 h-4" />
-                          <span className="text-sm">{feedback.comments.length}</span>
+                      {/* User & Meta Info */}
+                      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-1 sm:gap-x-4 sm:gap-y-1 text-xs sm:text-sm text-gray-500 mb-2 sm:mb-3">
+                        <div className="flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                          <span className="font-medium text-gray-700 truncate">
+                            <HighlightText
+                              text={activeTab === 'received'
+                                ? (feedback.fromUser?.name || feedback.fromUserEmail || feedback.fromUserId || '')
+                                : (feedback.toUser?.name || feedback.toUserEmail || feedback.toUserId || '')}
+                              highlight={searchQuery}
+                            />
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 sm:gap-4 text-gray-400">
+                          {feedback.cycle && (
+                            <span className="truncate max-w-[120px] sm:max-w-none">{feedback.cycle.name}</span>
+                          )}
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                            <span>{new Date(feedback.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Content Preview */}
+                      {feedback.content?.overallComment && (
+                        <div className="mt-1.5 sm:mt-2">
+                          <p className={`text-gray-600 text-xs sm:text-sm leading-relaxed ${
+                            expandedCards[feedback.id] ? '' : 'line-clamp-2'
+                          }`}>
+                            <HighlightText 
+                              text={feedback.content.overallComment} 
+                              highlight={searchQuery}
+                            />
+                          </p>
+                          {isLongContent(feedback.content.overallComment) && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                setExpandedCards(prev => ({
+                                  ...prev,
+                                  [feedback.id]: !prev[feedback.id]
+                                }));
+                              }}
+                              className="mt-1.5 text-xs sm:text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center gap-0.5 transition-colors min-h-[32px] sm:min-h-0"
+                            >
+                              {expandedCards[feedback.id] ? (
+                                <>Show less <ChevronUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></>
+                              ) : (
+                                <>Read more <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></>
+                              )}
+                            </button>
+                          )}
                         </div>
                       )}
-                      {feedback.goals && feedback.goals.length > 0 && (
-                        <span className="text-sm text-gray-600">
-                          {feedback.goals.length} goal{feedback.goals.length > 1 ? 's' : ''}
-                        </span>
+
+                      {/* Meta Badges */}
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-2 sm:mt-3">
+                        {feedback.comments && feedback.comments.length > 0 && (
+                          <div className="flex items-center gap-1 text-gray-400 text-xs">
+                            <MessageSquare className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                            <span>{feedback.comments.length}</span>
+                          </div>
+                        )}
+                        {feedback.goals && feedback.goals.length > 0 && (
+                          <div className="flex items-center gap-1 text-gray-400 text-xs">
+                            <Target className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                            <span>{feedback.goals.length} goal{feedback.goals.length > 1 ? 's' : ''}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Draft Actions */}
+                      {feedback.status === FeedbackStatus.DRAFT && (
+                        <div className="flex gap-2 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditDraft(feedback);
+                            }}
+                            icon={Edit}
+                            className="rounded-lg min-h-[40px] text-xs sm:text-sm"
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteDraft(feedback.id);
+                            }}
+                            icon={Trash2}
+                            className="rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 min-h-[40px] text-xs sm:text-sm"
+                          >
+                            Delete
+                          </Button>
+                        </div>
                       )}
                     </div>
 
-                    {/* Draft Actions */}
-                    {feedback.status === FeedbackStatus.DRAFT && (
-                      <div className="flex gap-2 mt-3">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditDraft(feedback);
-                          }}
-                          icon={Edit}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteDraft(feedback.id);
-                          }}
-                          icon={Trash2}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    )}
+                    {/* View Button - Hidden on mobile, entire card is tappable */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={Eye}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectFeedback?.(feedback);
+                      }}
+                      className="hidden sm:flex rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                    >
+                      View
+                    </Button>
                   </div>
-
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={Eye}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectFeedback?.(feedback);
-                    }}
-                  >
-                    View
-                  </Button>
                 </div>
-              </Card>
-            ))
+              );
+            })
           )}
         </div>
       )}
 
-      {/* Pagination */}
+      {/* Pagination - Modern Design */}
       {!isLoading && visibleFeedbackList.length > 0 && pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-600">
-            Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-            {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-            {pagination.total} results
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-100">
+          <p className="text-sm text-gray-500">
+            Showing <span className="font-medium text-gray-700">{(pagination.page - 1) * pagination.limit + 1}</span> to{' '}
+            <span className="font-medium text-gray-700">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> of{' '}
+            <span className="font-medium text-gray-700">{pagination.total}</span> results
           </p>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
+              size="sm"
               onClick={() => handlePageChange(pagination.page - 1)}
               disabled={pagination.page === 1}
+              className="rounded-lg"
             >
-              Previous
+              ← Previous
             </Button>
+            <span className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg">
+              {pagination.page} / {pagination.totalPages}
+            </span>
             <Button
               variant="outline"
+              size="sm"
               onClick={() => handlePageChange(pagination.page + 1)}
               disabled={pagination.page === pagination.totalPages}
+              className="rounded-lg"
             >
-              Next
+              Next →
             </Button>
           </div>
         </div>
