@@ -713,19 +713,19 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
           <Card className="p-6 bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-2xl">
             <SectionHeader 
               icon={FileText} 
-              iconBg="bg-gradient-to-br from-rose-500 to-pink-600" 
+              iconBg="bg-gradient-to-br from-indigo-500 to-blue-600" 
               title="Bottom Line" 
               subtitle={isEditMode ? "The key message or takeaway" : undefined}
             />
             {isEditMode ? (
               <textarea
-                className="w-full p-4 border border-gray-200 rounded-xl min-h-28 resize-none focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all bg-gray-50 hover:bg-white focus:bg-white"
+                className="w-full p-4 border border-gray-200 rounded-xl min-h-28 resize-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 hover:bg-white focus:bg-white"
                 value={editedContent?.bottomLine || ''}
                 onChange={(e) => setEditedContent(prev => prev ? { ...prev, bottomLine: e.target.value } : undefined)}
                 placeholder="What is the key message or takeaway..."
               />
             ) : (
-              <div className="p-4 bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200 rounded-xl">
+              <div className="p-4 bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-xl">
                 <p className="text-gray-700 whitespace-pre-wrap leading-relaxed font-medium">
                   {currentFeedback.content?.bottomLine}
                 </p>
