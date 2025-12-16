@@ -34,41 +34,31 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
       await markAsRead(notification.id);
     }
     
+    // Get the actual notification type from data.type (backend stores it there)
+    // notification.type is just 'in_app', the real type is in notification.data.type
+    const notificationType = notification.data?.type || notification.type;
+    
     // Determine navigation path based on notification type
     let navigationPath: string | null = null;
     
-    switch (notification.type) {
+    // Handle string-based type matching (from notification.data.type)
+    const typeString = String(notificationType).toLowerCase();
+    
+    if (typeString.includes('feedback') || typeString.includes('review')) {
       // Feedback-related notifications
-      case NotificationType.FEEDBACK_RECEIVED:
-      case NotificationType.FEEDBACK_REMINDER:
-      case NotificationType.FEEDBACK_SUBMITTED:
-      case NotificationType.FEEDBACK_ACKNOWLEDGED:
-      case NotificationType.REVIEW_REQUESTED:
-      case NotificationType.REVIEW_COMPLETED:
-        if (notification.data?.feedbackId) {
-          navigationPath = `/feedback/${notification.data.feedbackId}`;
-        } else {
-          navigationPath = '/feedback';
-        }
-        break;
-      
+      if (notification.data?.feedbackId) {
+        navigationPath = `/feedback/${notification.data.feedbackId}`;
+      } else {
+        navigationPath = '/feedback';
+      }
+    } else if (typeString.includes('cycle')) {
       // Cycle-related notifications
-      case NotificationType.CYCLE_STARTED:
-      case NotificationType.CYCLE_ENDING:
-      case NotificationType.CYCLE_COMPLETED:
-        navigationPath = '/dashboard';
-        break;
-      
+      navigationPath = '/dashboard';
+    } else if (typeString.includes('goal')) {
       // Goal-related notifications
-      case NotificationType.GOAL_ASSIGNED:
-      case NotificationType.GOAL_COMPLETED:
-        navigationPath = '/myself';
-        break;
-      
-      // USER_INVITED, USER_JOINED, SYSTEM_ANNOUNCEMENT - no navigation needed
-      default:
-        break;
+      navigationPath = '/myself';
     }
+    // USER_INVITED, USER_JOINED, SYSTEM_ANNOUNCEMENT - no navigation needed
     
     // Close dropdown first, then navigate
     onNavigate?.();
