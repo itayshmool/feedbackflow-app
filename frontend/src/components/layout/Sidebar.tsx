@@ -7,7 +7,6 @@ import {
   MessageSquare, 
   Settings, 
   Users,
-  Bell,
   Building,
   TreePine,
   Users2,
@@ -18,7 +17,6 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useHierarchyStore } from '@/stores/hierarchyStore'
-import { useNotificationStore } from '@/stores/notificationStore'
 import { cn } from '@/lib/utils'
 import { GrowthPulseLogoIcon } from '@/components/ui/GrowthPulseLogo'
 
@@ -94,7 +92,6 @@ interface SidebarProps {
 export default function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
   const { user } = useAuthStore()
   const { directReports } = useHierarchyStore()
-  const { stats } = useNotificationStore()
   
   const isAdmin = user?.roles?.includes('admin') || user?.roles?.includes('super_admin')
   const isSuperAdmin = user?.roles?.includes('super_admin') || user?.isSuperAdmin
@@ -141,14 +138,6 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
   if (!isManager) {
     coreNavigation.push({ name: 'Growth Quotes', href: '/quotes', icon: Sparkles })
   }
-  
-  // Notifications always at end of core/management section
-  coreNavigation.push({ 
-    name: 'Notifications', 
-    href: '/notifications', 
-    icon: Bell, 
-    badge: stats?.unread && stats.unread > 0 ? stats.unread : undefined 
-  })
 
   // Personal section (managers only)
   const personalNavigation: NavItem[] = [

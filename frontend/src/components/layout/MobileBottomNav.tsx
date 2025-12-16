@@ -9,7 +9,6 @@ import {
   Users,
   Settings,
   MoreHorizontal,
-  Bell,
   RotateCcw,
   FileText,
   TreePine,
@@ -18,7 +17,6 @@ import {
   X
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
-import { useNotificationStore } from '@/stores/notificationStore'
 import { useHierarchyStore } from '@/stores/hierarchyStore'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
@@ -32,7 +30,6 @@ interface NavItem {
 
 export default function MobileBottomNav() {
   const { user } = useAuthStore()
-  const { stats } = useNotificationStore()
   const { directReports } = useHierarchyStore()
   const [showMore, setShowMore] = useState(false)
   const location = useLocation()
@@ -57,14 +54,6 @@ export default function MobileBottomNav() {
   if (isManager) {
     coreNav.push({ name: 'My Team', href: '/team', icon: Users })
   }
-  
-  // Add Notifications with badge
-  coreNav.push({ 
-    name: 'Alerts', 
-    href: '/notifications', 
-    icon: Bell,
-    badge: stats?.unread && stats.unread > 0 ? stats.unread : undefined
-  })
   
   // Secondary navigation (shown in "More" drawer)
   const moreNav: NavItem[] = []
