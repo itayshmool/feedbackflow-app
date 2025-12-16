@@ -1,6 +1,7 @@
 // Feedback Detail Component - Polished Version
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useFeedbackStore } from '../../stores/feedbackStore';
 import { Feedback, FeedbackStatus, GoalStatus, FeedbackColorClassification, Goal, GoalCategory, GoalPriority, UpdateGoalRequest } from '../../types/feedback.types';
@@ -52,6 +53,7 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
   currentUserId,
   openInEditMode = false,
 }) => {
+  const navigate = useNavigate();
   const {
     currentFeedback,
     isLoading,
@@ -415,7 +417,14 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
           <FeedbackWorkflow
             feedback={currentFeedback}
             currentUserId={currentUserId || '123'}
-            onStatusChange={(updatedFeedback) => {}}
+            onStatusChange={(updatedFeedback) => {
+              // When feedback is acknowledged, close view and go to employee dashboard
+              if (updatedFeedback.status === FeedbackStatus.COMPLETED || updatedFeedback.acknowledgment) {
+                toast.success('Feedback acknowledged!');
+                onClose?.();
+                navigate('/myself');
+              }
+            }}
           />
         </div>
       )}
