@@ -1,7 +1,12 @@
 #!/usr/bin/env node
 /**
- * Manual test script for feedback goal updates
+ * Manual test script for feedback goal operations
  * Run with: node tests/manual/test-goal-updates.mjs
+ * 
+ * Tests:
+ * - Creating feedback with goals (POST)
+ * - Updating feedback goals (PUT)
+ * - Deleting goals (PUT with fewer goals)
  * 
  * Requires backend to be running on localhost:5000
  */
