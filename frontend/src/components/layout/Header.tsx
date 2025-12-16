@@ -53,10 +53,8 @@ export default function Header({ onMenuToggle }: HeaderProps) {
           {/* Right side - Actions */}
           <div className="flex items-center space-x-1 sm:space-x-4">
 
-            {/* Notifications - hidden on mobile since it's in bottom nav */}
-            <div className="hidden md:block">
-              <NotificationBell />
-            </div>
+            {/* Notifications */}
+            <NotificationBell />
 
             {/* User menu */}
             <div className="relative">
