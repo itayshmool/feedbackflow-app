@@ -427,8 +427,8 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
             <SectionHeader 
               icon={Target} 
               iconBg="bg-gradient-to-br from-gray-700 to-gray-900" 
-              title="Performance Classification" 
-              subtitle="🔒 Internal use only - not visible to recipient"
+              title="Take a moment" 
+              subtitle="Ask yourself, where is your team member currently standing?"
             />
             <div className="flex flex-wrap gap-3">
               {[

@@ -608,8 +608,8 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
           <SectionHeader 
             icon={Target} 
             iconBg="bg-gradient-to-br from-gray-700 to-gray-900" 
-            title="Performance Classification" 
-            subtitle="🔒 Internal use only - not visible to recipient"
+            title="Take a moment" 
+            subtitle="Ask yourself, where is your team member currently standing?"
           />
           <div className="flex flex-wrap gap-3">
             {[
@@ -619,7 +619,8 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
                 icon: TrendingUp,
                 gradient: 'from-emerald-500 to-emerald-600',
                 ring: 'ring-emerald-400',
-                lightBg: 'bg-emerald-50 border-emerald-200 hover:border-emerald-400'
+                lightBg: 'bg-emerald-50 border-emerald-200 hover:border-emerald-400',
+                tooltip: 'Consistently delivers strong results, shows ownership and positive impact'
               },
               { 
                 value: FeedbackColorClassification.YELLOW, 
@@ -627,7 +628,8 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
                 icon: Award,
                 gradient: 'from-amber-500 to-amber-600',
                 ring: 'ring-amber-400',
-                lightBg: 'bg-amber-50 border-amber-200 hover:border-amber-400'
+                lightBg: 'bg-amber-50 border-amber-200 hover:border-amber-400',
+                tooltip: "Performs well and meets the role's requirements"
               },
               { 
                 value: FeedbackColorClassification.RED, 
@@ -635,33 +637,40 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
                 icon: TrendingDown,
                 gradient: 'from-rose-500 to-rose-600',
                 ring: 'ring-rose-400',
-                lightBg: 'bg-rose-50 border-rose-200 hover:border-rose-400'
+                lightBg: 'bg-rose-50 border-rose-200 hover:border-rose-400',
+                tooltip: 'Gaps in delivery, behavior or engagement that require attention'
               },
             ].map((option) => {
               const isSelected = colorClassification === option.value;
               const Icon = option.icon;
               return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setColorClassification(isSelected ? '' : option.value)}
-                  className={`relative flex items-center gap-3 px-5 py-3.5 rounded-xl border-2 transition-all duration-300 ${
-                    isSelected
-                      ? `bg-gradient-to-r ${option.gradient} text-white border-transparent shadow-lg ring-4 ${option.ring} ring-opacity-30`
-                      : `${option.lightBg} text-gray-700`
-                  }`}
-                >
-                  <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-white/20' : `bg-gradient-to-r ${option.gradient}`}`}>
-                    <Icon className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-white'}`} />
+                <div key={option.value} className="relative group">
+                  <button
+                    type="button"
+                    onClick={() => setColorClassification(isSelected ? '' : option.value)}
+                    className={`relative flex items-center gap-3 px-5 py-3.5 rounded-xl border-2 transition-all duration-300 ${
+                      isSelected
+                        ? `bg-gradient-to-r ${option.gradient} text-white border-transparent shadow-lg ring-4 ${option.ring} ring-opacity-30`
+                        : `${option.lightBg} text-gray-700`
+                    }`}
+                  >
+                    <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-white/20' : `bg-gradient-to-r ${option.gradient}`}`}>
+                      <Icon className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-white'}`} />
+                    </div>
+                    <span className="font-semibold">{option.label}</span>
+                  </button>
+                  {/* Tooltip */}
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 max-w-[200px] text-center leading-relaxed">
+                    {option.tooltip}
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
                   </div>
-                  <span className="font-semibold">{option.label}</span>
-                </button>
+                </div>
               );
             })}
           </div>
           {!colorClassification && (
             <p className="text-sm text-rose-500 mt-4 font-medium">
-              ⚠️ Required: Please select a performance classification
+              ⚠️ Required: Please classify
             </p>
           )}
         </Card>
