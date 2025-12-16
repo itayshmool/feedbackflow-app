@@ -83,6 +83,9 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   
+  // Confirmation modal state
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  
   // Feature flag for AI generation
   const isAIEnabled = import.meta.env.VITE_ENABLE_AI_FEEDBACK === 'true';
 
@@ -328,6 +331,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
   };
 
   const handleSubmit = async () => {
+    // Validation
     if (!selectedCycleId) {
       toast.error('Please select a feedback cycle');
       return;
@@ -348,6 +352,13 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
       return;
     }
 
+    // Show confirmation modal instead of submitting directly
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmedSubmit = async () => {
+    setShowConfirmModal(false);
+    
     const data: CreateFeedbackRequest = {
       cycleId: selectedCycleId,
       toUserEmail,
@@ -877,6 +888,79 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-6 pb-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-amber-100 rounded-full">
+                  <Send className="w-6 h-6 text-amber-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">Ready to Submit?</h3>
+              </div>
+              
+              <p className="text-gray-600 leading-relaxed">
+                Once submitted, this feedback will be sent to{' '}
+                <span className="font-semibold text-gray-900">{selectedUser?.name || toUserEmail}</span>{' '}
+                and cannot be edited or deleted.
+              </p>
+            </div>
+
+            {/* Classification Display */}
+            <div className="px-6 pb-6">
+              <div className="bg-gray-50 rounded-xl p-4">
+                <p className="text-sm text-gray-500 mb-2">Classification:</p>
+                <div className="flex items-center gap-2">
+                  {colorClassification === FeedbackColorClassification.GREEN && (
+                    <>
+                      <div className="w-4 h-4 rounded-full bg-emerald-500 ring-4 ring-emerald-100" />
+                      <span className="font-semibold text-emerald-700">Exceeds Expectations</span>
+                    </>
+                  )}
+                  {colorClassification === FeedbackColorClassification.YELLOW && (
+                    <>
+                      <div className="w-4 h-4 rounded-full bg-amber-500 ring-4 ring-amber-100" />
+                      <span className="font-semibold text-amber-700">Meets Expectations</span>
+                    </>
+                  )}
+                  {colorClassification === FeedbackColorClassification.RED && (
+                    <>
+                      <div className="w-4 h-4 rounded-full bg-rose-500 ring-4 ring-rose-100" />
+                      <span className="font-semibold text-rose-700">Needs Improvement</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex gap-3 p-4 bg-gray-50 border-t border-gray-200">
+              <Button
+                variant="outline"
+                onClick={() => setShowConfirmModal(false)}
+                className="flex-1 rounded-xl"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmedSubmit}
+                disabled={isCreating}
+                className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl"
+              >
+                {isCreating ? <LoadingSpinner size="sm" /> : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Yes, Submit
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
