@@ -10,7 +10,7 @@ import { Badge } from '../ui/Badge';
 import { Select } from '../ui/Select';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { HighlightText } from '../ui/HighlightText';
-import { MessageSquare, Calendar, User, Filter, Download, Eye, Edit, Trash2, RotateCcw, Search, X, ChevronDown, ChevronUp, FileText, Target } from 'lucide-react';
+import { MessageSquare, Calendar, User, Filter, Download, Eye, Edit, Trash2, RotateCcw, Search, X, ChevronDown, ChevronUp, ChevronRight, FileText, Target } from 'lucide-react';
 
 interface FeedbackListProps {
   onSelectFeedback?: (feedback: Feedback, editMode?: boolean) => void;
@@ -725,19 +725,25 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
                       )}
                     </div>
 
-                    {/* View Button - Hidden on mobile, entire card is tappable */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      icon={Eye}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectFeedback?.(feedback);
-                      }}
-                      className="hidden sm:flex rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                    >
-                      View
-                    </Button>
+                    {/* Mobile: Tap hint | Desktop: View button on hover */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="sm:hidden text-xs text-gray-400 flex items-center gap-1">
+                        Tap to view
+                        <ChevronRight className="w-3 h-3" />
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon={Eye}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelectFeedback?.(feedback);
+                        }}
+                        className="hidden sm:flex rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        View
+                      </Button>
+                    </div>
                   </div>
                 </div>
               );
