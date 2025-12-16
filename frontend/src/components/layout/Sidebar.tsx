@@ -117,8 +117,20 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
   // Core navigation items (visible to all)
   const coreNavigation: NavItem[] = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Feedback', href: '/feedback', icon: MessageSquare },
   ]
+  
+  // Add "My Team" for managers only (after Dashboard)
+  if (isManager) {
+    coreNavigation.push({ 
+      name: 'My Team', 
+      href: '/team', 
+      icon: Users2,
+      badge: directReports.length > 0 ? directReports.length : undefined
+    })
+  }
+  
+  // Feedback for everyone
+  coreNavigation.push({ name: 'Feedback', href: '/feedback', icon: MessageSquare })
   
   // Manager's Feedback - only for manager of managers or admins
   if (hasManagerReports || isAdmin) {
