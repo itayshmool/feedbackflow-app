@@ -693,8 +693,8 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
                         <Target className="w-4 h-4 text-white" />
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">{goal.title}</h4>
-                        <p className="text-gray-700 mt-1">{goal.description}</p>
+                        <p className="text-gray-900">{goal.title}</p>
+                        {goal.description && <p className="text-gray-600 mt-1 text-sm">{goal.description}</p>}
                         <div className="flex items-center gap-2 mt-3 text-sm text-gray-600">
                           <Calendar className="w-4 h-4" />
                           Target: {new Date(goal.targetDate).toLocaleDateString()}
