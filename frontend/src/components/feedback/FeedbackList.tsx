@@ -51,8 +51,8 @@ export const FeedbackList: React.FC<FeedbackListProps> = ({
   // Get cycles for filter dropdown
   const { cycles, fetchCycles, isLoading: isCyclesLoading } = useCyclesStore();
 
-  // For employees, default to 'waiting' tab; for managers, use initialTab
-  const defaultTab = isManager ? initialTab : (initialTab === 'all' ? 'waiting' : initialTab);
+  // For employees, default to 'received' tab (all their feedback); for managers, use initialTab
+  const defaultTab = isManager ? initialTab : (initialTab === 'all' ? 'received' : initialTab);
   const [activeTab, setActiveTab] = useState<'received' | 'given' | 'all' | 'drafts' | 'waiting' | 'acknowledged'>(defaultTab as any);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<FeedbackStatus | ''>(initialStatus as FeedbackStatus || '');

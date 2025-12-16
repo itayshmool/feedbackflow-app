@@ -40,10 +40,10 @@ export default function FeedbackPage() {
 
   // Get initial tab from URL query parameter
   // For managers: received, given, drafts, all
-  // For employees: waiting, acknowledged, received
+  // For employees: waiting, acknowledged, received (default to 'received' to show all)
   const validManagerTabs = ['given', 'received', 'drafts', 'all'];
   const validEmployeeTabs = ['waiting', 'acknowledged', 'received'];
-  const defaultTab = isManager ? 'all' : 'waiting';
+  const defaultTab = isManager ? 'all' : 'received';
   
   const initialTab = isManager 
     ? (validManagerTabs.includes(tabParam || '') ? tabParam : defaultTab)
@@ -120,20 +120,22 @@ export default function FeedbackPage() {
 
           {/* Stats Cards - Modern Gradient Design */}
           {feedbackStats && (
-            <div className="grid grid-cols-3 gap-2 sm:gap-4">
-              {/* Given Card - Blue Theme */}
-              <div className="group relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 p-3 sm:p-5 shadow-lg shadow-blue-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5">
-                <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
-                <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <div className="order-2 sm:order-1">
-                    <p className="text-xs sm:text-sm font-medium text-blue-100">Given</p>
-                    <p className="text-2xl sm:text-3xl font-bold text-white">{feedbackStats.given}</p>
-                  </div>
-                  <div className="order-1 sm:order-2 flex h-9 w-9 sm:h-12 sm:w-12 items-center justify-center rounded-lg sm:rounded-xl bg-white/20 backdrop-blur-sm">
-                    <Send className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
+            <div className={`grid gap-2 sm:gap-4 ${isManager ? 'grid-cols-3' : 'grid-cols-2'}`}>
+              {/* Given Card - Blue Theme (Manager only) */}
+              {isManager && (
+                <div className="group relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 p-3 sm:p-5 shadow-lg shadow-blue-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5">
+                  <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+                  <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div className="order-2 sm:order-1">
+                      <p className="text-xs sm:text-sm font-medium text-blue-100">Given</p>
+                      <p className="text-2xl sm:text-3xl font-bold text-white">{feedbackStats.given}</p>
+                    </div>
+                    <div className="order-1 sm:order-2 flex h-9 w-9 sm:h-12 sm:w-12 items-center justify-center rounded-lg sm:rounded-xl bg-white/20 backdrop-blur-sm">
+                      <Send className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Received Card - Emerald Theme */}
               <div className="group relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 p-3 sm:p-5 shadow-lg shadow-emerald-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/30 hover:-translate-y-0.5">

@@ -179,7 +179,7 @@ app.use('/api/v1/settings', settingsRoutes)
 eventEmitter.on('cycle:created', (data) => notificationService.handleCycleEvent('cycle:created', data))
 eventEmitter.on('cycle:activated', (data) => notificationService.handleCycleEvent('cycle:activated', data))
 eventEmitter.on('cycle:updated', (data) => notificationService.handleCycleEvent('cycle:updated', data))
-eventEmitter.on('feedback:created', (data) => notificationService.handleFeedbackEvent('feedback:created', data))
+// Note: feedback:created notification removed - employees should only be notified when feedback is submitted, not when drafted
 eventEmitter.on('feedback:submitted', (data) => notificationService.handleFeedbackEvent('feedback:submitted', data))
 eventEmitter.on('feedback:acknowledged', (data) => notificationService.handleFeedbackEvent('feedback:acknowledged', data))
 
