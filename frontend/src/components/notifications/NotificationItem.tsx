@@ -3,7 +3,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotificationStore } from '../../stores/notificationStore';
-import { Notification } from '../../types/notification.types';
+import { Notification, NotificationType } from '../../types/notification.types';
 import { Button } from '../ui/Button';
 import { Trash2, Check } from 'lucide-react';
 
@@ -34,13 +34,29 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
       await markAsRead(notification.id);
     }
     
-    // Navigate to feedback if feedbackId exists
-    if (notification.data?.feedbackId) {
-      onNavigate?.(); // Close dropdown if provided
-      navigate(`/feedback/${notification.data.feedbackId}`);
-    } else {
-      // For non-feedback notifications, just close dropdown
-      onNavigate?.();
+    // Close dropdown first
+    onNavigate?.();
+    
+    // Navigate based on notification type
+    switch (notification.type) {
+      case NotificationType.FEEDBACK_RECEIVED:
+      case NotificationType.FEEDBACK_REMINDER:
+        if (notification.data?.feedbackId) {
+          navigate(`/feedback/${notification.data.feedbackId}`);
+        } else {
+          navigate('/feedback');
+        }
+        break;
+      case NotificationType.CYCLE_STARTED:
+      case NotificationType.CYCLE_ENDING:
+        navigate('/dashboard');
+        break;
+      case NotificationType.GOAL_ASSIGNED:
+        navigate('/myself');
+        break;
+      // USER_INVITED and SYSTEM_ANNOUNCEMENT - no navigation needed
+      default:
+        break;
     }
   };
 
