@@ -72,3 +72,4 @@ export function ScrollableTable({ children, className }: ScrollableTableProps) {
 
 export default ScrollableTable
 
+

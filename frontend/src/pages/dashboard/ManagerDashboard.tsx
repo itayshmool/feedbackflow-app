@@ -382,24 +382,23 @@ const ManagerDashboard: React.FC = () => {
       {/* Daily Growth Quote */}
       <QuoteOfTheDay />
 
-      {/* Stats Cards - 2 columns on all sizes for compact mobile view */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+      {/* Stats Cards - Gradient design */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         {/* Direct Reports - Click to switch to Team tab */}
         <Card 
-          className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer active:scale-[0.98]"
+          className="bg-gradient-to-br from-blue-500 to-blue-600 border-0 shadow-lg hover:shadow-xl transform transition-all duration-200 hover:-translate-y-1 cursor-pointer active:scale-[0.98]"
           onClick={() => setActiveTab('team')}
         >
-          <CardContent className="p-3 sm:p-4 md:p-6">
-            {/* Mobile: centered stacked layout, Desktop: horizontal layout */}
-            <div className="flex flex-col items-center text-center sm:flex-row sm:items-center sm:text-left">
-              <div className="p-2.5 sm:p-3 bg-blue-100 rounded-xl flex-shrink-0 mb-2 sm:mb-0">
-                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="p-2.5 bg-white/20 rounded-xl w-fit">
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
               </div>
-              <div className="sm:ml-4 min-w-0">
-                <p className="text-2xl sm:text-2xl md:text-3xl font-bold text-gray-900">
+              <div>
+                <p className="text-2xl sm:text-3xl font-bold text-white">
                   {directReports.length}
                 </p>
-                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate mt-0.5">Direct Reports</p>
+                <p className="text-xs sm:text-sm font-medium text-blue-100">Direct Reports</p>
               </div>
             </div>
           </CardContent>
@@ -407,20 +406,19 @@ const ManagerDashboard: React.FC = () => {
 
         {/* Team Feedback Given - Navigate to feedback page with 'given' tab */}
         <Card 
-          className="transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer active:scale-[0.98]"
+          className="bg-gradient-to-br from-emerald-500 to-emerald-600 border-0 shadow-lg hover:shadow-xl transform transition-all duration-200 hover:-translate-y-1 cursor-pointer active:scale-[0.98]"
           onClick={() => navigate('/feedback?tab=given')}
         >
-          <CardContent className="p-3 sm:p-4 md:p-6">
-            {/* Mobile: centered stacked layout, Desktop: horizontal layout */}
-            <div className="flex flex-col items-center text-center sm:flex-row sm:items-center sm:text-left">
-              <div className="p-2.5 sm:p-3 bg-green-100 rounded-xl flex-shrink-0 mb-2 sm:mb-0">
-                <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="p-2.5 bg-white/20 rounded-xl w-fit">
+                <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
               </div>
-              <div className="sm:ml-4 min-w-0">
-                <p className="text-2xl sm:text-2xl md:text-3xl font-bold text-gray-900">
+              <div>
+                <p className="text-2xl sm:text-3xl font-bold text-white">
                   {isFeedbackLoading ? '...' : feedbackStats?.given || 0}
                 </p>
-                <p className="text-xs sm:text-sm font-medium text-gray-600 truncate mt-0.5">Feedback Given</p>
+                <p className="text-xs sm:text-sm font-medium text-emerald-100">Feedback Given</p>
               </div>
             </div>
           </CardContent>
@@ -467,10 +465,12 @@ const ManagerDashboard: React.FC = () => {
 
       {/* Recent Activity - Stack on mobile, 2 columns on large screens */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-        <Card className="transform transition-all duration-200 hover:shadow-lg">
+        <Card className="bg-white/80 backdrop-blur-sm border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-200">
           <CardHeader className="pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
-            <CardTitle className="text-base sm:text-lg flex items-center">
-              <MessageSquare className="h-5 w-5 mr-2 text-green-600" />
+            <CardTitle className="text-lg sm:text-xl font-bold flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg mr-3">
+                <MessageSquare className="h-5 w-5 text-green-600" />
+              </div>
               Feedback You Gave
             </CardTitle>
           </CardHeader>
@@ -484,20 +484,22 @@ const ManagerDashboard: React.FC = () => {
                 {recentFeedback.slice(0, 3).map((feedback) => (
                   <button 
                     key={feedback.id} 
-                    className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all min-h-[56px] active:scale-[0.98] text-left"
+                    className={`w-full flex items-center gap-3 p-3 bg-white rounded-xl border hover:border-gray-300 hover:shadow-md transition-all min-h-[56px] active:scale-[0.98] text-left ${
+                      feedback.status === 'completed' ? 'border-l-4 border-l-green-500 border-gray-200' :
+                      (feedback.status as any) === 'pending' || feedback.status === 'submitted' ? 'border-l-4 border-l-yellow-500 border-gray-200' : 
+                      feedback.status === 'draft' ? 'border-l-4 border-l-gray-400 border-gray-200' : 'border-l-4 border-l-blue-500 border-gray-200'
+                    }`}
                     onClick={() => navigate(`/feedback?view=${feedback.id}`)}
                   >
-                    <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                      feedback.status === 'completed' ? 'bg-green-500' :
-                      (feedback.status as any) === 'pending' || feedback.status === 'submitted' ? 'bg-yellow-500' : 
-                      feedback.status === 'draft' ? 'bg-gray-400' : 'bg-blue-500'
-                    }`}></div>
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-sm font-medium text-gray-600 flex-shrink-0">
+                      {feedback.toUser?.name?.charAt(0).toUpperCase() || '?'}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">
-                        To: {feedback.toUser?.name || 'Unknown'}
+                        {feedback.toUser?.name || 'Unknown'}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {new Date(feedback.createdAt).toLocaleDateString()} • {feedback.status}
+                        {new Date(feedback.createdAt).toLocaleDateString()} • <span className="capitalize">{feedback.status}</span>
                       </p>
                     </div>
                     <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -505,46 +507,51 @@ const ManagerDashboard: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-6 text-gray-500">
-                <Activity className="w-10 h-10 mx-auto mb-2 text-gray-400" />
-                <p className="text-sm">No recent feedback given</p>
+              <div className="text-center py-8 text-gray-500">
+                <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Activity className="w-7 h-7 text-gray-400" />
+                </div>
+                <p className="font-medium text-gray-700">No feedback yet</p>
+                <p className="text-sm text-gray-500 mt-1">Start giving feedback to your team</p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        <Card className="transform transition-all duration-200 hover:shadow-lg">
+        <Card className="bg-white/80 backdrop-blur-sm border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-200">
           <CardHeader className="pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
-            <CardTitle className="text-base sm:text-lg flex items-center">
-              <Target className="h-5 w-5 mr-2 text-purple-600" />
+            <CardTitle className="text-lg sm:text-xl font-bold flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg mr-3">
+                <Target className="h-5 w-5 text-purple-600" />
+              </div>
               Team Feedback Progress
             </CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
             <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Team Members with Feedback</span>
-                  <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-medium">
-                    {completionData?.summary ? `${completionData.summary.completed}/${completionData.summary.total}` : `${directReports.length} reports`}
+              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-100">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold text-gray-700">Team Coverage</span>
+                  <span className="text-sm px-3 py-1 bg-white text-purple-700 rounded-full font-bold shadow-sm">
+                    {completionData?.summary ? `${completionData.summary.completed}/${completionData.summary.total}` : `${directReports.length}`}
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div className="w-full bg-white rounded-full h-3 shadow-inner">
                   <div 
-                    className="bg-green-500 h-2.5 rounded-full transition-all duration-500" 
+                    className="bg-gradient-to-r from-purple-500 to-indigo-500 h-3 rounded-full transition-all duration-500 shadow-sm" 
                     style={{ width: completionData?.summary ? `${completionData.summary.percentage}%` : '0%' }}
                   ></div>
                 </div>
-                <p className="text-xs text-gray-500 mt-1.5">
+                <p className="text-xs text-gray-600 mt-2">
                   {completionData?.summary 
-                    ? `${completionData.summary.percentage}% of your team has received feedback from you`
-                    : 'View Analytics tab for detailed completion data'}
+                    ? `${completionData.summary.percentage}% of your team has received feedback`
+                    : 'View Analytics for detailed data'}
                 </p>
               </div>
               
               <Button 
                 variant="outline" 
-                className="w-full min-h-[44px]"
+                className="w-full min-h-[44px] hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 transition-all"
                 onClick={() => setActiveTab('analytics')}
               >
                 <BarChart3 className="w-4 h-4 mr-2" />
@@ -748,12 +755,12 @@ const ManagerDashboard: React.FC = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Team Hierarchy</h2>
-            <p className="text-sm text-gray-500 mt-1 flex items-center gap-2">
-              <Users className="w-4 h-4" />
-              {directReports.length} direct report{directReports.length !== 1 ? 's' : ''}
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Team Hierarchy</h2>
+            <p className="text-sm text-gray-600 mt-1 flex items-center gap-2">
+              <Users className="w-4 h-4 text-blue-500" />
+              <span className="font-medium">{directReports.length}</span> direct report{directReports.length !== 1 ? 's' : ''}
               {totalTeamSize > directReports.length && (
-                <span className="text-gray-400">• {totalTeamSize} total team members</span>
+                <span className="text-gray-400">• <span className="font-medium">{totalTeamSize}</span> total</span>
               )}
             </p>
           </div>
@@ -896,11 +903,14 @@ const ManagerDashboard: React.FC = () => {
     return (
       <div className="space-y-6">
         <div className="flex flex-col gap-4">
-          <h2 className="text-xl font-semibold text-gray-900">Team Analytics</h2>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Team Analytics</h2>
+            <p className="text-sm text-gray-600 mt-1">Track feedback distribution and team progress</p>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-gray-200">
             {/* Cycle Filter */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <label className="text-sm text-gray-600">Filter by cycle:</label>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1">
+              <label className="text-sm font-medium text-gray-700">Cycle:</label>
               <Select
                 value={analyticsCycleId}
                 onChange={(e) => setAnalyticsCycleId(e.target.value)}
@@ -918,7 +928,7 @@ const ManagerDashboard: React.FC = () => {
               variant="outline"
               onClick={() => fetchAnalyticsData(analyticsCycleId || undefined)}
               disabled={isAnalyticsLoading}
-              className="flex items-center justify-center gap-2 w-full sm:w-auto"
+              className="flex items-center justify-center gap-2 w-full sm:w-auto min-h-[40px]"
             >
               <RefreshCw className={`h-4 w-4 ${isAnalyticsLoading ? 'animate-spin' : ''}`} />
               Refresh
@@ -1114,11 +1124,13 @@ const ManagerDashboard: React.FC = () => {
       {/* Header with Refresh Button */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-            <Sparkles className="h-6 w-6 text-purple-600" />
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <div className="p-2 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-lg">
+              <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
+            </div>
             AI Team Insights
           </h2>
-          <p className="text-gray-600 text-sm mt-1">
+          <p className="text-sm text-gray-600 mt-1">
             AI-powered analysis of your team's feedback patterns
           </p>
         </div>
@@ -1391,76 +1403,53 @@ const ManagerDashboard: React.FC = () => {
     </div>
   );
 
+  // Calculate active tab index for pill indicator
+  const activeTabIndex = tabs.findIndex(t => t.id === activeTab);
+
   return (
-    <div className="bg-gray-50">
-      {/* Header - Responsive: smaller padding/text on mobile */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="px-4 md:px-6 py-3 md:py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-lg md:text-2xl font-bold text-gray-900">Manager Dashboard</h1>
-              <p className="text-sm md:text-base text-gray-600 hidden md:block">Manage your team and track performance</p>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      {/* Header - Clean typography */}
+      <div className="px-4 sm:px-6 lg:px-8 py-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Manager Dashboard</h1>
+        <p className="text-base sm:text-lg text-gray-600 mt-1">Manage your team and track performance</p>
       </div>
 
-      {/* Desktop Tabs - Hidden on mobile */}
-      <div className="hidden md:block bg-white border-b border-gray-200">
-        <div className="px-6">
-          <nav className="flex space-x-8">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
-                    activeTab === tab.id
-                      ? 'border-green-500 text-green-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <Icon className="w-4 h-4 mr-2" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-      </div>
-
-      {/* Mobile Tabs - Horizontally scrollable pills, hidden on desktop */}
-      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-3 relative">
-        {/* Scroll fade indicator on right edge - hints there's more content */}
-        <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white via-white/80 to-transparent pointer-events-none z-10" />
-        
-        <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 pr-12">
-          <div className="flex gap-2 min-w-max">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 active:scale-95 min-h-[44px] ${
-                    isActive
-                      ? 'bg-green-600 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
+      {/* Modern Pill Tabs - Works for both desktop and mobile */}
+      <div className="px-4 sm:px-6 lg:px-8 pb-6">
+        <div className="relative inline-flex bg-gray-100 rounded-full p-1">
+          {/* Sliding indicator */}
+          <div
+            className="absolute top-1 bottom-1 bg-white rounded-full shadow-md transition-all duration-300 ease-out"
+            style={{
+              width: `${100 / tabs.length}%`,
+              left: `calc(${activeTabIndex * (100 / tabs.length)}% + 4px)`,
+              right: `calc(${(tabs.length - 1 - activeTabIndex) * (100 / tabs.length)}% + 4px)`,
+            }}
+          />
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`relative z-10 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all duration-200 min-h-[40px] ${
+                  isActive
+                    ? 'text-gray-900'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden">{tab.id === 'insights' ? 'AI' : tab.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Main Content - Responsive padding */}
-      <div className="p-4 md:p-6">
+      <div className="px-4 sm:px-6 lg:px-8 pb-8">
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'team' && renderTeam()}
         {activeTab === 'insights' && renderInsights()}
