@@ -6279,6 +6279,21 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
       // Save development goals to database (within the same transaction)
     if (goals && goals.length > 0) {
       console.log('💾 Saving', goals.length, 'development goals to database');
+      
+      // Map frontend category names to database-valid values
+      const mapGoalCategory = (cat: string): string => {
+        const categoryMap: Record<string, string> = {
+          'career_development': 'development',
+          'technical_skills': 'technical',
+          'leadership': 'leadership',
+          'communication': 'communication',
+          'performance': 'performance',
+          'skill': 'skill',
+          'development': 'development'
+        };
+        return categoryMap[cat?.toLowerCase()] || 'development';
+      };
+      
       for (const goal of goals) {
           // Sanitize goal content to prevent XSS
           const sanitizedGoal = sanitizeGoal(goal);
@@ -6291,8 +6306,8 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
             responseId,
             sanitizedGoal.title,
             sanitizedGoal.description,
-            sanitizedGoal.category,
-            sanitizedGoal.priority,
+            mapGoalCategory(sanitizedGoal.category || 'development'),
+            sanitizedGoal.priority || 'medium',
             goal.targetDate ? new Date(goal.targetDate) : null
           ]
         );
