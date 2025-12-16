@@ -64,10 +64,17 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
   const [areasForImprovement, setAreasForImprovement] = useState<string[]>(['']);
   const [specificExamples, setSpecificExamples] = useState<string[]>(['']);
   const [recommendations, setRecommendations] = useState<string[]>(['']);
+  const [bottomLine, setBottomLine] = useState('');
   const [confidential, setConfidential] = useState(false);
   const [colorClassification, setColorClassification] = useState<FeedbackColorClassification | ''>('');
   const [ratings, setRatings] = useState<RatingInput[]>([]);
-  const [goals, setGoals] = useState<GoalInput[]>([]);
+  const [goals, setGoals] = useState<GoalInput[]>([{
+    title: '',
+    description: '',
+    category: GoalCategory.CAREER_DEVELOPMENT,
+    priority: GoalPriority.MEDIUM,
+    targetDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  }]);
   
   // AI Generation state
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
@@ -128,14 +135,14 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
   const getHelpText = (section: string): string => {
     const helpTexts = {
       manager: {
-        strengths: "What has this employee done exceptionally well? Focus on specific achievements and behaviors.",
-        improvements: "What skills or behaviors should they develop? Be constructive and actionable.",
+        strengths: "Which strengths, skills, or behaviors showed up clearly in your work? Please share examples.",
+        improvements: "Which areas or skills could be improved or handled differently? Where should you focus on doing better? Please share examples.",
         examples: "Provide concrete examples of situations that illustrate your feedback.",
         recommendations: "Suggest specific actions or resources for professional development."
       },
       project: {
-        strengths: "What went well in this collaboration? Highlight positive contributions.",
-        improvements: "What could improve in future projects? Keep it constructive and forward-looking.",
+        strengths: "Which strengths, skills, or behaviors showed up clearly in your work? Please share examples.",
+        improvements: "Which areas or skills could be improved or handled differently? Where should you focus on doing better? Please share examples.",
         examples: "Share specific instances from the project that stood out.",
         recommendations: "Suggestions for future collaborations or team processes."
       }
@@ -247,8 +254,8 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         const { 
           strengths: aiStrengths, 
           areasForImprovement: aiAreas, 
-          specificExamples: aiExamples,
           recommendations: aiRecs,
+          bottomLine: aiBottomLine,
           developmentGoals: aiDevGoals,
           overallComment: aiComment 
         } = response.data.data;
@@ -260,11 +267,11 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         if (aiAreas) {
           setAreasForImprovement(Array.isArray(aiAreas) ? aiAreas : aiAreas.split('. ').filter((a: string) => a.trim()));
         }
-        if (aiExamples) {
-          setSpecificExamples(Array.isArray(aiExamples) ? aiExamples : aiExamples.split('. ').filter((e: string) => e.trim()));
-        }
         if (aiRecs) {
           setRecommendations(Array.isArray(aiRecs) ? aiRecs : aiRecs.split('. ').filter((r: string) => r.trim()));
+        }
+        if (aiBottomLine) {
+          setBottomLine(aiBottomLine);
         }
         if (aiComment) {
           setOverallComment(aiComment);
@@ -308,6 +315,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         areasForImprovement: areasForImprovement.filter((a) => a.trim()),
         specificExamples: specificExamples.filter((e) => e.trim()),
         recommendations: recommendations.filter((r) => r.trim()),
+        bottomLine: bottomLine.trim() || undefined,
         confidential,
       },
       ratings: [], // Ratings removed from UI
@@ -361,6 +369,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         areasForImprovement: areasForImprovement.filter((a) => a.trim()),
         specificExamples: specificExamples.filter((e) => e.trim()),
         recommendations: recommendations.filter((r) => r.trim()),
+        bottomLine: bottomLine.trim() || undefined,
         confidential,
       },
       ratings: [], // Ratings removed from UI
@@ -600,7 +609,13 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
 
       {/* Overall Comment */}
       <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Overall Feedback</h3>
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold">Overall Feedback</h3>
+          <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
+            <HelpCircle className="w-4 h-4" />
+            How I experienced your work over the past few months - including standout contributions, efforts, or moments worth highlighting.
+          </p>
+        </div>
         <textarea
           className="w-full p-3 border rounded-md min-h-32"
           value={overallComment}
@@ -683,154 +698,82 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         </div>
       </Card>
 
-      {/* Specific Examples */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-semibold">Specific Examples</h3>
-            <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
-              <HelpCircle className="w-4 h-4" />
-              {getHelpText('examples')}
-            </p>
-          </div>
-          <Button variant="outline" size="sm" onClick={addExample} icon={Plus}>
-            Add
-          </Button>
-        </div>
-        <div className="space-y-2">
-          {specificExamples.map((example, index) => (
-            <div key={index} className="flex gap-2">
-              <textarea
-                value={example}
-                onChange={(e) => updateExample(index, e.target.value)}
-                placeholder="Provide a specific example..."
-                className="flex-1 p-3 border rounded-md min-h-20 resize-none"
-                rows={2}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => removeExample(index)}
-                icon={Trash2}
-                className="self-start mt-2"
-              />
-            </div>
-          ))}
-        </div>
-      </Card>
+      {/* Specific Examples - Hidden from UI but data structure preserved */}
 
-      {/* Recommendations */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-semibold">Recommendations</h3>
-            <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
-              <HelpCircle className="w-4 h-4" />
-              {getHelpText('recommendations')}
-            </p>
-          </div>
-          <Button variant="outline" size="sm" onClick={addRecommendation} icon={Plus}>
-            Add
-          </Button>
-        </div>
-        <div className="space-y-2">
-          {recommendations.map((rec, index) => (
-            <div key={index} className="flex gap-2">
-              <textarea
-                value={rec}
-                onChange={(e) => updateRecommendation(index, e.target.value)}
-                placeholder="Provide a recommendation..."
-                className="flex-1 p-3 border rounded-md min-h-20 resize-none"
-                rows={2}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => removeRecommendation(index)}
-                icon={Trash2}
-                className="self-start mt-2"
-              />
-            </div>
-          ))}
-        </div>
-      </Card>
+      {/* Recommendations - Hidden from UI but data structure preserved */}
 
-      {/* Goals - Only show for Manager Reviews */}
+      {/* Growth & Development - Only show for Manager Reviews */}
       {reviewType === ReviewType.MANAGER_REVIEW && (
         <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-lg font-semibold">Development Goals</h3>
-              <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
-                <HelpCircle className="w-4 h-4" />
-                Set 3-5 SMART goals for the employee's growth and development
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold">Growth & Development</h3>
+              <p className="text-sm text-gray-500 mt-1 flex items-start gap-1">
+                <HelpCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>What are the focus areas and key actions we agreed on to support your growth over the next few months?</span>
               </p>
             </div>
-            <Button variant="outline" size="sm" onClick={addGoal} icon={Plus}>
+            <Button variant="outline" size="sm" onClick={addGoal} icon={Plus} className="flex-shrink-0 whitespace-nowrap">
               Add Goal
             </Button>
           </div>
-        <div className="space-y-4">
-          {goals.map((goal, index) => (
-            <div key={index} className="p-4 border rounded-md space-y-3">
-              <div className="flex items-start gap-3">
-                <Input
-                  label="Goal Title"
-                  value={goal.title}
-                  onChange={(e) => updateGoal(index, 'title', e.target.value)}
-                  placeholder="e.g., Improve React skills"
-                  className="flex-1"
+          <div className="space-y-4">
+            {goals.map((goal, index) => (
+              <div key={index} className="p-4 border rounded-md space-y-3">
+                <div className="flex items-start gap-3">
+                  <Input
+                    label="Goal Title"
+                    value={goal.title}
+                    onChange={(e) => updateGoal(index, 'title', e.target.value)}
+                    placeholder="e.g., Improve React skills"
+                    className="flex-1"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeGoal(index)}
+                    icon={Trash2}
+                    className="mt-6"
+                  />
+                </div>
+                <textarea
+                  className="w-full p-3 border rounded-md"
+                  value={goal.description}
+                  onChange={(e) => updateGoal(index, 'description', e.target.value)}
+                  placeholder="Describe the goal..."
+                  rows={2}
                 />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeGoal(index)}
-                  icon={Trash2}
-                  className="mt-6"
-                />
+                <div className="max-w-xs">
+                  <Input
+                    label="Target Date"
+                    type="date"
+                    value={goal.targetDate}
+                    onChange={(e) => updateGoal(index, 'targetDate', e.target.value)}
+                  />
+                </div>
+                {/* Category and Priority hidden from UI but preserved in data structure */}
               </div>
-              <textarea
-                className="w-full p-3 border rounded-md"
-                value={goal.description}
-                onChange={(e) => updateGoal(index, 'description', e.target.value)}
-                placeholder="Describe the goal..."
-                rows={2}
-              />
-              <div className="grid grid-cols-3 gap-3">
-                <Select
-                  label="Category"
-                  value={goal.category}
-                  onChange={(e) => updateGoal(index, 'category', e.target.value as GoalCategory)}
-                >
-                  <option value={GoalCategory.TECHNICAL_SKILLS}>Technical Skills</option>
-                  <option value={GoalCategory.SOFT_SKILLS}>Soft Skills</option>
-                  <option value={GoalCategory.LEADERSHIP}>Leadership</option>
-                  <option value={GoalCategory.COMMUNICATION}>Communication</option>
-                  <option value={GoalCategory.PERFORMANCE}>Performance</option>
-                  <option value={GoalCategory.CAREER_DEVELOPMENT}>Career Development</option>
-                </Select>
-                <Select
-                  label="Priority"
-                  value={goal.priority}
-                  onChange={(e) => updateGoal(index, 'priority', e.target.value as GoalPriority)}
-                >
-                  <option value={GoalPriority.LOW}>Low</option>
-                  <option value={GoalPriority.MEDIUM}>Medium</option>
-                  <option value={GoalPriority.HIGH}>High</option>
-                  <option value={GoalPriority.CRITICAL}>Critical</option>
-                </Select>
-                <Input
-                  label="Target Date"
-                  type="date"
-                  value={goal.targetDate}
-                  onChange={(e) => updateGoal(index, 'targetDate', e.target.value)}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
+            ))}
+          </div>
+        </Card>
       )}
+
+      {/* Bottom Line - Last input field */}
+      <Card className="p-6">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold">Bottom Line</h3>
+          <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
+            <HelpCircle className="w-4 h-4" />
+            What is the key message or takeaway I want you to leave this conversation with?
+          </p>
+        </div>
+        <textarea
+          className="w-full p-3 border rounded-md min-h-24"
+          value={bottomLine}
+          onChange={(e) => setBottomLine(e.target.value)}
+          placeholder="Share the key message or takeaway..."
+        />
+      </Card>
 
       {/* Action Buttons */}
       <div className="flex gap-3 justify-end sticky bottom-0 bg-white py-4 border-t">

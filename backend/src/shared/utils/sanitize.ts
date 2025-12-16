@@ -61,6 +61,7 @@ export function sanitizeFeedbackContent(content: any): {
   areasForImprovement: string[];
   specificExamples: string[];
   recommendations: string[];
+  bottomLine?: string;
   confidential: boolean;
 } {
   if (!content || typeof content !== 'object') {
@@ -80,6 +81,7 @@ export function sanitizeFeedbackContent(content: any): {
     areasForImprovement: sanitizeStringArray(content.areasForImprovement),
     specificExamples: sanitizeStringArray(content.specificExamples),
     recommendations: sanitizeStringArray(content.recommendations),
+    bottomLine: content.bottomLine ? sanitizeString(content.bottomLine) : undefined,
     confidential: Boolean(content.confidential)
   };
 }

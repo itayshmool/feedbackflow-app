@@ -97,6 +97,7 @@ export interface FeedbackContent {
   areasForImprovement: string[];
   specificExamples: string[];
   recommendations: string[];
+  bottomLine?: string;
   confidential: boolean;
   createdAt: string;
   updatedAt: string;
@@ -185,6 +186,7 @@ export interface CreateFeedbackRequest {
     areasForImprovement: string[];
     specificExamples: string[];
     recommendations: string[];
+    bottomLine?: string;
     confidential?: boolean;
   };
   ratings: CreateRatingRequest[];
@@ -215,6 +217,7 @@ export interface UpdateFeedbackRequest {
     areasForImprovement: string[];
     specificExamples: string[];
     recommendations: string[];
+    bottomLine?: string;
     confidential: boolean;
   }>;
   ratings?: UpdateRatingRequest[];

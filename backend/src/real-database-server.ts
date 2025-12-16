@@ -5664,6 +5664,7 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
           areasForImprovement: parsedContent.areasForImprovement || [],
           specificExamples: parsedContent.specificExamples || [],
           recommendations: parsedContent.recommendations || [],
+          bottomLine: parsedContent.bottomLine || undefined,
           confidential: parsedContent.confidential || false,
           createdAt: row.createdAt,
           updatedAt: row.updatedAt
@@ -5962,6 +5963,7 @@ app.get('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
         areasForImprovement: parsedContent.areasForImprovement || [],
         specificExamples: parsedContent.specificExamples || [],
         recommendations: parsedContent.recommendations || [],
+        bottomLine: parsedContent.bottomLine || undefined,
         confidential: parsedContent.confidential || false,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt
@@ -6249,6 +6251,7 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
       areasForImprovement: content?.areasForImprovement || [],
       specificExamples: content?.specificExamples || [],
       recommendations: content?.recommendations || [],
+      bottomLine: content?.bottomLine || undefined,
       confidential: content?.confidential || false
     });
 
@@ -6276,6 +6279,21 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
       // Save development goals to database (within the same transaction)
     if (goals && goals.length > 0) {
       console.log('💾 Saving', goals.length, 'development goals to database');
+      
+      // Map frontend category names to database-valid values
+      const mapGoalCategory = (cat: string): string => {
+        const categoryMap: Record<string, string> = {
+          'career_development': 'development',
+          'technical_skills': 'technical',
+          'leadership': 'leadership',
+          'communication': 'communication',
+          'performance': 'performance',
+          'skill': 'skill',
+          'development': 'development'
+        };
+        return categoryMap[cat?.toLowerCase()] || 'development';
+      };
+      
       for (const goal of goals) {
           // Sanitize goal content to prevent XSS
           const sanitizedGoal = sanitizeGoal(goal);
@@ -6288,8 +6306,8 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
             responseId,
             sanitizedGoal.title,
             sanitizedGoal.description,
-            sanitizedGoal.category,
-            sanitizedGoal.priority,
+            mapGoalCategory(sanitizedGoal.category || 'development'),
+            sanitizedGoal.priority || 'medium',
             goal.targetDate ? new Date(goal.targetDate) : null
           ]
         );
@@ -6352,6 +6370,7 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
         areasForImprovement: structuredContent.areasForImprovement,
         specificExamples: structuredContent.specificExamples,
         recommendations: structuredContent.recommendations,
+        bottomLine: structuredContent.bottomLine,
         confidential: structuredContent.confidential,
         createdAt: responseResult.rows[0].created_at,
         updatedAt: responseResult.rows[0].updated_at
@@ -6509,6 +6528,7 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
       areasForImprovement: updates.content?.areasForImprovement ?? existingContent.areasForImprovement ?? [],
       specificExamples: updates.content?.specificExamples ?? existingContent.specificExamples ?? [],
       recommendations: updates.content?.recommendations ?? existingContent.recommendations ?? [],
+      bottomLine: updates.content?.bottomLine ?? existingContent.bottomLine ?? undefined,
       confidential: updates.content?.confidential ?? existingContent.confidential ?? false
     });
     
@@ -6533,6 +6553,46 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
     
     if (updateResult.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Feedback not found' });
+    }
+    
+    // Handle goals update if provided
+    if (updates.goals !== undefined) {
+      // Map frontend category names to database-valid values
+      const mapCategory = (cat: string): string => {
+        const categoryMap: Record<string, string> = {
+          'career_development': 'development',
+          'technical_skills': 'technical',
+          'leadership': 'leadership',
+          'communication': 'communication',
+          'performance': 'performance',
+          'skill': 'skill',
+          'development': 'development'
+        };
+        return categoryMap[cat?.toLowerCase()] || 'development';
+      };
+      
+      // Delete existing goals for this feedback
+      await query('DELETE FROM feedback_goals WHERE feedback_response_id = $1', [id]);
+      
+      // Insert new goals if any
+      if (Array.isArray(updates.goals) && updates.goals.length > 0) {
+        for (const goal of updates.goals) {
+          await query(`
+            INSERT INTO feedback_goals (
+              feedback_response_id, title, description, category, priority, target_date, status, progress
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          `, [
+            id,
+            goal.title,
+            goal.description || '',
+            mapCategory(goal.category),
+            goal.priority || 'medium',
+            goal.targetDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+            goal.status || 'not_started',
+            goal.progress || 0
+          ]);
+        }
+      }
     }
     
     // Fetch the complete updated feedback with all related data
@@ -6568,6 +6628,28 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
     
     const fullResult = await query(fullFeedbackQuery, [id]);
     const row = fullResult.rows[0];
+    
+    // Fetch updated goals
+    const goalsResult = await query(`
+      SELECT id, title, description, category, priority, target_date, status, progress, created_at, updated_at
+      FROM feedback_goals
+      WHERE feedback_response_id = $1
+      ORDER BY created_at ASC
+    `, [id]);
+    
+    const updatedGoals = goalsResult.rows.map(g => ({
+      id: g.id,
+      feedbackId: id,
+      title: g.title,
+      description: g.description,
+      category: g.category,
+      priority: g.priority,
+      targetDate: g.target_date,
+      status: g.status,
+      progress: g.progress,
+      createdAt: g.created_at,
+      updatedAt: g.updated_at
+    }));
     
     // Parse content
     let parsedContent = {};
@@ -6609,6 +6691,7 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
           areasForImprovement: parsedContent.areasForImprovement || [],
           specificExamples: parsedContent.specificExamples || [],
           recommendations: parsedContent.recommendations || [],
+          bottomLine: parsedContent.bottomLine || undefined,
           confidential: parsedContent.confidential || false,
           createdAt: row.createdAt,
           updatedAt: row.updatedAt
@@ -6623,7 +6706,7 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
           updatedAt: row.updatedAt
         }] : [],
         comments: [],
-        goals: [],
+        goals: updatedGoals,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
         isAnonymous: row.isAnonymous,
@@ -6837,6 +6920,7 @@ app.post('/api/v1/feedback/:id/submit', authenticateToken, async (req, res) => {
           areasForImprovement: parsedContent.areasForImprovement || [],
           specificExamples: parsedContent.specificExamples || [],
           recommendations: parsedContent.recommendations || [],
+          bottomLine: parsedContent.bottomLine || undefined,
           confidential: parsedContent.confidential || false,
           createdAt: row.createdAt,
           updatedAt: row.updatedAt
@@ -7012,6 +7096,7 @@ app.post('/api/v1/feedback/:id/complete', authenticateToken, async (req, res) =>
           areasForImprovement: parsedContent.areasForImprovement || [],
           specificExamples: parsedContent.specificExamples || [],
           recommendations: parsedContent.recommendations || [],
+          bottomLine: parsedContent.bottomLine || undefined,
           confidential: parsedContent.confidential || false,
           createdAt: row.createdAt,
           updatedAt: row.updatedAt
@@ -9061,12 +9146,12 @@ Write the feedback in a professional, supportive tone. The feedback should be:
 
 Return ONLY a JSON object with this exact structure (no markdown, no explanation):
 {
-  "strengths": ["First strength point", "Second strength point", "Third strength point"],
-  "areasForImprovement": ["First improvement area", "Second improvement area"],
-  "specificExamples": ["A specific example of good work or behavior", "Another concrete example"],
+  "strengths": ["First strength point with specific example", "Second strength point with specific example", "Third strength point with specific example"],
+  "areasForImprovement": ["First improvement area with suggestion", "Second improvement area with suggestion"],
   "recommendations": ["First actionable recommendation", "Second recommendation"],
   "developmentGoals": ["SMART goal 1 for next quarter", "SMART goal 2 for next quarter"],
-  "overallComment": "A 2-3 sentence summary tying it all together"
+  "overallComment": "A 2-3 sentence summary of how you experienced their work over the past few months",
+  "bottomLine": "The key message or takeaway you want them to leave this conversation with"
 }`;
 
     console.log('🤖 Generating AI feedback...');

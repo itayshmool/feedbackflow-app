@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useFeedbackStore } from '../../stores/feedbackStore';
-import { Feedback, FeedbackStatus, GoalStatus, FeedbackColorClassification } from '../../types/feedback.types';
+import { Feedback, FeedbackStatus, GoalStatus, FeedbackColorClassification, Goal, GoalCategory, GoalPriority, UpdateGoalRequest } from '../../types/feedback.types';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -22,6 +22,7 @@ import {
   Edit,
   X,
   TrendingUp,
+  Plus,
 } from 'lucide-react';
 import { PenOff } from '../icons';
 import { createFeedbackDocxBlob } from '../../utils/generateFeedbackDocx';
@@ -55,6 +56,7 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
   const [editedColorClassification, setEditedColorClassification] = useState<FeedbackColorClassification | undefined>(
     currentFeedback?.colorClassification as FeedbackColorClassification | undefined
   );
+  const [editedGoals, setEditedGoals] = useState<UpdateGoalRequest[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   
   // Export hook for download and Google Drive
@@ -72,10 +74,23 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
         areasForImprovement: currentFeedback.content.areasForImprovement || [],
         specificExamples: currentFeedback.content.specificExamples || [],
         recommendations: currentFeedback.content.recommendations || [],
+        bottomLine: currentFeedback.content.bottomLine || '',
       });
     }
     if (currentFeedback?.colorClassification) {
       setEditedColorClassification(currentFeedback.colorClassification as FeedbackColorClassification);
+    }
+    if (currentFeedback?.goals) {
+      setEditedGoals(currentFeedback.goals.map(goal => ({
+        id: goal.id,
+        title: goal.title,
+        description: goal.description,
+        category: goal.category,
+        priority: goal.priority,
+        targetDate: goal.targetDate.split('T')[0], // Format for date input
+        status: goal.status,
+        progress: goal.progress,
+      })));
     }
   }, [currentFeedback]);
 
@@ -94,6 +109,7 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
       await updateFeedback(feedbackId, {
         content: editedContent,
         colorClassification: editedColorClassification,
+        goals: editedGoals.filter(g => g.title.trim()), // Only save goals with titles
       });
       setIsEditMode(false);
     } catch (error: any) {
@@ -106,7 +122,43 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
 
   const handleCancelEdit = () => {
     setEditedContent(currentFeedback?.content);
+    setEditedColorClassification(currentFeedback?.colorClassification as FeedbackColorClassification | undefined);
+    if (currentFeedback?.goals) {
+      setEditedGoals(currentFeedback.goals.map(goal => ({
+        id: goal.id,
+        title: goal.title,
+        description: goal.description,
+        category: goal.category,
+        priority: goal.priority,
+        targetDate: goal.targetDate.split('T')[0],
+        status: goal.status,
+        progress: goal.progress,
+      })));
+    } else {
+      setEditedGoals([]);
+    }
     setIsEditMode(false);
+  };
+
+  // Goal editing helpers
+  const addGoal = () => {
+    setEditedGoals([...editedGoals, {
+      title: '',
+      description: '',
+      category: GoalCategory.CAREER_DEVELOPMENT,
+      priority: GoalPriority.MEDIUM,
+      targetDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 90 days from now
+    }]);
+  };
+
+  const removeGoal = (index: number) => {
+    setEditedGoals(editedGoals.filter((_, i) => i !== index));
+  };
+
+  const updateGoal = (index: number, field: keyof UpdateGoalRequest, value: string) => {
+    const updated = [...editedGoals];
+    updated[index] = { ...updated[index], [field]: value };
+    setEditedGoals(updated);
   };
 
   const handleDownload = () => {
@@ -225,22 +277,24 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
             )}
             {isEditMode && (
               <>
-                <IconButton
-                  icon={<PenOff className="w-full h-full" />}
-                  tooltip="Cancel Edit"
-                  onClick={handleCancelEdit}
+                <Button
                   variant="outline"
                   size="sm"
-                />
-                <IconButton
-                  icon={<CheckCircle className="w-full h-full" />}
-                  tooltip="Save Changes"
+                  onClick={handleCancelEdit}
+                  icon={PenOff}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={handleSaveEdit}
                   disabled={isSaving}
                   loading={isSaving}
-                  variant="primary"
-                  size="sm"
-                />
+                  icon={CheckCircle}
+                >
+                  Save
+                </Button>
               </>
             )}
             <ExportButtons
@@ -374,10 +428,10 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
             Strengths
           </h3>
           {isEditMode ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {editedContent?.strengths?.map((strength, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <Input
+                <div key={index} className="flex items-start gap-2">
+                  <textarea
                     value={strength}
                     onChange={(e) => {
                       const newStrengths = [...(editedContent?.strengths || [])];
@@ -385,6 +439,8 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
                       setEditedContent(prev => prev ? { ...prev, strengths: newStrengths } : undefined);
                     }}
                     placeholder="Describe a strength..."
+                    className="flex-1 p-3 border rounded-md min-h-20 resize-none"
+                    rows={2}
                   />
                   <Button
                     size="sm"
@@ -394,6 +450,7 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
                       setEditedContent(prev => prev ? { ...prev, strengths: newStrengths } : undefined);
                     }}
                     icon={Trash2}
+                    className="mt-2"
                   />
                 </div>
               ))}
@@ -430,10 +487,10 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
               Areas for Improvement
             </h3>
             {isEditMode ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {editedContent?.areasForImprovement?.map((area, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <Input
+                  <div key={index} className="flex items-start gap-2">
+                    <textarea
                       value={area}
                       onChange={(e) => {
                         const newAreas = [...(editedContent?.areasForImprovement || [])];
@@ -441,6 +498,8 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
                         setEditedContent(prev => prev ? { ...prev, areasForImprovement: newAreas } : undefined);
                       }}
                       placeholder="Describe an area for improvement..."
+                      className="flex-1 p-3 border rounded-md min-h-20 resize-none"
+                      rows={2}
                     />
                     <Button
                       size="sm"
@@ -450,6 +509,7 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
                         setEditedContent(prev => prev ? { ...prev, areasForImprovement: newAreas } : undefined);
                       }}
                       icon={Trash2}
+                      className="mt-2"
                     />
                   </div>
                 ))}
@@ -477,133 +537,107 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
           </Card>
         )}
 
-      {/* Specific Examples */}
-      {(currentFeedback.content?.specificExamples &&
-        currentFeedback.content.specificExamples.length > 0 || isEditMode) && (
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-3">Specific Examples</h3>
-            {isEditMode ? (
-              <div className="space-y-2">
-                {editedContent?.specificExamples?.map((example, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <Input
-                      value={example}
-                      onChange={(e) => {
-                        const newExamples = [...(editedContent?.specificExamples || [])];
-                        newExamples[index] = e.target.value;
-                        setEditedContent(prev => prev ? { ...prev, specificExamples: newExamples } : undefined);
-                      }}
-                      placeholder="Provide a specific example..."
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        const newExamples = editedContent?.specificExamples?.filter((_, i) => i !== index) || [];
-                        setEditedContent(prev => prev ? { ...prev, specificExamples: newExamples } : undefined);
-                      }}
-                      icon={Trash2}
-                    />
-                  </div>
-                ))}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const newExamples = [...(editedContent?.specificExamples || []), ''];
-                    setEditedContent(prev => prev ? { ...prev, specificExamples: newExamples } : undefined);
-                  }}
-                >
-                  Add Specific Example
-                </Button>
-              </div>
-            ) : (
-              <ul className="space-y-2">
-                {currentFeedback.content?.specificExamples?.map((example, index) => (
-                  <li key={index} className="text-gray-700 pl-4 border-l-2 border-gray-200">
-                    {example}
-                  </li>
-                )) || <p className="text-gray-500 italic">No specific examples provided.</p>}
-              </ul>
-            )}
-          </Card>
-        )}
+      {/* Specific Examples - Hidden from UI but data preserved */}
 
-      {/* Recommendations */}
-      {(currentFeedback.content?.recommendations &&
-        currentFeedback.content.recommendations.length > 0 || isEditMode) && (
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-3">Recommendations</h3>
-            {isEditMode ? (
-              <div className="space-y-2">
-                {editedContent?.recommendations?.map((rec, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <Input
-                      value={rec}
-                      onChange={(e) => {
-                        const newRecs = [...(editedContent?.recommendations || [])];
-                        newRecs[index] = e.target.value;
-                        setEditedContent(prev => prev ? { ...prev, recommendations: newRecs } : undefined);
-                      }}
-                      placeholder="Provide a recommendation..."
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        const newRecs = editedContent?.recommendations?.filter((_, i) => i !== index) || [];
-                        setEditedContent(prev => prev ? { ...prev, recommendations: newRecs } : undefined);
-                      }}
-                      icon={Trash2}
-                    />
-                  </div>
-                ))}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const newRecs = [...(editedContent?.recommendations || []), ''];
-                    setEditedContent(prev => prev ? { ...prev, recommendations: newRecs } : undefined);
-                  }}
-                >
-                  Add Recommendation
-                </Button>
-              </div>
-            ) : (
-              <ul className="space-y-2">
-                {currentFeedback.content?.recommendations?.map((rec, index) => (
-                  <li key={index} className="text-gray-700 pl-4 border-l-2 border-green-200">
-                    {rec}
-                  </li>
-                )) || <p className="text-gray-500 italic">No recommendations provided.</p>}
-              </ul>
-            )}
-          </Card>
-        )}
+      {/* Recommendations - Hidden from UI but data preserved */}
 
-      {/* Goals */}
-      {currentFeedback.goals && currentFeedback.goals.length > 0 && (
+      {/* Growth & Development (Goals) */}
+      {((currentFeedback.goals && currentFeedback.goals.length > 0) || isEditMode) && (
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-            <Target className="w-5 h-5 text-purple-500" />
-            Development Goals
-          </h3>
-          <ul className="space-y-4">
-            {currentFeedback.goals.map((goal) => (
-              <li key={goal.id} className="border-l-2 border-purple-200 pl-4">
-                <span className="font-medium text-gray-900">{goal.title}</span>
-                <p className="text-gray-700 mb-2">{goal.description}</p>
-                <div className="flex flex-wrap items-center gap-4 text-gray-600">
-                  <span className="capitalize">Category: {goal.category?.replace('_', ' ') || 'Unknown'}</span>
-                  <span className="capitalize">Priority: {goal.priority}</span>
-                  <span className="flex items-center gap-1">
-                    <Calendar className="w-4 h-4" />
-                    Target: {new Date(goal.targetDate).toLocaleDateString()}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Target className="w-5 h-5 text-purple-500" />
+              Growth & Development
+            </h3>
+            {isEditMode && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={addGoal}
+                icon={Plus}
+                className="flex-shrink-0 whitespace-nowrap"
+              >
+                Add Goal
+              </Button>
+            )}
+          </div>
+          {isEditMode ? (
+            <div className="space-y-4">
+              {editedGoals.length === 0 ? (
+                <p className="text-gray-500 italic">No goals yet. Click "Add Goal" to create one.</p>
+              ) : (
+                editedGoals.map((goal, index) => (
+                  <div key={index} className="p-4 border rounded-md space-y-3">
+                    <div className="flex items-start gap-3">
+                      <Input
+                        label="Goal Title"
+                        value={goal.title}
+                        onChange={(e) => updateGoal(index, 'title', e.target.value)}
+                        placeholder="e.g., Improve communication skills"
+                        className="flex-1"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeGoal(index)}
+                        icon={Trash2}
+                        className="mt-6"
+                      />
+                    </div>
+                    <textarea
+                      className="w-full p-3 border rounded-md min-h-20 resize-none"
+                      value={goal.description}
+                      onChange={(e) => updateGoal(index, 'description', e.target.value)}
+                      placeholder="Describe the goal..."
+                      rows={2}
+                    />
+                    <div className="max-w-xs">
+                      <Input
+                        label="Target Date"
+                        type="date"
+                        value={goal.targetDate}
+                        onChange={(e) => updateGoal(index, 'targetDate', e.target.value)}
+                      />
+                    </div>
+                    {/* Category and Priority hidden from UI */}
+                  </div>
+                ))
+              )}
+            </div>
+          ) : (
+            <ul className="space-y-4">
+              {currentFeedback.goals?.map((goal) => (
+                <li key={goal.id} className="border-l-2 border-purple-200 pl-4">
+                  <span className="font-medium text-gray-900">{goal.title}</span>
+                  <p className="text-gray-700 mb-2">{goal.description}</p>
+                  <div className="flex flex-wrap items-center gap-4 text-gray-600">
+                    {/* Category and Priority hidden from UI */}
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-4 h-4" />
+                      Target: {new Date(goal.targetDate).toLocaleDateString()}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      )}
+
+      {/* Bottom Line */}
+      {(currentFeedback.content?.bottomLine || isEditMode) && (
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-3">Bottom Line</h3>
+          {isEditMode ? (
+            <textarea
+              className="w-full p-3 border rounded-md min-h-24"
+              value={editedContent?.bottomLine || ''}
+              onChange={(e) => setEditedContent(prev => prev ? { ...prev, bottomLine: e.target.value } : undefined)}
+              placeholder="What is the key message or takeaway..."
+            />
+          ) : (
+            <p className="text-gray-700 whitespace-pre-wrap">{currentFeedback.content?.bottomLine}</p>
+          )}
         </Card>
       )}
 
