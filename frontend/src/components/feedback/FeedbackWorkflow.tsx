@@ -50,15 +50,7 @@ const WORKFLOW_ACTIONS: Record<FeedbackStatus, WorkflowAction[]> = {
     },
   ],
   [FeedbackStatus.SUBMITTED]: [
-    {
-      id: 'complete',
-      label: 'Mark as Complete',
-      description: 'Mark this feedback as completed',
-      icon: <CheckCircle className="w-4 h-4" />,
-      status: FeedbackStatus.COMPLETED,
-      color: 'bg-green-500 hover:bg-green-600',
-      requiresComment: false,
-    },
+    // Note: "Mark as Complete" removed - only employees (recipients) can acknowledge feedback
     {
       id: 'acknowledge',
       label: 'Acknowledge Feedback',
@@ -108,7 +100,7 @@ export const FeedbackWorkflow: React.FC<FeedbackWorkflowProps> = ({
   currentUserId,
   onStatusChange,
 }) => {
-  const { updateFeedback, submitFeedback, completeFeedback, acknowledgeFeedback, isUpdating } = useFeedbackStore();
+  const { updateFeedback, submitFeedback, acknowledgeFeedback, isUpdating } = useFeedbackStore();
   const [selectedAction, setSelectedAction] = useState<string>('');
   const [comment, setComment] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -129,8 +121,6 @@ export const FeedbackWorkflow: React.FC<FeedbackWorkflowProps> = ({
       
       if (action.id === 'submit') {
         updatedFeedback = await submitFeedback(feedback.id);
-      } else if (action.id === 'complete') {
-        updatedFeedback = await completeFeedback(feedback.id);
       } else if (action.id === 'acknowledge') {
         updatedFeedback = await acknowledgeFeedback(feedback.id, comment);
       } else {
@@ -159,13 +149,8 @@ export const FeedbackWorkflow: React.FC<FeedbackWorkflowProps> = ({
       return isGiver && feedback.status === FeedbackStatus.DRAFT;
     }
     
-    // Givers can mark as complete (when status is SUBMITTED)
-    if (action.id === 'complete') {
-      return isGiver && feedback.status === FeedbackStatus.SUBMITTED;
-    }
-    
-    // Receivers can acknowledge at any time after submission (SUBMITTED or COMPLETED)
-    // But only if feedback hasn't been acknowledged yet
+    // Only recipients (employees) can acknowledge feedback
+    // Managers cannot mark as complete - only employees can acknowledge
     if (action.id === 'acknowledge') {
       return isRecipient && feedback.status !== FeedbackStatus.DRAFT && !feedback.acknowledgment;
     }
