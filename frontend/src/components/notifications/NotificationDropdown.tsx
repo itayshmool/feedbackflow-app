@@ -88,28 +88,29 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
   return (
     <div
       ref={dropdownRef}
-      className="absolute right-0 top-full mt-2 w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-hidden"
+      className="fixed inset-x-3 top-16 md:absolute md:inset-auto md:right-0 md:top-full md:mt-2 md:w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-[80vh] md:max-h-96 overflow-hidden"
     >
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 bg-gray-50">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">
+      <div className="p-3 md:p-4 border-b border-gray-200 bg-gray-50">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-base md:text-lg font-semibold text-gray-900">
             Notifications
             {stats && (
               <span className="ml-2 text-sm font-normal text-gray-500">
-                ({stats.unread} unread)
+                ({stats.unread})
               </span>
             )}
           </h3>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1 md:space-x-2 flex-shrink-0">
             <Button
               variant="ghost"
               size="sm"
               onClick={handleRefresh}
               disabled={isLoading}
               icon={isLoading ? LoadingSpinner : RefreshCw}
+              className="px-2 md:px-3"
             >
-              Refresh
+              <span className="hidden sm:inline">Refresh</span>
             </Button>
             {stats && stats.unread > 0 && (
               <Button
@@ -118,8 +119,9 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
                 onClick={handleMarkAllAsRead}
                 disabled={isMarkingAsRead}
                 icon={isMarkingAsRead ? LoadingSpinner : Check}
+                className="px-2 md:px-3"
               >
-                Mark All Read
+                <span className="hidden sm:inline">Mark Read</span>
               </Button>
             )}
           </div>
@@ -142,7 +144,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
       )}
 
       {/* Notifications List */}
-      <div className="max-h-80 overflow-y-auto">
+      <div className="max-h-[60vh] md:max-h-80 overflow-y-auto">
         {isLoading ? (
           <div className="p-8 flex justify-center">
             <LoadingSpinner />
@@ -175,7 +177,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
 
       {/* Footer */}
       {notifications.length > 0 && (
-        <div className="p-4 border-t border-gray-200 bg-gray-50">
+        <div className="p-3 md:p-4 border-t border-gray-200 bg-gray-50">
           <Button
             variant="outline"
             size="sm"
