@@ -231,8 +231,8 @@ const OrganizationForm: React.FC<OrganizationFormProps> = ({ organization, onClo
                       {...register('slug', { 
                         required: 'Slug is required',
                         pattern: {
-                          value: /^[a-z0-9-]+$/,
-                          message: 'Slug can only contain lowercase letters, numbers, and hyphens'
+                          value: /^[a-z0-9_-]+$/,
+                          message: 'Slug can only contain lowercase letters, numbers, hyphens, and underscores'
                         }
                       })}
                       placeholder="organization-slug"

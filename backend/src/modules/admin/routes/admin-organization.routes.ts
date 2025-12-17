@@ -30,7 +30,7 @@ const upload = multer({
 const createOrganizationSchema = z.object({
   body: z.object({
     name: z.string().min(1, 'Organization name is required').max(100, 'Name too long'),
-    slug: z.string().min(1, 'Slug is required').max(50, 'Slug too long').regex(/^[a-z0-9-]+$/, 'Invalid slug format'),
+    slug: z.string().min(1, 'Slug is required').max(50, 'Slug too long').regex(/^[a-z0-9_-]+$/, 'Invalid slug format'),
     description: z.string().max(500, 'Description too long').optional(),
     contactEmail: z.string().email('Invalid email format'),
     phone: z.string().max(20, 'Phone too long').optional(),
@@ -89,7 +89,7 @@ const updateOrganizationSchema = z.object({
   }),
   body: z.object({
     name: z.string().min(1, 'Organization name is required').max(100, 'Name too long').optional(),
-    slug: z.string().min(1, 'Slug is required').max(50, 'Slug too long').regex(/^[a-z0-9-]+$/, 'Invalid slug format').optional(),
+    slug: z.string().min(1, 'Slug is required').max(50, 'Slug too long').regex(/^[a-z0-9_-]+$/, 'Invalid slug format').optional(),
     description: z.string().max(500, 'Description too long').optional(),
     contactEmail: z.string().email('Invalid email format').optional(),
     phone: z.string().max(20, 'Phone too long').optional(),
