@@ -56,16 +56,18 @@ export function generateCsrfToken(): string {
  */
 export function getCsrfCookieOptions(req: Request) {
   const hostname = req.hostname || req.get('host')?.split(':')[0] || 'localhost';
-  const isProduction = process.env.NODE_ENV === 'production';
+  // Treat both production and staging as production-like for cookie settings
+  // (cross-origin cookies need sameSite: 'none' and secure: true)
+  const isProductionLike = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
   const isLocalhost = hostname === 'localhost' || hostname.startsWith('127.0.0.1');
   
   // For cross-origin requests (frontend/backend on different subdomains),
-  // we need sameSite: 'none' with secure: true in production
-  const sameSite = isProduction && !isLocalhost ? 'none' as const : 'lax' as const;
+  // we need sameSite: 'none' with secure: true in production/staging
+  const sameSite = isProductionLike && !isLocalhost ? 'none' as const : 'lax' as const;
   
   return {
     httpOnly: false, // MUST be false so frontend JS can read it
-    secure: isProduction && !isLocalhost, // Must be true when sameSite is 'none'
+    secure: isProductionLike && !isLocalhost, // Must be true when sameSite is 'none'
     sameSite,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours - longer than session since it's just for CSRF
     path: '/',

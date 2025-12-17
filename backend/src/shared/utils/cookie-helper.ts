@@ -30,22 +30,24 @@ export type TokenType = 'access' | 'refresh'
  */
 export function getCookieOptions(req: Request, tokenType: TokenType = 'access') {
   const hostname = req.hostname || req.get('host')?.split(':')[0] || 'localhost'
-  const isProduction = process.env.NODE_ENV === 'production'
+  // Treat both production and staging as production-like for cookie settings
+  // (cross-origin cookies need sameSite: 'none' and secure: true)
+  const isProductionLike = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
   const isLocalhost = hostname === 'localhost' || hostname.startsWith('127.0.0.1')
 
   // Check if request is HTTPS (direct or behind proxy)
   const isHttps = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https'
 
   // For cross-origin cookies (frontend and backend on different subdomains),
-  // we need sameSite: 'none' with secure: true in production
-  const sameSite = isProduction && !isLocalhost ? 'none' as const : 'lax' as const
+  // we need sameSite: 'none' with secure: true in production/staging
+  const sameSite = isProductionLike && !isLocalhost ? 'none' as const : 'lax' as const
 
   // Different maxAge based on token type
   const maxAge = tokenType === 'access' ? ACCESS_TOKEN_MAX_AGE_MS : REFRESH_TOKEN_MAX_AGE_MS
 
   const options = {
     httpOnly: true,
-    secure: isProduction && !isLocalhost,  // Must be true when sameSite is 'none'
+    secure: isProductionLike && !isLocalhost,  // Must be true when sameSite is 'none'
     sameSite,
     maxAge,
     path: '/',  // Explicit path required for clearCookie to work properly
