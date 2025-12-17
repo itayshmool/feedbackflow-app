@@ -6299,22 +6299,44 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
       console.log('💾 Saving', goals.length, 'development goals to database');
       
       // Map frontend category names to database-valid values
+      // Database constraint allows: development, performance, skill, leadership, communication, technical
       const mapGoalCategory = (cat: string): string => {
         const categoryMap: Record<string, string> = {
           'career_development': 'development',
           'technical_skills': 'technical',
+          'soft_skills': 'communication', // Map soft_skills to communication (closest match)
           'leadership': 'leadership',
           'communication': 'communication',
           'performance': 'performance',
           'skill': 'skill',
-          'development': 'development'
+          'development': 'development',
+          'technical': 'technical'
         };
-        return categoryMap[cat?.toLowerCase()] || 'development';
+        const mapped = categoryMap[cat?.toLowerCase()];
+        if (!mapped) {
+          console.warn(`⚠️ Unknown goal category "${cat}", defaulting to "development"`);
+        }
+        return mapped || 'development';
+      };
+
+      // Truncate title to fit database VARCHAR(255) constraint
+      const truncateTitle = (title: string, maxLength: number = 255): string => {
+        if (!title || title.length <= maxLength) return title;
+        console.warn(`⚠️ Goal title truncated from ${title.length} to ${maxLength} chars`);
+        // Truncate at word boundary if possible, add ellipsis
+        const truncated = title.substring(0, maxLength - 3);
+        const lastSpace = truncated.lastIndexOf(' ');
+        if (lastSpace > maxLength - 50) {
+          return truncated.substring(0, lastSpace) + '...';
+        }
+        return truncated + '...';
       };
       
       for (const goal of goals) {
           // Sanitize goal content to prevent XSS
           const sanitizedGoal = sanitizeGoal(goal);
+          // Truncate title to prevent "value too long" database error
+          const truncatedTitle = truncateTitle(sanitizedGoal.title);
           const goalResult = await client.query(
           `INSERT INTO feedback_goals 
            (feedback_response_id, title, description, category, priority, target_date, status, progress)
@@ -6322,7 +6344,7 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
            RETURNING id, feedback_response_id, title, description, category, priority, target_date, status, progress, created_at, updated_at`,
           [
             responseId,
-            sanitizedGoal.title,
+            truncatedTitle,
             sanitizedGoal.description,
             mapGoalCategory(sanitizedGoal.category || 'development'),
             sanitizedGoal.priority || 'medium',
@@ -6576,17 +6598,32 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
     // Handle goals update if provided
     if (updates.goals !== undefined) {
       // Map frontend category names to database-valid values
+      // Database constraint allows: development, performance, skill, leadership, communication, technical
       const mapCategory = (cat: string): string => {
         const categoryMap: Record<string, string> = {
           'career_development': 'development',
           'technical_skills': 'technical',
+          'soft_skills': 'communication', // Map soft_skills to communication (closest match)
           'leadership': 'leadership',
           'communication': 'communication',
           'performance': 'performance',
           'skill': 'skill',
-          'development': 'development'
+          'development': 'development',
+          'technical': 'technical'
         };
         return categoryMap[cat?.toLowerCase()] || 'development';
+      };
+
+      // Truncate title to fit database VARCHAR(255) constraint
+      const truncateTitle = (title: string, maxLength: number = 255): string => {
+        if (!title || title.length <= maxLength) return title;
+        console.warn(`⚠️ Goal title truncated from ${title.length} to ${maxLength} chars (update)`);
+        const truncated = title.substring(0, maxLength - 3);
+        const lastSpace = truncated.lastIndexOf(' ');
+        if (lastSpace > maxLength - 50) {
+          return truncated.substring(0, lastSpace) + '...';
+        }
+        return truncated + '...';
       };
       
       // Delete existing goals for this feedback
@@ -6601,7 +6638,7 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
           `, [
             id,
-            goal.title,
+            truncateTitle(goal.title || ''),
             goal.description || '',
             mapCategory(goal.category),
             goal.priority || 'medium',
