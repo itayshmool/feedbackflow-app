@@ -533,6 +533,140 @@ describe('AdminUserService', () => {
       expect(result.totalErrors).toBe(1);
       expect(result.errors[0].error).toContain('Email is required');
     });
+
+    // TDD: New tests for descriptive organization error messages
+    it('should return descriptive error when organization name+slug combo not found', async () => {
+      const importData: UserImportData[] = [
+        {
+          email: 'user@example.com',
+          name: 'Test User',
+          organizationName: 'wix.com',  // Wrong - should be 'wix'
+          organizationSlug: 'security',
+          department: 'Engineering'
+        }
+      ];
+
+      // Mock: organization lookup returns null (not found)
+      mockUserModel.findOrganizationByNameAndSlug.mockResolvedValueOnce(null);
+
+      const result = await adminUserService.importUsers(importData);
+
+      expect(result.totalProcessed).toBe(1);
+      expect(result.totalSuccess).toBe(0);
+      expect(result.totalErrors).toBe(1);
+      // Error should include both org name AND slug for easy debugging
+      expect(result.errors[0].error).toContain('wix.com');
+      expect(result.errors[0].error).toContain('security');
+      expect(result.errors[0].error).toMatch(/organization.*not found/i);
+    });
+
+    it('should return descriptive error when only organization name not found', async () => {
+      const importData: UserImportData[] = [
+        {
+          email: 'user@example.com',
+          name: 'Test User',
+          organizationName: 'nonexistent-org',
+          department: 'Engineering'
+        }
+      ];
+
+      // Mock: organization lookup returns null (not found)
+      mockUserModel.findOrganizationByName.mockResolvedValueOnce(null);
+
+      const result = await adminUserService.importUsers(importData);
+
+      expect(result.totalProcessed).toBe(1);
+      expect(result.totalSuccess).toBe(0);
+      expect(result.totalErrors).toBe(1);
+      // Error should clearly state which org was not found
+      expect(result.errors[0].error).toContain('nonexistent-org');
+      expect(result.errors[0].error).toMatch(/organization.*not found/i);
+    });
+
+    it('should include user email in error for easy identification', async () => {
+      const importData: UserImportData[] = [
+        {
+          email: 'john.doe@wix.com',
+          name: 'John Doe',
+          organizationName: 'wrong-org',
+          organizationSlug: 'security'
+        }
+      ];
+
+      mockUserModel.findOrganizationByNameAndSlug.mockResolvedValueOnce(null);
+
+      const result = await adminUserService.importUsers(importData);
+
+      expect(result.totalErrors).toBe(1);
+      // The error should include the user's email so admin knows which row failed
+      expect(result.errors[0].data.email).toBe('john.doe@wix.com');
+      expect(result.errors[0].error).toContain('wrong-org');
+    });
+
+    it('should suggest similar organization names when not found', async () => {
+      const importData: UserImportData[] = [
+        {
+          email: 'user@example.com',
+          name: 'Test User',
+          organizationName: 'wix.com',  // User typed 'wix.com' but correct is 'wix'
+          organizationSlug: 'security'
+        }
+      ];
+
+      // Mock: returns null but could suggest 'wix' exists
+      mockUserModel.findOrganizationByNameAndSlug.mockResolvedValueOnce(null);
+      // Mock: find organizations by slug to suggest alternatives
+      (mockUserModel as any).findOrganizationsBySlug = jest.fn().mockResolvedValueOnce([
+        { id: 'org-1', name: 'wix', slug: 'security' }
+      ]);
+
+      const result = await adminUserService.importUsers(importData);
+
+      expect(result.totalErrors).toBe(1);
+      // Error should suggest the correct organization name
+      expect(result.errors[0].error).toMatch(/wix\.com.*not found/i);
+      expect(result.errors[0].error).toMatch(/did you mean.*wix/i);
+    });
+
+    it('should continue processing remaining users after one fails', async () => {
+      const mockUser: User = {
+        id: 'user-2',
+        email: 'user2@example.com',
+        name: 'User Two',
+        isActive: true,
+        emailVerified: false,
+        createdAt: '2025-01-01T10:00:00Z',
+        updatedAt: '2025-01-01T10:00:00Z',
+        roles: []
+      };
+
+      const importData: UserImportData[] = [
+        {
+          email: 'user1@example.com',
+          name: 'User One',
+          organizationName: 'wrong-org',
+          organizationSlug: 'security'
+        },
+        {
+          email: 'user2@example.com',
+          name: 'User Two',
+          organizationId: 'valid-org-id'  // This one has direct org ID
+        }
+      ];
+
+      // First user: org not found
+      mockUserModel.findOrganizationByNameAndSlug.mockResolvedValueOnce(null);
+      // Second user: succeeds
+      mockUserModel.create.mockResolvedValueOnce(mockUser);
+
+      const result = await adminUserService.importUsers(importData);
+
+      expect(result.totalProcessed).toBe(2);
+      expect(result.totalSuccess).toBe(1);
+      expect(result.totalErrors).toBe(1);
+      expect(result.errors[0].data.email).toBe('user1@example.com');
+      expect(result.success[0].email).toBe('user2@example.com');
+    });
   });
 
   describe('getUserStats', () => {

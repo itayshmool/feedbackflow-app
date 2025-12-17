@@ -2001,13 +2001,31 @@ app.post('/api/v1/admin/bulk/upload', authenticateToken, csvUpload.single('file'
         if (importType === 'users') {
           // Import users using the user service
           const userService = new AdminUserService();
-          await userService.importUsers([item]);
+          const importResult = await userService.importUsers([item]);
+          
+          // Check if the import actually succeeded (importUsers catches errors internally)
+          if (importResult.totalErrors > 0) {
+            results.failed++;
+            // Include the detailed error message from the service
+            const errorDetails = importResult.errors.map(e => 
+              `${e.data?.email || 'Unknown'}: ${e.error}`
+            ).join('; ');
+            results.errors.push({
+              row: i + 1,
+              error: errorDetails,
+            });
+            
+            if (!skipValidation) {
+              break; // Stop on first error if validation is not skipped
+            }
+          } else {
+            results.successful++;
+          }
         } else {
           // Import organizations (default behavior)
           await organizationService.createOrganization(item);
+          results.successful++;
         }
-        
-        results.successful++;
       } catch (error) {
         results.failed++;
         results.errors.push({
