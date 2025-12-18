@@ -1,8 +1,15 @@
 {
   "name": "feedbackflow-app",
   "private": true,
-  "workspaces": ["frontend", "backend"],
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
-    "dev": "echo 'Run frontend and backend dev servers'"
+    "dev": "echo 'Run frontend and backend dev servers'",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
   }
 }
