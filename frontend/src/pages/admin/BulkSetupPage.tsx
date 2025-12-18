@@ -566,15 +566,28 @@ const BulkSetupPage: React.FC = () => {
         throw new Error('Unable to obtain CSRF token. Please refresh the page and try again.');
       }
       
-      // Get auth token from localStorage
-      const authToken = localStorage.getItem('auth_token');
+      // Get auth token from localStorage (same pattern as api.ts interceptor)
+      let authToken: string | null = null;
+      const storedAuth = localStorage.getItem('auth-storage');
+      if (storedAuth) {
+        try {
+          const parsed = JSON.parse(storedAuth);
+          authToken = parsed?.state?.token || parsed?.token || null;
+        } catch (e) {
+          console.error('[BulkSetup] Failed to parse auth token:', e);
+        }
+      }
+      
+      if (!authToken) {
+        throw new Error('Not authenticated. Please refresh the page and try again.');
+      }
       
       const response = await fetch(`${apiUrl}/hierarchy/bulk/csv`, {
         method: 'POST',
         headers: {
           'Content-Type': 'text/csv',
           'X-CSRF-Token': csrfToken,
-          ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
+          'Authorization': `Bearer ${authToken}`,
         },
         credentials: 'include',
         body: csvContent
