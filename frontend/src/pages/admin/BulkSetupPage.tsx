@@ -6,7 +6,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { OrganizationStatus } from '../../types/organization.types';
-import { api } from '../../lib/api';
+import { api, csrfUtils } from '../../lib/api';
 import { 
   Upload, 
   FileSpreadsheet, 
@@ -560,11 +560,11 @@ const BulkSetupPage: React.FC = () => {
       // Use fetch directly for text/csv content type (axios transforms the body)
       const apiUrl = import.meta.env.VITE_API_URL || '/api/v1';
       
-      // Get CSRF token from cookie
-      const csrfToken = document.cookie
-        .split(';')
-        .find(c => c.trim().startsWith('csrf-token='))
-        ?.split('=')[1];
+      // Ensure CSRF token exists (fetch from server if missing)
+      const csrfToken = await csrfUtils.ensureToken();
+      if (!csrfToken) {
+        throw new Error('Unable to obtain CSRF token. Please refresh the page and try again.');
+      }
       
       // Get auth token from localStorage
       const authToken = localStorage.getItem('auth_token');
@@ -573,7 +573,7 @@ const BulkSetupPage: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'text/csv',
-          ...(csrfToken && { 'X-CSRF-Token': decodeURIComponent(csrfToken) }),
+          'X-CSRF-Token': csrfToken,
           ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
         },
         credentials: 'include',
