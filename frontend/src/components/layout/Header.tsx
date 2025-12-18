@@ -1,7 +1,7 @@
 // frontend/src/components/layout/Header.tsx
 
 import { useState } from 'react'
-import { Menu, User, LogOut, Settings } from 'lucide-react'
+import { Menu, User, LogOut } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { GrowthPulseLogoIcon } from '@/components/ui/GrowthPulseLogo'
 import { useProfileStore } from '@/stores/profileStore'
@@ -96,15 +96,6 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                     >
                       <User className="mr-3 h-4 w-4" />
                       Profile
-                    </a>
-                    
-                    <a
-                      href="/settings"
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                      onClick={() => setShowUserMenu(false)}
-                    >
-                      <Settings className="mr-3 h-4 w-4" />
-                      Settings
                     </a>
                     
                     <div className="border-t border-gray-100">
