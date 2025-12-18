@@ -512,9 +512,9 @@ const BulkSetupPage: React.FC = () => {
       );
 
       const result = {
-        created: response.success?.length || 0,
-        skipped: usersToCreate.length - (response.success?.length || 0) - (response.errors?.length || 0),
-        errors: response.errors?.map(e => `${e.data.email}: ${e.error}`) || []
+        created: response.data.success?.length || 0,
+        skipped: usersToCreate.length - (response.data.success?.length || 0) - (response.data.errors?.length || 0),
+        errors: response.data.errors?.map((e: { data: { email: string }; error: string }) => `${e.data.email}: ${e.error}`) || []
       };
 
       setUserCreationResult(result);
