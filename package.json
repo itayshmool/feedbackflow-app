@@ -7,7 +7,7 @@
   ],
   "scripts": {
     "dev": "echo 'Run frontend and backend dev servers'",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "devDependencies": {
     "husky": "^9.1.7"
