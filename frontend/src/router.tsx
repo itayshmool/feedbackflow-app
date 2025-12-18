@@ -29,6 +29,7 @@ import ProfilePage from './pages/profile/ProfilePage';
 import SettingsPage from './pages/settings/SettingsPage';
 import HierarchyManagement from './pages/admin/HierarchyManagement';
 import TemplatesManagement from './pages/admin/TemplatesManagement';
+import BulkSetupPage from './pages/admin/BulkSetupPage';
 import TemplateLibrary from './pages/manager/TemplateLibrary';
 import EmployeeHistoryPage from './pages/team/EmployeeHistoryPage';
 import TeamPage from './pages/team/TeamPage';
@@ -107,6 +108,10 @@ const AppRouter: React.FC = () => {
             {
               path: 'templates',
               element: <TemplatesManagement />,
+            },
+            {
+              path: 'bulk-setup',
+              element: <BulkSetupPage />,
             },
           ],
         },

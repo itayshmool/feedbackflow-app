@@ -13,7 +13,8 @@ import {
   FileText,
   X,
   User,
-  Sparkles
+  Sparkles,
+  Upload
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useHierarchyStore } from '@/stores/hierarchyStore'
@@ -157,6 +158,7 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
     { name: 'Cycles', href: '/cycles', icon: RotateCcw },
     { name: 'Users', href: '/admin/users', icon: Users },
     { name: 'Hierarchy', href: '/admin/hierarchy', icon: TreePine },
+    { name: 'Bulk Setup', href: '/admin/bulk-setup', icon: Upload },
     { name: 'Template Management', href: '/admin/templates', icon: FileText },
   ]
 
