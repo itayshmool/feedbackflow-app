@@ -1,0 +1,150 @@
+# Security Rule: Privilege Escalation Prevention
+
+## Critical Security Requirement
+
+**ALL endpoints that assign roles or permissions MUST:**
+
+1. ✅ Require `GrantorContext` parameter (never optional)
+2. ✅ Call `validateRoleAssignment()` from `privilege-validator.ts`
+3. ✅ Use centralized validation - NEVER implement custom checks
+4. ✅ Pass `grantorContext` through entire call stack (controller → service → model)
+
+## Role Hierarchy (Lowest to Highest)
+
+```
+employee < manager < admin < super_admin
+```
+
+**Security Rule**: Users CANNOT assign roles equal to or higher than their own privilege level.
+
+- Employees: Cannot assign any roles
+- Managers: Can only assign employee role  
+- Admins: Can assign employee, manager roles (NOT admin or super_admin)
+- Super Admins: Can assign any role
+
+## Protected Operations
+
+These operations REQUIRE privilege validation:
+
+- `POST /api/v1/admin/users` - Create user with roles
+- `PUT /api/v1/admin/users/:id` - Update user roles
+- `POST /api/v1/admin/users/import` - Bulk import users
+- `POST /api/v1/admin/users/bulk` - Bulk assign roles
+- `POST /api/v1/admin/users/:userId/roles` - Assign role directly
+- Any endpoint that modifies `user_roles` table
+
+## Required Validation Pattern
+
+```typescript
+// 1. Import validator
+import { 
+  validateRoleAssignment, 
+  validateAdminOrganizations,
+  type GrantorContext 
+} from '../../../shared/utils/privilege-validator.js';
+
+// 2. Controller: Extract grantor context
+const grantorContext: GrantorContext = {
+  id: req.user.id,
+  isSuperAdmin: req.isSuperAdmin || false,
+  adminOrganizationIds: req.user.adminOrganizations?.map(org => org.id) || [],
+  roles: req.user.roles || []
+};
+
+// 3. Service: Validate BEFORE any database operations
+validateRoleAssignment(requestedRoles, grantorContext);
+
+// 4. If assigning admin role, also validate org access
+if (requestedRoles.includes('admin')) {
+  validateAdminOrganizations(organizationIds, grantorContext);
+}
+```
+
+## Anti-Patterns (NEVER DO THIS)
+
+❌ **Making grantorContext optional**
+```typescript
+// BAD
+async createUser(userData, grantorContext?) {
+  if (grantorContext) { // ❌ Allows bypass!
+    validateRoles(userData.roles, grantorContext);
+  }
+}
+
+// GOOD  
+async createUser(userData, grantorContext: GrantorContext) {
+  if (!grantorContext) {
+    throw new Error('SECURITY: Grantor context required');
+  }
+  validateRoles(userData.roles, grantorContext);
+}
+```
+
+❌ **Custom privilege checks**
+```typescript
+// BAD - Don't reinvent the wheel
+if (role === 'admin' && !isSuperAdmin) {
+  throw new Error('Only super_admin can assign admin');
+}
+
+// GOOD - Use centralized validator
+validateRoleAssignment([role], grantorContext);
+```
+
+❌ **Skipping validation for "trusted" operations**
+```typescript
+// BAD - Import still needs validation!
+async importUsers(users) {
+  for (const user of users) {
+    await createUser(user); // ❌ No grantorContext!
+  }
+}
+
+// GOOD
+async importUsers(users, grantorContext: GrantorContext) {
+  for (const user of users) {
+    validateRoleAssignment(user.roles, grantorContext);
+    await createUser(user, grantorContext);
+  }
+}
+```
+
+## Testing Requirements
+
+Every role assignment endpoint MUST have tests for:
+
+1. ✅ Super admin can assign any role
+2. ✅ Admin CANNOT assign admin or super_admin
+3. ✅ Manager CANNOT assign manager, admin, or super_admin
+4. ✅ Returns 400/403 with clear error message on privilege escalation
+5. ✅ Works correctly for valid role assignments
+
+## Code Review Checklist
+
+Before merging ANY PR that touches user roles:
+
+- [ ] All role assignment paths have `grantorContext` parameter
+- [ ] `validateRoleAssignment()` is called BEFORE database operations
+- [ ] Admin role assignments call `validateAdminOrganizations()`
+- [ ] No custom privilege validation logic (use centralized validator)
+- [ ] Tests cover privilege escalation attempts
+- [ ] Error messages don't leak sensitive information
+
+## Security Incidents Fixed
+
+**Date**: 2024-12-22  
+**Reporter**: Security Team  
+**Severity**: CRITICAL
+
+**Vulnerabilities Found**:
+1. Admin could import users with super_admin role via `/api/v1/admin/users/import`
+2. Admin could bulk-assign super_admin role via `/api/v1/admin/users/bulk`  
+3. Admin could directly assign super_admin via `/api/v1/admin/users/:userId/roles`
+
+**Fix**: All three endpoints now validate role hierarchy before assignment.
+
+## References
+
+- Privilege Validator: `backend/src/shared/utils/privilege-validator.ts`
+- Security Tests: `backend/tests/security/exploit-privilege-escalation.test.ts`
+- RBAC Architecture: `/docs/features/multi-org-admin-rbac.md`
