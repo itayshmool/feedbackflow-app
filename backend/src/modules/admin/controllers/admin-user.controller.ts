@@ -182,11 +182,7 @@ export class AdminUserController {
       // Get current user context for privilege escalation checks
       const orgScopedReq = req as OrgScopedRequest;
       const currentUser = (req as any).user;
-      const grantorContext = {
-        id: currentUser?.id,
-        isSuperAdmin: orgScopedReq.isSuperAdmin || currentUser?.roles?.includes('super_admin'),
-        adminOrganizationIds: currentUser?.adminOrganizations?.map((org: any) => org.id) || []
-      };
+      const grantorContext = this.extractGrantorContext(req);
       
       const user = await this.userService.createUser(userData, grantorContext);
       
@@ -222,12 +218,7 @@ export class AdminUserController {
       
       // Get current user context for privilege escalation checks
       const orgScopedReq = req as OrgScopedRequest;
-      const currentUser = (req as any).user;
-      const grantorContext = {
-        id: currentUser?.id,
-        isSuperAdmin: orgScopedReq.isSuperAdmin || currentUser?.roles?.includes('super_admin'),
-        adminOrganizationIds: currentUser?.adminOrganizations?.map((org: any) => org.id) || []
-      };
+      const grantorContext = this.extractGrantorContext(req);
       
       const user = await this.userService.updateUser(id, userData, grantorContext);
       
