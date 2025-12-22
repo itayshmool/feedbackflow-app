@@ -279,7 +279,15 @@ export class AdminUserService {
     };
   }
 
-  async bulkUpdateUsers(operation: BulkUserOperation): Promise<{ success: number; errors: string[] }> {
+  async bulkUpdateUsers(
+    operation: BulkUserOperation,
+    grantorContext: GrantorContext
+  ): Promise<{ success: number; errors: string[] }> {
+    // SECURITY: Grantor context is REQUIRED for role operations
+    if (!grantorContext && operation.operation === 'assign_role') {
+      throw new Error('SECURITY: Grantor context is required for role assignment operations');
+    }
+
     const errors: string[] = [];
     let success = 0;
 
@@ -301,9 +309,29 @@ export class AdminUserService {
           if (!operation.roleId) {
             throw new Error('Please select a role to assign');
           }
+          
+          // ✅ SECURITY FIX: Get the role name and validate privilege escalation
+          const roleToAssign = await this.roleModel.findById(operation.roleId);
+          if (!roleToAssign) {
+            throw new Error('Role not found');
+          }
+          
+          // ✅ Validate role assignment
+          validateRoleAssignment([roleToAssign.name], grantorContext);
+          
+          // If assigning admin role, validate organization access
+          if (roleToAssign.name === 'admin' && operation.organizationId) {
+            validateAdminOrganizations([operation.organizationId], grantorContext);
+          }
+          
           for (const userId of operation.userIds) {
             try {
-              await this.userModel.assignRole(userId, operation.roleId, operation.organizationId);
+              await this.userModel.assignRole(
+                userId, 
+                operation.roleId, 
+                operation.organizationId,
+                grantorContext.id
+              );
               success++;
             } catch (error) {
               errors.push(`Failed to assign role to user ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -312,6 +340,7 @@ export class AdminUserService {
           break;
         
         case 'remove_role':
+          // Role removal doesn't need privilege validation
           if (!operation.roleId) {
             throw new Error('Please select a role to remove');
           }

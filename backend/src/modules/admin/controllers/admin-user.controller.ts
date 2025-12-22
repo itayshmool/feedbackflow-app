@@ -309,7 +309,11 @@ export class AdminUserController {
   async bulkUpdateUsers(req: Request, res: Response): Promise<void> {
     try {
       const operation: BulkUserOperation = req.body;
-      const result = await this.userService.bulkUpdateUsers(operation);
+      
+      // ✅ CRITICAL FIX: Extract and pass grantor context
+      const grantorContext = this.extractGrantorContext(req);
+      
+      const result = await this.userService.bulkUpdateUsers(operation, grantorContext);
       
       res.json({
         success: true,
