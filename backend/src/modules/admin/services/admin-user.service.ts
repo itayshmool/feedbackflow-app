@@ -467,8 +467,32 @@ export class AdminUserService {
     return this.userModel.getUserRoles(userId);
   }
 
-  async assignUserRole(userId: string, roleId: string, organizationId?: string, grantedBy?: string): Promise<UserRole> {
-    return this.userModel.assignRole(userId, roleId, organizationId, grantedBy);
+  async assignUserRole(
+    userId: string, 
+    roleId: string, 
+    organizationId?: string, 
+    grantorContext?: GrantorContext
+  ): Promise<UserRole> {
+    // ✅ SECURITY: Grantor context is REQUIRED
+    if (!grantorContext) {
+      throw new Error('SECURITY: Grantor context is required for role assignment operations');
+    }
+
+    // Get the role being assigned
+    const role = await this.roleModel.findById(roleId);
+    if (!role) {
+      throw new Error('Role not found');
+    }
+
+    // ✅ CRITICAL FIX: Validate privilege escalation
+    validateRoleAssignment([role.name], grantorContext);
+
+    // If assigning admin role, validate organization access
+    if (role.name === 'admin' && organizationId) {
+      validateAdminOrganizations([organizationId], grantorContext);
+    }
+
+    return this.userModel.assignRole(userId, roleId, organizationId, grantorContext.id);
   }
 
   async removeUserRole(userId: string, roleId: string, organizationId?: string): Promise<boolean> {

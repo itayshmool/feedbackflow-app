@@ -511,7 +511,16 @@ export class AdminUserController {
     try {
       const { userId } = req.params;
       const { roleId, organizationId } = req.body;
-      const userRole = await this.userService.assignUserRole(userId, roleId, organizationId);
+      
+      // ✅ CRITICAL FIX: Extract and pass grantor context
+      const grantorContext = this.extractGrantorContext(req);
+      
+      const userRole = await this.userService.assignUserRole(
+        userId, 
+        roleId, 
+        organizationId,
+        grantorContext
+      );
       
       res.json({
         success: true,
