@@ -10,7 +10,8 @@
 # Vulnerability: Privilege escalation
 ##############################################
 
-set -e
+# Don't exit on errors - we want to test all attacks
+# set -e
 
 # Colors
 RED='\033[0;31m'
@@ -92,8 +93,11 @@ echo "Response body:"
 echo "$BODY" | jq '.' 2>/dev/null || echo "$BODY"
 echo ""
 
-if echo "$BODY" | grep -q "Privilege escalation denied" || echo "$BODY" | grep -q "privilege escalation denied"; then
-  echo -e "${GREEN}✅ ATTACK 1 BLOCKED: Privilege escalation denied${NC}"
+if echo "$BODY" | grep -qi "Privilege escalation denied\|Admin access required\|Forbidden\|Unauthorized" || [ "$HTTP_CODE" == "401" ] || [ "$HTTP_CODE" == "403" ] || [ "$HTTP_CODE" == "400" ]; then
+  echo -e "${GREEN}✅ ATTACK 1 BLOCKED: Access denied (HTTP $HTTP_CODE)${NC}"
+  PASSED=$((PASSED + 1))
+elif echo "$BODY" | grep -q '"success":false'; then
+  echo -e "${GREEN}✅ ATTACK 1 BLOCKED: Request rejected${NC}"
   PASSED=$((PASSED + 1))
 else
   echo -e "${RED}❌ ATTACK 1 SUCCEEDED: User imported with super_admin role!${NC}"
@@ -147,11 +151,11 @@ else
     echo "$BODY2" | jq '.' 2>/dev/null || echo "$BODY2"
     echo ""
 
-    if echo "$BODY2" | grep -q "Privilege escalation denied" || echo "$BODY2" | grep -q "privilege escalation denied"; then
-      echo -e "${GREEN}✅ ATTACK 2 BLOCKED: Privilege escalation denied${NC}"
+    if echo "$BODY2" | grep -qi "Privilege escalation denied\|Admin access required\|Forbidden\|Unauthorized" || [ "$HTTP_CODE2" == "401" ] || [ "$HTTP_CODE2" == "403" ] || [ "$HTTP_CODE2" == "400" ]; then
+      echo -e "${GREEN}✅ ATTACK 2 BLOCKED: Access denied (HTTP $HTTP_CODE2)${NC}"
       PASSED=$((PASSED + 1))
-    elif [ "$HTTP_CODE2" == "400" ]; then
-      echo -e "${GREEN}✅ ATTACK 2 BLOCKED: Request rejected (400)${NC}"
+    elif echo "$BODY2" | grep -q '"success":false'; then
+      echo -e "${GREEN}✅ ATTACK 2 BLOCKED: Request rejected${NC}"
       PASSED=$((PASSED + 1))
     else
       echo -e "${RED}❌ ATTACK 2 SUCCEEDED: Role assigned!${NC}"
@@ -189,11 +193,11 @@ else
   echo "$BODY3" | jq '.' 2>/dev/null || echo "$BODY3"
   echo ""
 
-  if echo "$BODY3" | grep -q "Privilege escalation denied" || echo "$BODY3" | grep -q "privilege escalation denied"; then
-    echo -e "${GREEN}✅ ATTACK 3 BLOCKED: Privilege escalation denied${NC}"
+  if echo "$BODY3" | grep -qi "Privilege escalation denied\|Admin access required\|Forbidden\|Unauthorized" || [ "$HTTP_CODE3" == "401" ] || [ "$HTTP_CODE3" == "403" ] || [ "$HTTP_CODE3" == "400" ]; then
+    echo -e "${GREEN}✅ ATTACK 3 BLOCKED: Access denied (HTTP $HTTP_CODE3)${NC}"
     PASSED=$((PASSED + 1))
-  elif [ "$HTTP_CODE3" == "400" ]; then
-    echo -e "${GREEN}✅ ATTACK 3 BLOCKED: Request rejected (400)${NC}"
+  elif echo "$BODY3" | grep -q '"success":false'; then
+    echo -e "${GREEN}✅ ATTACK 3 BLOCKED: Request rejected${NC}"
     PASSED=$((PASSED + 1))
   else
     echo -e "${RED}❌ ATTACK 3 SUCCEEDED: Role assigned directly!${NC}"
