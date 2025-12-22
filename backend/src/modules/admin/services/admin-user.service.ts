@@ -13,13 +13,13 @@ import {
   BulkUserOperation,
   UserImportData,
   UserImportResult,
-  PaginationOptions,
-  GrantorContext
+  PaginationOptions
 } from '../types/user.types.js';
 import { 
   validateRoleAssignment, 
   validateAdminOrganizations,
-  validateAdminRoleRequirements
+  validateAdminRoleRequirements,
+  GrantorContext
 } from '../../../shared/utils/privilege-validator.js';
 
 export class AdminUserService {

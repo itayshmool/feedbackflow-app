@@ -7,9 +7,9 @@ import {
   UpdateUserData,
   UserFilters,
   BulkUserOperation,
-  UserImportData,
-  GrantorContext
+  UserImportData
 } from '../types/user.types.js';
+import { GrantorContext } from '../../../shared/utils/privilege-validator.js';
 import { OrgScopedRequest } from '../../../shared/middleware/rbac.middleware.js';
 
 export class AdminUserController {
