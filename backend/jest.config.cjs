@@ -3,7 +3,8 @@ module.exports = {
   testEnvironment: 'node',
   testMatch: [
     '**/tests/unit/**/*.test.ts',
-    '**/tests/integration/**/*.test.ts'
+    '**/tests/integration/**/*.test.ts',
+    '**/tests/security/**/*.test.ts'
   ],
   moduleFileExtensions: ['ts', 'js', 'json'],
   roots: ['<rootDir>'],
