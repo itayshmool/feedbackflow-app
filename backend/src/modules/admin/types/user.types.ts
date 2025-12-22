@@ -131,8 +131,5 @@ export interface PaginationOptions {
 /**
  * Context of the user granting roles (used for privilege escalation checks)
  */
-export interface GrantorContext {
-  id?: string;
-  isSuperAdmin: boolean;
-  adminOrganizationIds: string[]; // Organizations this user can grant admin access to
-}
+// GrantorContext moved to shared/utils/privilege-validator.ts to avoid duplication
+// Import from there: import { GrantorContext } from '../../shared/utils/privilege-validator';
