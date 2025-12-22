@@ -16,6 +16,11 @@ import {
   PaginationOptions,
   GrantorContext
 } from '../types/user.types.js';
+import { 
+  validateRoleAssignment, 
+  validateAdminOrganizations,
+  validateAdminRoleRequirements
+} from '../../../shared/utils/privilege-validator.js';
 
 export class AdminUserService {
   private userModel: UserModel;
@@ -330,7 +335,12 @@ export class AdminUserService {
     return { success, errors };
   }
 
-  async importUsers(users: UserImportData[]): Promise<UserImportResult> {
+  async importUsers(users: UserImportData[], grantorContext: GrantorContext): Promise<UserImportResult> {
+    // SECURITY: Grantor context is REQUIRED
+    if (!grantorContext) {
+      throw new Error('SECURITY: Grantor context is required for user import operations');
+    }
+
     const result: UserImportResult = {
       success: [],
       errors: [],
@@ -363,6 +373,12 @@ export class AdminUserService {
           organizationId = organization.id;
         }
 
+        // ✅ SECURITY FIX: Pre-validate roles before creating user
+        if (userData.roles && userData.roles.length > 0) {
+          validateRoleAssignment(userData.roles, grantorContext);
+        }
+
+        // ✅ Pass grantorContext to createUser
         const user = await this.createUser({
           email: userData.email,
           name: userData.name,
@@ -371,7 +387,7 @@ export class AdminUserService {
           organizationId: organizationId,
           roles: userData.roles,
           sendWelcomeEmail: false
-        });
+        }, grantorContext);
         
         result.success.push(userData);
         result.totalSuccess++;

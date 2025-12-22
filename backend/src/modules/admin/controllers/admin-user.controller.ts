@@ -7,7 +7,8 @@ import {
   UpdateUserData,
   UserFilters,
   BulkUserOperation,
-  UserImportData
+  UserImportData,
+  GrantorContext
 } from '../types/user.types.js';
 import { OrgScopedRequest } from '../../../shared/middleware/rbac.middleware.js';
 
@@ -16,6 +17,25 @@ export class AdminUserController {
 
   constructor() {
     this.userService = new AdminUserService();
+  }
+
+  /**
+   * Extract grantor context from request for privilege validation
+   */
+  private extractGrantorContext(req: Request): GrantorContext {
+    const orgScopedReq = req as OrgScopedRequest;
+    const currentUser = (req as any).user;
+    
+    if (!currentUser) {
+      throw new Error('Authentication required');
+    }
+
+    return {
+      id: currentUser.id,
+      isSuperAdmin: orgScopedReq.isSuperAdmin || currentUser.roles?.includes('super_admin') || false,
+      adminOrganizationIds: currentUser.adminOrganizations?.map((org: any) => org.id) || [],
+      roles: currentUser.roles || []
+    };
   }
 
   async getUsers(req: Request, res: Response): Promise<void> {
@@ -308,7 +328,11 @@ export class AdminUserController {
   async importUsers(req: Request, res: Response): Promise<void> {
     try {
       const users: UserImportData[] = req.body.users;
-      const result = await this.userService.importUsers(users);
+      
+      // ✅ CRITICAL FIX: Extract and pass grantor context
+      const grantorContext = this.extractGrantorContext(req);
+      
+      const result = await this.userService.importUsers(users, grantorContext);
       
       res.json({
         success: true,
