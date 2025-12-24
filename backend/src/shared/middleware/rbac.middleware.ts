@@ -16,6 +16,8 @@ export interface OrgScopedRequest extends Request {
   effectiveOrganizationId?: string | null;
   // Whether the user has cross-org access (super_admin)
   isSuperAdmin?: boolean;
+  // Validation helper to check if user can access a specific organization
+  validateOrgAccess?: (targetOrgId: string) => void;
 }
 
 /**
@@ -112,6 +114,27 @@ export function requireOrgScopedAdmin() {
       // Set the effective org to admin's assigned org
       req.effectiveOrganizationId = adminOrgId;
     }
+
+    // Add validation helper function for controllers to use
+    req.validateOrgAccess = (targetOrgId: string) => {
+      // Super admins can access any organization
+      if (req.isSuperAdmin) {
+        return;
+      }
+      
+      // Validate that target org matches effective org
+      if (!req.effectiveOrganizationId) {
+        const error: any = new Error('Organization context not set');
+        error.statusCode = 500;
+        throw error;
+      }
+      
+      if (targetOrgId !== req.effectiveOrganizationId) {
+        const error: any = new Error('You do not have permission to access this organization');
+        error.statusCode = 403;
+        throw error;
+      }
+    };
 
     next();
   };

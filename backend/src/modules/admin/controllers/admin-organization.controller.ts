@@ -76,6 +76,10 @@ export class AdminOrganizationController {
 
   getOrganizationById = async (req: Request, res: Response, next: NextFunction) => {
     try {
+      // SECURITY: Validate organization access
+      const orgScopedReq = req as OrgScopedRequest;
+      orgScopedReq.validateOrgAccess?.(req.params.id);
+      
       const organization = await this.organizationService.getOrganizationById(req.params.id);
       res.json(organization);
     } catch (err) {
@@ -86,6 +90,13 @@ export class AdminOrganizationController {
   getOrganizationBySlug = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const organization = await this.organizationService.getOrganizationBySlug(req.params.slug);
+      
+      // SECURITY: Validate organization access after fetching
+      if (organization) {
+        const orgScopedReq = req as OrgScopedRequest;
+        orgScopedReq.validateOrgAccess?.(organization.id);
+      }
+      
       res.json(organization);
     } catch (err) {
       next(err);
@@ -94,6 +105,10 @@ export class AdminOrganizationController {
 
   updateOrganization = async (req: Request, res: Response, next: NextFunction) => {
     try {
+      // SECURITY: Validate organization access
+      const orgScopedReq = req as OrgScopedRequest;
+      orgScopedReq.validateOrgAccess?.(req.params.id);
+      
       const updateData: UpdateOrganizationRequest = req.body;
       const organization = await this.organizationService.updateOrganization(
         req.params.id,

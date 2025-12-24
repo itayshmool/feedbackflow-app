@@ -5123,6 +5123,17 @@ app.post('/api/v1/hierarchy', authenticateToken, requireOrgScopedAdmin(), async 
     const { organizationId, managerId, employeeId, level, isDirectReport } = req.body;
     const hierarchyLevel = level !== undefined ? level : 1;
 
+    // SECURITY: Validate organization access
+    const orgScopedReq = req as OrgScopedRequest;
+    try {
+      orgScopedReq.validateOrgAccess?.(organizationId);
+    } catch (error: any) {
+      return res.status(error.statusCode || 403).json({ 
+        success: false, 
+        error: error.message || 'Organization access denied' 
+      });
+    }
+
     // First, deactivate any existing manager relationship for this employee in this org
     // An employee can only have ONE active manager
     await query(
@@ -5273,6 +5284,17 @@ app.post('/api/v1/hierarchy/bulk', authenticateToken, requireOrgScopedAdmin(), a
   try {
     const { organizationId, hierarchies } = req.body;
     
+    // SECURITY: Validate organization access
+    const orgScopedReq = req as OrgScopedRequest;
+    try {
+      orgScopedReq.validateOrgAccess?.(organizationId);
+    } catch (error: any) {
+      return res.status(error.statusCode || 403).json({ 
+        success: false, 
+        error: error.message || 'Organization access denied' 
+      });
+    }
+    
     // Mock bulk update
     const result = {
       created: hierarchies.length,
@@ -5403,6 +5425,20 @@ app.post('/api/v1/hierarchy/bulk/csv', authenticateToken, requireOrgScopedAdmin(
         const orgId = await getOrgIdByNameAndSlug(organizationName, organizationSlug);
         if (!orgId) {
           errors.push({ row: i + 1, employeeEmail, managerEmail, error: `Organization not found: ${organizationName} (${organizationSlug})` });
+          continue;
+        }
+
+        // SECURITY: Validate organization access before processing
+        const orgScopedReq = req as OrgScopedRequest;
+        try {
+          orgScopedReq.validateOrgAccess?.(orgId);
+        } catch (accessError: any) {
+          errors.push({ 
+            row: i + 1, 
+            employeeEmail, 
+            managerEmail, 
+            error: `Access denied: ${accessError.message || 'You do not have permission to manage this organization'}` 
+          });
           continue;
         }
 
