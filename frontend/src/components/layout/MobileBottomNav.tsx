@@ -61,7 +61,6 @@ export default function MobileBottomNav() {
   // Personal section items
   if (isManager) {
     moreNav.push({ name: 'Myself', href: '/myself', icon: UserIcon })
-    moreNav.push({ name: 'Templates', href: '/templates', icon: FileText })
   }
   
   // Admin section items
