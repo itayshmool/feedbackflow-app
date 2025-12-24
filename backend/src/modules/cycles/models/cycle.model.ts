@@ -40,10 +40,10 @@ export class CycleModelClass {
     return this.mapDbRowToModel(result.rows[0]);
   }
 
-  async findById(id: string, client?: PoolClient): Promise<CycleModel | null> {
+  async findById(id: string, organizationId?: string, client?: PoolClient): Promise<CycleModel | null> {
     const executor = client || this.db;
     
-    const query = `
+    let query = `
       SELECT 
         fc.id, fc.organization_id, fc.name, fc.description,
         fc.type, fc.status, fc.start_date, fc.end_date,
@@ -54,7 +54,15 @@ export class CycleModelClass {
       WHERE fc.id = $1
     `;
     
-    const result = await executor.query(query, [id]);
+    const params: any[] = [id];
+    
+    // Add organization filter for security (BAC/IDOR protection)
+    if (organizationId) {
+      query += ` AND fc.organization_id = $2`;
+      params.push(organizationId);
+    }
+    
+    const result = await executor.query(query, params);
     
     if (result.rows.length === 0) {
       return null;
@@ -175,7 +183,7 @@ export class CycleModelClass {
     }
 
     if (setStatements.length === 0) {
-      return this.findById(id, client);
+      return this.findById(id, undefined, client);
     }
 
     setStatements.push(`updated_at = NOW()`);

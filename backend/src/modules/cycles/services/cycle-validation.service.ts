@@ -14,14 +14,15 @@ export class CycleValidationService {
     cycleId: string,
     fromUserId: string,
     toUserId: string,
-    reviewType: string
+    reviewType: string,
+    organizationId: string
   ): Promise<boolean> {
     try {
       // Check if cycle exists and is active
       await this.cycleService.validateCyclePermission(cycleId, fromUserId, toUserId);
       
-      // Get cycle details for additional validation
-      const cycle = await this.cycleService.getCycleById(cycleId);
+      // Get cycle details for additional validation (with organization filter)
+      const cycle = await this.cycleService.getCycleById(cycleId, fromUserId, organizationId);
       
       // Validate review type against cycle settings
       this.validateReviewType(cycle.settings, reviewType);
@@ -43,10 +44,11 @@ export class CycleValidationService {
   async validateCycleAccess(
     cycleId: string,
     userId: string,
+    organizationId: string,
     requiredRole?: string
   ): Promise<boolean> {
     try {
-      const cycle = await this.cycleService.getCycleById(cycleId, userId);
+      const cycle = await this.cycleService.getCycleById(cycleId, userId, organizationId);
       
       if (requiredRole) {
         // TODO: Implement role-based access validation
@@ -59,9 +61,9 @@ export class CycleValidationService {
     }
   }
 
-  async validateCycleStatus(cycleId: string, allowedStatuses: string[]): Promise<boolean> {
+  async validateCycleStatus(cycleId: string, userId: string, organizationId: string, allowedStatuses: string[]): Promise<boolean> {
     try {
-      const cycle = await this.cycleService.getCycleById(cycleId);
+      const cycle = await this.cycleService.getCycleById(cycleId, userId, organizationId);
       
       if (!allowedStatuses.includes(cycle.status)) {
         throw new ValidationError(`Cycle must be in one of these statuses: ${allowedStatuses.join(', ')}`);

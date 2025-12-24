@@ -7716,6 +7716,15 @@ app.get('/api/v1/cycles', authenticateToken, async (req, res) => {
 // GET /api/v1/cycles/:id - Get specific cycle
 app.get('/api/v1/cycles/:id', authenticateToken, async (req, res) => {
   try {
+    // BAC/IDOR FIX: Validate organization ownership
+    const userOrganizationId = req.user.organizationId;
+    console.log(`DEBUG: User organizationId = ${userOrganizationId}, User ID = ${req.user.id}, Requested cycle = ${req.params.id}`);
+    
+    if (!userOrganizationId) {
+      console.log(`ERROR: User has no organizationId`);
+      return res.status(403).json({ success: false, error: 'User must belong to an organization' });
+    }
+    
     // Participants = employees in the org hierarchy (those who have managers)
     // Completed = employees who received feedback FROM their manager in this cycle
     const cycleQuery = `
@@ -7762,10 +7771,10 @@ app.get('/api/v1/cycles/:id', authenticateToken, async (req, res) => {
           AND oh.is_active = true
         GROUP BY fr.cycle_id
       ) completed_counts ON fc.id = completed_counts.cycle_id
-      WHERE fc.id = $1
+      WHERE fc.id = $1 AND fc.organization_id = $2
     `;
 
-    const result = await query(cycleQuery, [req.params.id]);
+    const result = await query(cycleQuery, [req.params.id, userOrganizationId]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Cycle not found' });
@@ -7907,6 +7916,13 @@ app.post('/api/v1/cycles', authenticateToken, async (req, res) => {
 // PUT /api/v1/cycles/:id - Update cycle
 app.put('/api/v1/cycles/:id', authenticateToken, async (req, res) => {
   try {
+    // BAC/IDOR FIX: Validate organization ownership
+    const userOrganizationId = req.user.organizationId;
+    
+    if (!userOrganizationId) {
+      return res.status(403).json({ success: false, error: 'User must belong to an organization' });
+    }
+    
     const {
       name,
       description,
@@ -7930,7 +7946,7 @@ app.put('/api/v1/cycles/:id', authenticateToken, async (req, res) => {
         feedback_end_date = COALESCE($8, feedback_end_date),
         settings = COALESCE($9, settings),
         updated_at = NOW()
-      WHERE id = $1
+      WHERE id = $1 AND organization_id = $10
       RETURNING id, name, description, organization_id, type, status,
                 start_date, end_date, feedback_start_date, feedback_end_date,
                 settings, created_by, created_at, updated_at
@@ -7945,7 +7961,8 @@ app.put('/api/v1/cycles/:id', authenticateToken, async (req, res) => {
       endDate,
       feedbackStartDate,
       feedbackEndDate,
-      settings ? JSON.stringify(settings) : null
+      settings ? JSON.stringify(settings) : null,
+      userOrganizationId
     ]);
 
     if (result.rows.length === 0) {
@@ -8314,6 +8331,23 @@ app.get('/api/v1/cycles/summary', authenticateToken, async (req, res) => {
 // GET /api/v1/cycles/:id/participants - Get cycle participants
 app.get('/api/v1/cycles/:id/participants', authenticateToken, async (req, res) => {
   try {
+    // BAC/IDOR FIX: Validate organization ownership of the cycle first
+    const userOrganizationId = req.user.organizationId;
+    
+    if (!userOrganizationId) {
+      return res.status(403).json({ success: false, error: 'User must belong to an organization' });
+    }
+    
+    // Check if cycle exists and belongs to user's organization
+    const cycleCheck = await query(
+      'SELECT id FROM feedback_cycles WHERE id = $1 AND organization_id = $2',
+      [req.params.id, userOrganizationId]
+    );
+    
+    if (cycleCheck.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Cycle not found' });
+    }
+    
     const participantsQuery = `
       SELECT 
         u.id,

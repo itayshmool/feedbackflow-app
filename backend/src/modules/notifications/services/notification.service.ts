@@ -155,9 +155,12 @@ export class NotificationService {
     page: number = 1,
     limit: number = 20
   ): Promise<NotificationListResponse> {
-    // Apply user filter for non-admin users
+    // Apply user filter for non-admin users (proper admin check now)
     const userFilters = { ...filters, organizationId };
-    if (!this.isAdminUser(requestingUserId)) {
+    const isAdmin = await this.isAdminUser(requestingUserId);
+    
+    if (!isAdmin) {
+      // Regular users can only see their own notifications
       userFilters.userId = requestingUserId;
     }
     
@@ -263,7 +266,9 @@ export class NotificationService {
     organizationId: string,
     requestingUserId: string
   ): Promise<NotificationStats> {
-    if (this.isAdminUser(requestingUserId)) {
+    const isAdmin = await this.isAdminUser(requestingUserId);
+    
+    if (isAdmin) {
       return this.notificationModel.getStatsByOrganization(organizationId);
     } else {
       return this.notificationModel.getStatsByUser(requestingUserId);
@@ -403,9 +408,31 @@ export class NotificationService {
     });
   }
 
-  private isAdminUser(userId: string): boolean {
-    // TODO: Implement proper admin check
-    return false;
+  private async isAdminUser(userId: string): Promise<boolean> {
+    try {
+      // Get user's roles
+      const result = await this.db.query(
+        'SELECT role_id FROM user_roles WHERE user_id = $1',
+        [userId]
+      );
+      
+      if (result.rows.length === 0) {
+        return false;
+      }
+      
+      // Get role names
+      const roleIds = result.rows.map((r: any) => r.role_id);
+      const rolesResult = await this.db.query(
+        'SELECT name FROM roles WHERE id = ANY($1)',
+        [roleIds]
+      );
+      
+      const roleNames = rolesResult.rows.map((r: any) => r.name.toLowerCase());
+      return roleNames.includes('admin') || roleNames.includes('hr');
+    } catch (error) {
+      this.logger.error('Error checking admin status', { error, userId });
+      return false;
+    }
   }
 
   // Event-specific notification methods

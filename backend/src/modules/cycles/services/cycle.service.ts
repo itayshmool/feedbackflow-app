@@ -93,7 +93,7 @@ export class CycleService {
       
       await client.query('COMMIT');
       
-      const completeCycle = await this.getCycleById(cycle.id);
+      const completeCycle = await this.getCycleById(cycle.id, createdBy, organizationId);
       
       // Emit cycle created event
       this.eventEmitter.emit('cycle:created', {
@@ -119,16 +119,12 @@ export class CycleService {
     }
   }
 
-  async getCycleById(id: string, requestingUserId?: string): Promise<Cycle> {
-    const cycle = await this.cycleModel.findById(id);
+  async getCycleById(id: string, requestingUserId: string, userOrgId: string): Promise<Cycle> {
+    // Query with organization filter for BAC/IDOR protection
+    const cycle = await this.cycleModel.findById(id, userOrgId);
     
     if (!cycle) {
       throw new NotFoundError('Cycle not found');
-    }
-    
-    // Check if user has permission to view this cycle
-    if (requestingUserId && !this.hasViewPermission(cycle, requestingUserId)) {
-      throw new ForbiddenError('Insufficient permission to view this cycle');
     }
     
     return this.buildCompleteCycle(cycle);
@@ -163,20 +159,23 @@ export class CycleService {
   async updateCycle(
     id: string,
     updates: UpdateCycleRequest,
-    requestingUserId: string
+    requestingUserId: string,
+    userRoles: string[],
+    userOrgId: string
   ): Promise<Cycle> {
     const client = await this.db.connect();
     
     try {
       await client.query('BEGIN');
       
-      const existingCycle = await this.cycleModel.findById(id, client);
+      // Query with organization filter for BAC/IDOR protection
+      const existingCycle = await this.cycleModel.findById(id, userOrgId, client);
       if (!existingCycle) {
         throw new NotFoundError('Cycle not found');
       }
       
-      // Check if user has permission to update
-      if (!this.hasUpdatePermission(existingCycle, requestingUserId)) {
+      // Check if user has permission to update (with roles)
+      if (!this.hasUpdatePermission(existingCycle, requestingUserId, userRoles)) {
         throw new ForbiddenError('Insufficient permission to update this cycle');
       }
       
@@ -213,7 +212,7 @@ export class CycleService {
       
       await client.query('COMMIT');
       
-      const completeCycle = await this.getCycleById(id);
+      const completeCycle = await this.getCycleById(id, requestingUserId, userOrgId);
       
       // Emit cycle updated event
       this.eventEmitter.emit('cycle:updated', {
@@ -238,39 +237,40 @@ export class CycleService {
     }
   }
 
-  async activateCycle(id: string, requestingUserId: string): Promise<Cycle> {
-    const cycle = await this.getCycleById(id, requestingUserId);
+  async activateCycle(id: string, requestingUserId: string, userRoles: string[], userOrgId: string): Promise<Cycle> {
+    const cycle = await this.getCycleById(id, requestingUserId, userOrgId);
     
     if (cycle.status !== CycleStatus.DRAFT) {
       throw new ValidationError('Only draft cycles can be activated');
     }
     
-    return this.updateCycle(id, { status: CycleStatus.ACTIVE }, requestingUserId);
+    return this.updateCycle(id, { status: CycleStatus.ACTIVE }, requestingUserId, userRoles, userOrgId);
   }
 
-  async closeCycle(id: string, requestingUserId: string): Promise<Cycle> {
-    const cycle = await this.getCycleById(id, requestingUserId);
+  async closeCycle(id: string, requestingUserId: string, userRoles: string[], userOrgId: string): Promise<Cycle> {
+    const cycle = await this.getCycleById(id, requestingUserId, userOrgId);
     
     if (cycle.status !== CycleStatus.ACTIVE && cycle.status !== CycleStatus.IN_PROGRESS) {
       throw new ValidationError('Only active or in-progress cycles can be closed');
     }
     
-    return this.updateCycle(id, { status: CycleStatus.CLOSED }, requestingUserId);
+    return this.updateCycle(id, { status: CycleStatus.CLOSED }, requestingUserId, userRoles, userOrgId);
   }
 
-  async deleteCycle(id: string, requestingUserId: string): Promise<void> {
+  async deleteCycle(id: string, requestingUserId: string, userRoles: string[], userOrgId: string): Promise<void> {
     const client = await this.db.connect();
     
     try {
       await client.query('BEGIN');
       
-      const cycle = await this.cycleModel.findById(id, client);
+      // Query with organization filter for BAC/IDOR protection
+      const cycle = await this.cycleModel.findById(id, userOrgId, client);
       if (!cycle) {
         throw new NotFoundError('Cycle not found');
       }
       
-      // Check permissions
-      if (!this.hasDeletePermission(cycle, requestingUserId)) {
+      // Check permissions (with roles)
+      if (!this.hasDeletePermission(cycle, requestingUserId, userRoles)) {
         throw new ForbiddenError('Insufficient permission to delete this cycle');
       }
       
@@ -332,7 +332,13 @@ export class CycleService {
   }
 
   // Participant management methods
-  async getCycleParticipants(cycleId: string): Promise<any[]> {
+  async getCycleParticipants(cycleId: string, requestingUserId: string, userOrgId: string): Promise<any[]> {
+    // Verify cycle exists and user has access to it (organization check)
+    const cycle = await this.cycleModel.findById(cycleId, userOrgId);
+    if (!cycle) {
+      throw new NotFoundError('Cycle not found');
+    }
+    
     const participants = await this.participantModel.findByCycleId(cycleId);
     return participants.map(p => ({
       id: p.id,
@@ -349,17 +355,24 @@ export class CycleService {
   async addCycleParticipants(
     cycleId: string,
     participants: any[],
-    assignedBy: string
+    assignedBy: string,
+    userRoles: string[],
+    userOrgId: string
   ): Promise<any[]> {
     const client = await this.db.connect();
     
     try {
       await client.query('BEGIN');
       
-      // Check if cycle exists
-      const cycle = await this.cycleModel.findById(cycleId, client);
+      // Check if cycle exists with organization filter (BAC/IDOR protection)
+      const cycle = await this.cycleModel.findById(cycleId, userOrgId, client);
       if (!cycle) {
         throw new NotFoundError('Cycle not found');
+      }
+      
+      // Check permissions (with roles)
+      if (!this.hasManageParticipantsPermission(cycle, assignedBy, userRoles)) {
+        throw new ForbiddenError('Insufficient permission to manage participants');
       }
       
       const added = [];
@@ -402,17 +415,24 @@ export class CycleService {
   async removeCycleParticipant(
     cycleId: string,
     participantId: string,
-    requestingUserId: string
+    requestingUserId: string,
+    userRoles: string[],
+    userOrgId: string
   ): Promise<void> {
     const client = await this.db.connect();
     
     try {
       await client.query('BEGIN');
       
-      // Check if cycle exists
-      const cycle = await this.cycleModel.findById(cycleId, client);
+      // Check if cycle exists with organization filter (BAC/IDOR protection)
+      const cycle = await this.cycleModel.findById(cycleId, userOrgId, client);
       if (!cycle) {
         throw new NotFoundError('Cycle not found');
+      }
+      
+      // Check permissions (with roles)
+      if (!this.hasManageParticipantsPermission(cycle, requestingUserId, userRoles)) {
+        throw new ForbiddenError('Insufficient permission to manage participants');
       }
       
       // Check permissions (cycle creator or admin/HR can remove participants)
@@ -445,6 +465,8 @@ export class CycleService {
     fromUserId: string,
     toUserId: string
   ): Promise<boolean> {
+    // This is an internal validation method called by feedback module
+    // No organization filter needed since cycleId is unique and we validate participants
     const cycle = await this.cycleModel.findById(cycleId);
     
     if (!cycle) {
@@ -521,6 +543,23 @@ export class CycleService {
     }
     
     // Admin and HR can delete any cycle in their organization
+    if (userRoles) {
+      const roles = userRoles.map(r => r.toLowerCase());
+      if (roles.includes('admin') || roles.includes('hr')) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  private hasManageParticipantsPermission(cycle: CycleModel, userId: string, userRoles?: string[]): boolean {
+    // Creator can always manage participants
+    if (cycle.created_by === userId) {
+      return true;
+    }
+    
+    // Admin and HR can manage participants for any cycle in their organization
     if (userRoles) {
       const roles = userRoles.map(r => r.toLowerCase());
       if (roles.includes('admin') || roles.includes('hr')) {

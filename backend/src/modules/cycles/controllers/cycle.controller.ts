@@ -35,8 +35,8 @@ export class CycleController {
 
   getCycle = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).user?.id;
-      const cycle = await this.cycleService.getCycleById(req.params.id, userId);
+      const { id: userId, organizationId } = (req as any).user;
+      const cycle = await this.cycleService.getCycleById(req.params.id, userId, organizationId);
       res.json(cycle);
     } catch (err) {
       next(err);
@@ -45,8 +45,8 @@ export class CycleController {
 
   updateCycle = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).user?.id;
-      const cycle = await this.cycleService.updateCycle(req.params.id, req.body, userId);
+      const { id: userId, roles, organizationId } = (req as any).user;
+      const cycle = await this.cycleService.updateCycle(req.params.id, req.body, userId, roles, organizationId);
       res.json(cycle);
     } catch (err) {
       next(err);
@@ -55,8 +55,8 @@ export class CycleController {
 
   deleteCycle = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).user?.id;
-      await this.cycleService.deleteCycle(req.params.id, userId);
+      const { id: userId, roles, organizationId } = (req as any).user;
+      await this.cycleService.deleteCycle(req.params.id, userId, roles, organizationId);
       res.status(204).send();
     } catch (err) {
       next(err);
@@ -65,8 +65,8 @@ export class CycleController {
 
   activateCycle = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).user?.id;
-      const cycle = await this.cycleService.activateCycle(req.params.id, userId);
+      const { id: userId, roles, organizationId } = (req as any).user;
+      const cycle = await this.cycleService.activateCycle(req.params.id, userId, roles, organizationId);
       res.json(cycle);
     } catch (err) {
       next(err);
@@ -75,8 +75,8 @@ export class CycleController {
 
   closeCycle = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).user?.id;
-      const cycle = await this.cycleService.closeCycle(req.params.id, userId);
+      const { id: userId, roles, organizationId } = (req as any).user;
+      const cycle = await this.cycleService.closeCycle(req.params.id, userId, roles, organizationId);
       res.json(cycle);
     } catch (err) {
       next(err);
@@ -96,7 +96,8 @@ export class CycleController {
   // Participant management endpoints
   getCycleParticipants = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const participants = await this.cycleService.getCycleParticipants(req.params.id);
+      const { id: userId, organizationId } = (req as any).user;
+      const participants = await this.cycleService.getCycleParticipants(req.params.id, userId, organizationId);
       res.json(participants);
     } catch (err) {
       next(err);
@@ -105,9 +106,9 @@ export class CycleController {
 
   addCycleParticipants = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).user?.id;
+      const { id: userId, roles, organizationId } = (req as any).user;
       const { participants } = req.body;
-      const added = await this.cycleService.addCycleParticipants(req.params.id, participants, userId);
+      const added = await this.cycleService.addCycleParticipants(req.params.id, participants, userId, roles, organizationId);
       res.status(201).json(added);
     } catch (err) {
       next(err);
@@ -116,8 +117,8 @@ export class CycleController {
 
   removeCycleParticipant = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).user?.id;
-      await this.cycleService.removeCycleParticipant(req.params.id, req.params.participantId, userId);
+      const { id: userId, roles, organizationId } = (req as any).user;
+      await this.cycleService.removeCycleParticipant(req.params.id, req.params.participantId, userId, roles, organizationId);
       res.status(204).send();
     } catch (err) {
       next(err);
@@ -128,8 +129,9 @@ export class CycleController {
   validateFeedbackPermission = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { cycleId, fromUserId, toUserId, reviewType } = req.body;
+      const { organizationId } = (req as any).user;
       const isValid = await this.validationService.validateFeedbackPermission(
-        cycleId, fromUserId, toUserId, reviewType
+        cycleId, fromUserId, toUserId, reviewType, organizationId
       );
       res.json({ valid: isValid });
     } catch (err) {
