@@ -146,11 +146,6 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
     { name: 'Growth Quotes', href: '/quotes', icon: Sparkles },
   ]
 
-  // Resources section
-  const resourcesNavigation: NavItem[] = [
-    { name: 'Templates', href: '/templates', icon: FileText },
-  ]
-
   // Admin navigation
   const adminNavigation: NavItem[] = [
     { name: 'Admin Dashboard', href: '/admin', icon: Settings },
@@ -204,17 +199,6 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
               <SectionDivider />
               <SectionHeader>Personal</SectionHeader>
               {personalNavigation.map((item) => (
-                <NavItem key={item.name} item={item} onClick={handleNavClick} />
-              ))}
-            </>
-          )}
-          
-          {/* RESOURCES Section - for managers */}
-          {isManager && (
-            <>
-              <SectionDivider />
-              <SectionHeader>Resources</SectionHeader>
-              {resourcesNavigation.map((item) => (
                 <NavItem key={item.name} item={item} onClick={handleNavClick} />
               ))}
             </>
