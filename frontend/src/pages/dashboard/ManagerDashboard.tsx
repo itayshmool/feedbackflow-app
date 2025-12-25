@@ -122,6 +122,9 @@ const ManagerDashboard: React.FC = () => {
     fetchFeedbackList
   } = useFeedbackStore();
 
+  // Feature flag for AI Insights tab
+  const isAIInsightsEnabled = import.meta.env.VITE_ENABLE_AI_INSIGHTS === 'true';
+
   // Support URL parameter for direct tab linking (e.g., /dashboard?tab=analytics)
   type TabType = 'overview' | 'analytics' | 'insights';
   const [searchParams] = useSearchParams();
@@ -334,9 +337,17 @@ const ManagerDashboard: React.FC = () => {
     }
   }, [user, fetchDirectReports, fetchHierarchyStats, fetchFeedbackStats, fetchFeedbackList]);
   
+  // Redirect to overview if AI Insights is disabled but user is on that tab
+  useEffect(() => {
+    if (activeTab === 'insights' && !isAIInsightsEnabled) {
+      setActiveTab('overview');
+    }
+  }, [activeTab, isAIInsightsEnabled]);
+  
+  // Build tabs array conditionally based on feature flags
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
-    { id: 'insights', label: 'AI Insights', icon: Sparkles },
+    ...(isAIInsightsEnabled ? [{ id: 'insights', label: 'AI Insights', icon: Sparkles }] : []),
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   ];
 
@@ -1204,7 +1215,7 @@ const ManagerDashboard: React.FC = () => {
       {/* Main Content - Responsive padding */}
       <div className="px-4 sm:px-6 lg:px-8 pb-8">
         {activeTab === 'overview' && renderOverview()}
-        {activeTab === 'insights' && renderInsights()}
+        {activeTab === 'insights' && isAIInsightsEnabled && renderInsights()}
         {activeTab === 'analytics' && renderAnalytics()}
       </div>
     </div>
