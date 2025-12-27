@@ -6,6 +6,7 @@ interface QuoteData {
   quote: string;
   author: string;
   authorTitle: string;
+  authorImageUrl: string | null;
 }
 
 export default function QuoteOfTheDay() {
@@ -83,8 +84,21 @@ export default function QuoteOfTheDay() {
         {/* Author & Footer - Enhanced */}
         <div className="flex items-center justify-between pt-2 border-t border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-purple-600 
-                          flex items-center justify-center text-sm font-bold shadow-lg ring-2 ring-white/20">
+            {quote.authorImageUrl ? (
+              <img 
+                src={quote.authorImageUrl} 
+                alt={quote.author}
+                className="w-10 h-10 rounded-full object-cover shadow-lg ring-2 ring-white/20"
+                onError={(e) => {
+                  // Fallback to initials on image load error
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                }}
+              />
+            ) : null}
+            <div className={`w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-purple-600 
+                          flex items-center justify-center text-sm font-bold shadow-lg ring-2 ring-white/20
+                          ${quote.authorImageUrl ? 'hidden' : ''}`}>
               {quote.author.charAt(0)}
             </div>
             <div>
@@ -96,7 +110,7 @@ export default function QuoteOfTheDay() {
           {/* Subtle badge */}
           <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-white/5 rounded-full border border-white/10">
             <Sparkles className="w-3 h-3 text-indigo-400" />
-            <span className="text-[10px] text-slate-400 font-medium">AI-Powered</span>
+            <span className="text-[10px] text-slate-400 font-medium">Curated</span>
           </div>
         </div>
       </div>

@@ -34,7 +34,7 @@ async function seedQuotes() {
     await pool.query('SELECT NOW()');
     console.log('✅ Connected to database');
 
-    // Drop and recreate the table with new schema (pool-based, no generated_date needed)
+    // Drop and recreate the table with new schema (pool-based with author images)
     console.log('📋 Recreating daily_quotes table with new schema...');
     
     // Drop old table
@@ -47,6 +47,7 @@ async function seedQuotes() {
         quote TEXT NOT NULL,
         author VARCHAR(255) NOT NULL,
         author_title VARCHAR(255) NOT NULL,
+        author_image_url TEXT,
         theme VARCHAR(100) DEFAULT 'growth',
         used_on DATE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -70,8 +71,8 @@ async function seedQuotes() {
 
     for (const q of quotesData) {
       await pool.query(
-        `INSERT INTO daily_quotes (quote, author, author_title, theme) VALUES ($1, $2, $3, $4)`,
-        [q.quote, q.author, q.authorTitle, 'growth']
+        `INSERT INTO daily_quotes (quote, author, author_title, author_image_url, theme) VALUES ($1, $2, $3, $4, $5)`,
+        [q.quote, q.author, q.authorTitle, q.authorImageUrl || null, 'growth']
       );
       inserted++;
       

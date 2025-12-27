@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS daily_quotes (
     quote TEXT NOT NULL,
     author VARCHAR(255) NOT NULL,
     author_title VARCHAR(255) NOT NULL,
+    author_image_url TEXT,  -- Wikipedia image URL for author portrait
     theme VARCHAR(100) DEFAULT 'growth',
     used_on DATE,  -- Tracks when quote was displayed (NULL = never used)
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

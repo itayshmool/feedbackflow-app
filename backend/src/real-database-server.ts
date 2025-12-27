@@ -9701,7 +9701,7 @@ app.get('/api/v1/quote-of-the-day', authenticateToken, async (req: any, res: any
   try {
     // Select a random quote from the pool (fresh each request)
     const randomQuote = await query(`
-      SELECT id, quote, author, author_title 
+      SELECT id, quote, author, author_title, author_image_url 
       FROM daily_quotes 
       ORDER BY RANDOM() 
       LIMIT 1
@@ -9714,7 +9714,8 @@ app.get('/api/v1/quote-of-the-day', authenticateToken, async (req: any, res: any
         data: {
           quote: "The only way to do great work is to love what you do.",
           author: "Steve Jobs",
-          authorTitle: "Co-founder of Apple"
+          authorTitle: "Co-founder of Apple",
+          authorImageUrl: null
         }
       });
     }
@@ -9726,7 +9727,8 @@ app.get('/api/v1/quote-of-the-day', authenticateToken, async (req: any, res: any
       data: {
         quote: selectedQuote.quote,
         author: selectedQuote.author,
-        authorTitle: selectedQuote.author_title
+        authorTitle: selectedQuote.author_title,
+        authorImageUrl: selectedQuote.author_image_url
       }
     });
     
@@ -9738,7 +9740,8 @@ app.get('/api/v1/quote-of-the-day', authenticateToken, async (req: any, res: any
       data: {
         quote: "The only way to do great work is to love what you do.",
         author: "Steve Jobs",
-        authorTitle: "Co-founder of Apple"
+        authorTitle: "Co-founder of Apple",
+        authorImageUrl: null
       }
     });
   }
