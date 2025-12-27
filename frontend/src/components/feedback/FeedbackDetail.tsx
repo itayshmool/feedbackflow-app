@@ -33,6 +33,7 @@ import {
   Mail,
   Building,
   Save,
+  HelpCircle,
 } from 'lucide-react';
 import { PenOff } from '../icons';
 import { createFeedbackDocxBlob } from '../../utils/generateFeedbackDocx';
@@ -84,6 +85,7 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
         areasForImprovement: currentFeedback.content.areasForImprovement || [],
         specificExamples: currentFeedback.content.specificExamples || [],
         recommendations: currentFeedback.content.recommendations || [],
+        whatDoYouNeedFromMe: currentFeedback.content.whatDoYouNeedFromMe || '',
         bottomLine: currentFeedback.content.bottomLine || '',
       });
     }
@@ -713,6 +715,32 @@ export const FeedbackDetail: React.FC<FeedbackDetailProps> = ({
                   </li>
                 ))}
               </ul>
+            )}
+          </Card>
+        )}
+
+        {/* What Do You Need From Me */}
+        {(currentFeedback.content?.whatDoYouNeedFromMe || isEditMode) && (
+          <Card className="p-6 bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-2xl">
+            <SectionHeader 
+              icon={HelpCircle} 
+              iconBg="bg-gradient-to-br from-indigo-500 to-violet-600" 
+              title="What Do You Need From Me?" 
+              subtitle={isEditMode ? "Support, resources, or actions needed from your manager" : undefined}
+            />
+            {isEditMode ? (
+              <textarea
+                className="w-full p-4 border border-gray-200 rounded-xl min-h-28 resize-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 hover:bg-white focus:bg-white"
+                value={editedContent?.whatDoYouNeedFromMe || ''}
+                onChange={(e) => setEditedContent(prev => prev ? { ...prev, whatDoYouNeedFromMe: e.target.value } : undefined)}
+                placeholder="What support, resources, or actions can I provide to help you succeed?"
+              />
+            ) : (
+              <div className="p-4 bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-200 rounded-xl">
+                <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                  {currentFeedback.content?.whatDoYouNeedFromMe}
+                </p>
+              </div>
             )}
           </Card>
         )}
