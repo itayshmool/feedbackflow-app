@@ -67,6 +67,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
   const [areasForImprovement, setAreasForImprovement] = useState<string[]>(['']);
   const [specificExamples, setSpecificExamples] = useState<string[]>(['']);
   const [recommendations, setRecommendations] = useState<string[]>(['']);
+  const [whatDoYouNeedFromMe, setWhatDoYouNeedFromMe] = useState('');
   const [bottomLine, setBottomLine] = useState('');
   const [confidential, setConfidential] = useState(false);
   const [colorClassification, setColorClassification] = useState<FeedbackColorClassification | ''>('');
@@ -309,6 +310,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         areasForImprovement: areasForImprovement.filter((a) => a.trim()),
         specificExamples: specificExamples.filter((e) => e.trim()),
         recommendations: recommendations.filter((r) => r.trim()),
+        whatDoYouNeedFromMe: whatDoYouNeedFromMe.trim() || undefined,
         bottomLine: bottomLine.trim() || undefined,
         confidential,
       },
@@ -370,6 +372,7 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
         areasForImprovement: areasForImprovement.filter((a) => a.trim()),
         specificExamples: specificExamples.filter((e) => e.trim()),
         recommendations: recommendations.filter((r) => r.trim()),
+        whatDoYouNeedFromMe: whatDoYouNeedFromMe.trim() || undefined,
         bottomLine: bottomLine.trim() || undefined,
         confidential,
       },
@@ -826,6 +829,22 @@ export const GiveFeedback: React.FC<GiveFeedbackProps> = ({
             </div>
           </Card>
         )}
+
+        {/* What Do You Need From Me - Collaborative field for feedback meetings */}
+        <Card className="p-6 bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-2xl">
+          <SectionHeader 
+            icon={HelpCircle} 
+            iconBg="bg-gradient-to-br from-indigo-500 to-violet-600" 
+            title="What Do You Need From Me?" 
+            subtitle="A space for both of us to discuss what support, resources, or actions you need from me as your manager."
+          />
+          <textarea
+            className="w-full p-4 border border-gray-200 rounded-xl min-h-28 resize-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50 hover:bg-white focus:bg-white"
+            value={whatDoYouNeedFromMe}
+            onChange={(e) => setWhatDoYouNeedFromMe(e.target.value)}
+            placeholder="What support, resources, or actions can I provide to help you succeed?"
+          />
+        </Card>
 
         {/* Bottom Line */}
         <Card className="p-6 bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-2xl">
