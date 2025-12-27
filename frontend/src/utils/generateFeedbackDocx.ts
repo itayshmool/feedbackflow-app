@@ -261,6 +261,23 @@ export const createFeedbackDocxBlob = async (feedback: Feedback): Promise<DocxGe
     });
   }
 
+  // What Do You Need From Me
+  if (feedback.content?.whatDoYouNeedFromMe) {
+    sections.push(
+      new Paragraph({
+        text: 'What Do You Need From Me',
+        heading: HeadingLevel.HEADING_1,
+        spacing: { before: 400, after: 200 },
+      })
+    );
+    sections.push(
+      new Paragraph({
+        text: feedback.content.whatDoYouNeedFromMe,
+        spacing: { after: 200 },
+      })
+    );
+  }
+
   // Bottom Line
   if (feedback.content?.bottomLine) {
     sections.push(
