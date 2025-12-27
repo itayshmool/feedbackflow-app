@@ -28,6 +28,7 @@ export interface FeedbackBase {
     areasForImprovement: string[];
     specificExamples: string[];
     recommendations: string[];
+    whatDoYouNeedFromMe?: string; // Optional collaborative field for feedback meetings
     confidential: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -160,6 +161,7 @@ export interface FeedbackBase {
       areasForImprovement: string[];
       specificExamples: string[];
       recommendations: string[];
+      whatDoYouNeedFromMe?: string; // Optional collaborative field for feedback meetings
       confidential?: boolean;
     };
     ratings: CreateRatingRequest[];
@@ -190,6 +192,7 @@ export interface FeedbackBase {
       areasForImprovement: string[];
       specificExamples: string[];
       recommendations: string[];
+      whatDoYouNeedFromMe?: string; // Optional collaborative field for feedback meetings
       confidential: boolean;
     }>;
     ratings?: UpdateRatingRequest[];
@@ -285,6 +288,7 @@ export interface FeedbackBase {
     areas_for_improvement: string;
     specific_examples: string;
     recommendations: string;
+    what_do_you_need_from_me?: string; // Optional collaborative field for feedback meetings
     confidential: boolean;
     created_at: Date;
     updated_at: Date;

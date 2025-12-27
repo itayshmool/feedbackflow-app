@@ -61,6 +61,7 @@ export function sanitizeFeedbackContent(content: any): {
   areasForImprovement: string[];
   specificExamples: string[];
   recommendations: string[];
+  whatDoYouNeedFromMe?: string;
   bottomLine?: string;
   confidential: boolean;
 } {
@@ -81,6 +82,7 @@ export function sanitizeFeedbackContent(content: any): {
     areasForImprovement: sanitizeStringArray(content.areasForImprovement),
     specificExamples: sanitizeStringArray(content.specificExamples),
     recommendations: sanitizeStringArray(content.recommendations),
+    whatDoYouNeedFromMe: content.whatDoYouNeedFromMe ? sanitizeString(content.whatDoYouNeedFromMe) : undefined,
     bottomLine: content.bottomLine ? sanitizeString(content.bottomLine) : undefined,
     confidential: Boolean(content.confidential)
   };
