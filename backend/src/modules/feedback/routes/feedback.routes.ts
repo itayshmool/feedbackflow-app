@@ -112,12 +112,22 @@ export function createFeedbackRoutes(
   // ===================
 
   /**
-   * @route   GET /api/v1/feedback/summary/:userId?
+   * @route   GET /api/v1/feedback/summary/:userId
    * @desc    Get feedback summary for user
    * @access  Private (Own summary, Manager for direct reports, HR for all)
    */
   router.get(
-    '/summary/:userId?',
+    '/summary/:userId',
+    feedbackController.getFeedbackSummary
+  );
+  
+  /**
+   * @route   GET /api/v1/feedback/summary
+   * @desc    Get feedback summary for current user
+   * @access  Private
+   */
+  router.get(
+    '/summary',
     feedbackController.getFeedbackSummary
   );
 
@@ -133,12 +143,22 @@ export function createFeedbackRoutes(
   );
 
   /**
-   * @route   GET /api/v1/feedback/stats/user/:userId?
+   * @route   GET /api/v1/feedback/stats/user/:userId
    * @desc    Get user feedback statistics (path param: userId) - DEPRECATED, use /stats?userId=
    * @access  Private (Own stats, Manager for direct reports, HR for all)
    */
   router.get(
-    '/stats/user/:userId?',
+    '/stats/user/:userId',
+    feedbackController.getUserFeedbackStats
+  );
+  
+  /**
+   * @route   GET /api/v1/feedback/stats/user
+   * @desc    Get user feedback statistics for current user - DEPRECATED, use /stats
+   * @access  Private
+   */
+  router.get(
+    '/stats/user',
     feedbackController.getUserFeedbackStats
   );
 
