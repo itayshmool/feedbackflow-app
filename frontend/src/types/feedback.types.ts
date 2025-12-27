@@ -97,6 +97,7 @@ export interface FeedbackContent {
   areasForImprovement: string[];
   specificExamples: string[];
   recommendations: string[];
+  whatDoYouNeedFromMe?: string; // Optional collaborative field for feedback meetings
   bottomLine?: string;
   confidential: boolean;
   createdAt: string;
@@ -186,6 +187,7 @@ export interface CreateFeedbackRequest {
     areasForImprovement: string[];
     specificExamples: string[];
     recommendations: string[];
+    whatDoYouNeedFromMe?: string; // Optional collaborative field for feedback meetings
     bottomLine?: string;
     confidential?: boolean;
   };
@@ -217,6 +219,7 @@ export interface UpdateFeedbackRequest {
     areasForImprovement: string[];
     specificExamples: string[];
     recommendations: string[];
+    whatDoYouNeedFromMe?: string; // Optional collaborative field for feedback meetings
     bottomLine?: string;
     confidential: boolean;
   }>;
