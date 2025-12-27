@@ -27,14 +27,17 @@ interface QuoteItem {
   author: string;
   authorTitle: string;
   category: string;
-  generatedDate: string;
+  usedOn: string | null;
   createdAt: string;
 }
 
 interface QuoteStats {
   totalQuotes: number;
   uniqueAuthors: number;
-  oldestQuote: string | null;
+  displayedQuotes: number;
+  availableQuotes: number;
+  firstUsed: string | null;
+  lastUsed: string | null;
 }
 
 interface Pagination {
@@ -349,8 +352,14 @@ export default function QuoteArchivePage() {
                   </div>
                   
                   <div className="flex items-center gap-2 text-xs text-gray-400 ml-10 sm:ml-0">
-                    <Calendar className="w-3 h-3" />
-                    <span>{format(new Date(quote.generatedDate), 'MMM d, yyyy')}</span>
+                    {quote.usedOn ? (
+                      <>
+                        <Calendar className="w-3 h-3" />
+                        <span>{format(new Date(quote.usedOn), 'MMM d, yyyy')}</span>
+                      </>
+                    ) : (
+                      <span className="text-gray-300">Not yet displayed</span>
+                    )}
                     {quote.category && (
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(quote.category)}`}>
                         {quote.category}
