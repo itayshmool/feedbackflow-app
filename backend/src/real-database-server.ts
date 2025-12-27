@@ -9630,86 +9630,59 @@ GUIDELINES:
 // QUOTE OF THE DAY - TEST ENDPOINT
 // ===========================================
 
-const QUOTES_LIMIT = 300;
-
-// Categories for random selection to ensure variety
-const QUOTE_CATEGORIES = [
-  'ancient Greek philosopher',
-  'Roman Stoic philosopher',
-  'Renaissance artist or inventor',
-  'Enlightenment thinker',
-  'modern psychologist',
-  'tech entrepreneur or innovator',
-  'civil rights leader',
-  'scientist or physicist',
-  'author or poet',
-  'business leader or CEO',
-  'spiritual leader',
-  'political leader',
-  'athlete or sports coach',
-  'educator or academic',
-  'Eastern philosopher (Chinese, Japanese, Indian)',
-  'self-help author',
-  'military leader or strategist',
-  'economist or management thinker'
-];
-
-// TEST ENDPOINT - generates a fresh quote every time (bypasses cache for testing)
+// TEST ENDPOINT - returns a random quote from pool (bypasses daily caching for testing)
 app.get('/api/v1/test/quote-of-the-day', async (req: any, res: any) => {
   try {
-    // Pick a random category for variety
-    const randomCategory = QUOTE_CATEGORIES[Math.floor(Math.random() * QUOTE_CATEGORIES.length)];
-    const randomSeed = Math.floor(Math.random() * 10000);
+    console.log('🧪 TEST: Fetching random quote from pool...');
     
-    console.log(`🧪 TEST: Generating quote (category: ${randomCategory}, seed: ${randomSeed})...`);
-    
-    const prompt = `You are a curator of inspirational wisdom focused on PERSONAL GROWTH.
-
-For this request, focus on a ${randomCategory}.
-
-Pick ONE famous person from this category who has spoken about:
-- Personal growth & self-improvement
-- Learning from failure & resilience
-- Continuous improvement & progress
-- The value of feedback & self-reflection
-- Embracing challenges & change
-
-Then provide ONE real, verified quote from them.
-
-CRITICAL REQUIREMENTS:
-- Must be a ${randomCategory}
-- Must be a REAL person who actually existed
-- Must be a REAL quote they actually said/wrote (no fabrications)
-- Keep the quote concise (1-2 sentences max)
-- Random seed for variety: ${randomSeed}
-
-Return ONLY a JSON object:
-{
-  "author": "Full name of the person",
-  "authorTitle": "Their most known title/role",
-  "quote": "The exact verified quote"
-}`;
-
     const startTime = Date.now();
-    const aiResponse = await generateAIContent(prompt, { maxTokens: 300 });
-    const aiTime = Date.now() - startTime;
     
-    const parsed = parseAIJsonResponse(aiResponse.text);
+    // Get a random quote from the pool (ignores used_on)
+    const randomQuote = await query(`
+      SELECT id, quote, author, author_title, used_on, created_at
+      FROM daily_quotes 
+      ORDER BY RANDOM() 
+      LIMIT 1
+    `);
     
-    console.log(`✅ AI responded in ${aiTime}ms: ${parsed.author}`);
+    const fetchTime = Date.now() - startTime;
+    
+    if (randomQuote.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'No quotes in database. Run: node scripts/seed-quotes.js <DATABASE_URL>' 
+      });
+    }
+    
+    const quote = randomQuote.rows[0];
+    
+    // Get pool stats
+    const statsResult = await query(`
+      SELECT 
+        COUNT(*) as total,
+        COUNT(used_on) as used,
+        COUNT(*) - COUNT(used_on) as available
+      FROM daily_quotes
+    `);
+    const stats = statsResult.rows[0];
     
     const result = {
-      quote: parsed.quote,
-      author: parsed.author,
-      authorTitle: parsed.authorTitle,
+      quote: quote.quote,
+      author: quote.author,
+      authorTitle: quote.author_title,
       _debug: {
-        aiResponseTime: `${aiTime}ms`,
-        aiProvider: aiResponse.provider || 'unknown',
-        category: randomCategory
+        fetchTime: `${fetchTime}ms`,
+        quoteId: quote.id,
+        usedOn: quote.used_on,
+        poolStats: {
+          total: parseInt(stats.total),
+          used: parseInt(stats.used),
+          available: parseInt(stats.available)
+        }
       }
     };
     
-    console.log('🧪 TEST RESULT:', JSON.stringify(result, null, 2));
+    console.log(`🧪 TEST RESULT: "${quote.quote.substring(0, 40)}..." - ${quote.author}`);
     
     res.json({ success: true, data: result });
     
@@ -9723,102 +9696,81 @@ Return ONLY a JSON object:
   }
 });
 
-// PRODUCTION ENDPOINT - uses database caching (one quote per day)
+// PRODUCTION ENDPOINT - selects random quote from pre-seeded pool (no AI)
 app.get('/api/v1/quote-of-the-day', authenticateToken, async (req: any, res: any) => {
   try {
     // Use Israel timezone (Asia/Jerusalem) for consistent daily quotes
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
     
-    // Check if we already have a quote for today
-    const existingQuote = await query(
-      'SELECT quote, author, author_title FROM daily_quotes WHERE generated_date = $1 LIMIT 1',
+    // Check if we already displayed a quote today
+    const todaysQuote = await query(
+      'SELECT quote, author, author_title FROM daily_quotes WHERE used_on = $1 LIMIT 1',
       [today]
     );
     
-    if (existingQuote.rows.length > 0) {
+    if (todaysQuote.rows.length > 0) {
       return res.json({ 
         success: true, 
         data: {
-          quote: existingQuote.rows[0].quote,
-          author: existingQuote.rows[0].author,
-          authorTitle: existingQuote.rows[0].author_title
+          quote: todaysQuote.rows[0].quote,
+          author: todaysQuote.rows[0].author,
+          authorTitle: todaysQuote.rows[0].author_title
         }
       });
     }
     
-    // Pick category based on day of year (deterministic for same day)
-    const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
-    const categoryIndex = dayOfYear % QUOTE_CATEGORIES.length;
-    const category = QUOTE_CATEGORIES[categoryIndex];
+    // Select a random unused quote from the pool
+    let randomQuote = await query(`
+      SELECT id, quote, author, author_title 
+      FROM daily_quotes 
+      WHERE used_on IS NULL
+      ORDER BY RANDOM() 
+      LIMIT 1
+    `);
     
-    const prompt = `You are a curator of inspirational wisdom focused on PERSONAL GROWTH.
-
-For today, focus on a ${category}.
-
-Pick ONE famous person from this category who has spoken about:
-- Personal growth & self-improvement
-- Learning from failure & resilience
-- Continuous improvement & progress
-- The value of feedback & self-reflection
-- Embracing challenges & change
-
-Then provide ONE real, verified quote from them.
-
-CRITICAL REQUIREMENTS:
-- Must be a ${category}
-- Must be a REAL person who actually existed
-- Must be a REAL quote they actually said/wrote (no fabrications)
-- Keep the quote concise (1-2 sentences max)
-
-Return ONLY a JSON object:
-{
-  "author": "Full name of the person",
-  "authorTitle": "Their most known title/role",
-  "quote": "The exact verified quote"
-}`;
-
-    console.log(`🤖 Generating quote of the day (category: ${category})...`);
-    const aiResponse = await generateAIContent(prompt, { maxTokens: 300 });
-    const parsed = parseAIJsonResponse(aiResponse.text);
-    
-    // Enforce the 300 record limit (FIFO - delete oldest)
-    const countResult = await query('SELECT COUNT(*) as count FROM daily_quotes');
-    const currentCount = parseInt(countResult.rows[0].count, 10);
-    
-    if (currentCount >= QUOTES_LIMIT) {
-      const toDelete = currentCount - QUOTES_LIMIT + 1;
-      await query(`
-        DELETE FROM daily_quotes 
-        WHERE id IN (
-          SELECT id FROM daily_quotes 
-          ORDER BY created_at ASC 
-          LIMIT $1
-        )
-      `, [toDelete]);
-      console.log(`🗑️ Deleted ${toDelete} old quote(s) to maintain ${QUOTES_LIMIT} limit`);
+    // If all quotes have been used, reset the pool and pick again
+    if (randomQuote.rows.length === 0) {
+      console.log('🔄 All quotes used, resetting pool...');
+      await query('UPDATE daily_quotes SET used_on = NULL');
+      randomQuote = await query(`
+        SELECT id, quote, author, author_title 
+        FROM daily_quotes 
+        ORDER BY RANDOM() 
+        LIMIT 1
+      `);
     }
     
-    // Insert the new quote
-    await query(
-      `INSERT INTO daily_quotes (quote, author, author_title, theme, generated_date) 
-       VALUES ($1, $2, $3, $4, $5)`,
-      [parsed.quote, parsed.author, parsed.authorTitle, 'growth', today]
-    );
+    const selectedQuote = randomQuote.rows[0];
     
-    console.log(`✅ Quote saved: "${parsed.quote.substring(0, 50)}..." - ${parsed.author}`);
+    if (!selectedQuote) {
+      // Fallback if no quotes in database
+      return res.json({ 
+        success: true, 
+        data: {
+          quote: "The only way to do great work is to love what you do.",
+          author: "Steve Jobs",
+          authorTitle: "Co-founder of Apple"
+        }
+      });
+    }
+    
+    // Mark quote as used today
+    await query('UPDATE daily_quotes SET used_on = $1 WHERE id = $2', [today, selectedQuote.id]);
+    
+    console.log(`📜 Quote of the day: "${selectedQuote.quote.substring(0, 40)}..." - ${selectedQuote.author}`);
     
     res.json({ 
       success: true, 
       data: {
-        quote: parsed.quote,
-        author: parsed.author,
-        authorTitle: parsed.authorTitle
+        quote: selectedQuote.quote,
+        author: selectedQuote.author,
+        authorTitle: selectedQuote.author_title
       }
     });
     
   } catch (error: any) {
-    console.error('Quote generation error:', error);
-    // Fallback quote if AI fails
+    console.error('Quote fetch error:', error);
+    // Fallback quote if database fails
     res.json({ 
       success: true, 
       data: {
@@ -9871,13 +9823,13 @@ app.get('/api/v1/quotes/archive', authenticateToken, async (req: any, res: any) 
     }
     
     if (startDate) {
-      whereConditions.push(`generated_date >= $${paramIndex}`);
+      whereConditions.push(`used_on >= $${paramIndex}`);
       queryParams.push(startDate);
       paramIndex++;
     }
     
     if (endDate) {
-      whereConditions.push(`generated_date <= $${paramIndex}`);
+      whereConditions.push(`used_on <= $${paramIndex}`);
       queryParams.push(endDate);
       paramIndex++;
     }
@@ -9895,10 +9847,10 @@ app.get('/api/v1/quotes/archive', authenticateToken, async (req: any, res: any) 
     
     // Get quotes with pagination
     const quotesResult = await query(
-      `SELECT id, quote, author, author_title, theme, generated_date, created_at 
+      `SELECT id, quote, author, author_title, theme, used_on, created_at 
        FROM daily_quotes 
        ${whereClause}
-       ORDER BY generated_date DESC, created_at DESC
+       ORDER BY used_on DESC NULLS LAST, created_at DESC
        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
       [...queryParams, limitNum, offset]
     );
@@ -9909,7 +9861,7 @@ app.get('/api/v1/quotes/archive', authenticateToken, async (req: any, res: any) 
       author: row.author,
       authorTitle: row.author_title,
       category: row.theme || 'growth',
-      generatedDate: row.generated_date,
+      usedOn: row.used_on,
       createdAt: row.created_at
     }));
     
@@ -9956,16 +9908,28 @@ app.get('/api/v1/quotes/authors', authenticateToken, async (req: any, res: any) 
 // Get quote statistics
 app.get('/api/v1/quotes/stats', authenticateToken, async (req: any, res: any) => {
   try {
-    const totalResult = await query('SELECT COUNT(*) FROM daily_quotes');
-    const authorsResult = await query('SELECT COUNT(DISTINCT author) FROM daily_quotes');
-    const oldestResult = await query('SELECT MIN(generated_date) as oldest FROM daily_quotes');
+    const statsResult = await query(`
+      SELECT 
+        COUNT(*) as total,
+        COUNT(DISTINCT author) as unique_authors,
+        COUNT(used_on) as displayed,
+        COUNT(*) - COUNT(used_on) as available,
+        MIN(used_on) as first_used,
+        MAX(used_on) as last_used
+      FROM daily_quotes
+    `);
+    
+    const stats = statsResult.rows[0];
     
     res.json({
       success: true,
       data: {
-        totalQuotes: parseInt(totalResult.rows[0].count),
-        uniqueAuthors: parseInt(authorsResult.rows[0].count),
-        oldestQuote: oldestResult.rows[0].oldest
+        totalQuotes: parseInt(stats.total),
+        uniqueAuthors: parseInt(stats.unique_authors),
+        displayedQuotes: parseInt(stats.displayed),
+        availableQuotes: parseInt(stats.available),
+        firstUsed: stats.first_used,
+        lastUsed: stats.last_used
       }
     });
   } catch (error: any) {
