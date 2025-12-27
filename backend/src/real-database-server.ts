@@ -6306,6 +6306,7 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
       areasForImprovement: content?.areasForImprovement || [],
       specificExamples: content?.specificExamples || [],
       recommendations: content?.recommendations || [],
+      whatDoYouNeedFromMe: content?.whatDoYouNeedFromMe || undefined,
       bottomLine: content?.bottomLine || undefined,
       confidential: content?.confidential || false
     });
@@ -6605,6 +6606,7 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
       areasForImprovement: updates.content?.areasForImprovement ?? existingContent.areasForImprovement ?? [],
       specificExamples: updates.content?.specificExamples ?? existingContent.specificExamples ?? [],
       recommendations: updates.content?.recommendations ?? existingContent.recommendations ?? [],
+      whatDoYouNeedFromMe: updates.content?.whatDoYouNeedFromMe ?? existingContent.whatDoYouNeedFromMe ?? undefined,
       bottomLine: updates.content?.bottomLine ?? existingContent.bottomLine ?? undefined,
       confidential: updates.content?.confidential ?? existingContent.confidential ?? false
     });

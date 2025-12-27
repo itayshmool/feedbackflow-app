@@ -1,17 +1,24 @@
--- Migration: Add "What do you need from me" field to feedback responses
+-- Migration: "What do you need from me" field for feedback
 -- Purpose: Collaborative field for manager-employee feedback meetings
--- Safe for production: nullable column, no data modification, backward compatible
 -- Date: 2024-12-27
+--
+-- NOTE: This field is stored within the JSON 'content' column of feedback_responses,
+-- NOT as a separate database column. This is consistent with how other content fields
+-- (overallComment, strengths, areasForImprovement, etc.) are stored.
+--
+-- The field is automatically included when:
+-- 1. Creating feedback via POST /api/v1/feedback
+-- 2. Updating feedback via PUT /api/v1/feedback/:id
+-- 3. Retrieving feedback via GET /api/v1/feedback/:id
+--
+-- No database schema changes required - this migration file serves as documentation.
+--
+-- Field details:
+-- - Name in JSON: whatDoYouNeedFromMe
+-- - Type: string (optional)
+-- - Purpose: Captures what support, resources, or actions the employee needs from their manager
+-- - Visibility: Shown to both giver and receiver
+-- - XSS Protection: Sanitized via sanitizeFeedbackContent()
 
--- Add the new column to feedback_responses table
--- This is where structured feedback content is stored as JSON
-ALTER TABLE feedback_responses 
-ADD COLUMN IF NOT EXISTS what_do_you_need_from_me TEXT;
-
--- Add comment for documentation
-COMMENT ON COLUMN feedback_responses.what_do_you_need_from_me IS 
-'Optional collaborative field for feedback meetings - captures what support, resources, or actions the employee needs from their manager';
-
--- Note: This migration is safe to run multiple times due to IF NOT EXISTS
--- No index needed as this field is not used for filtering/searching
-
+-- This is a documentation-only migration. No SQL statements needed.
+SELECT 'whatDoYouNeedFromMe field is stored in feedback_responses.content JSON column' AS migration_note;
