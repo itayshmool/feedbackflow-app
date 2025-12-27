@@ -9696,53 +9696,18 @@ app.get('/api/v1/test/quote-of-the-day', async (req: any, res: any) => {
   }
 });
 
-// PRODUCTION ENDPOINT - selects random quote from pre-seeded pool (no AI)
+// PRODUCTION ENDPOINT - selects random quote from pre-seeded pool (fresh each request)
 app.get('/api/v1/quote-of-the-day', authenticateToken, async (req: any, res: any) => {
   try {
-    // Use Israel timezone (Asia/Jerusalem) for consistent daily quotes
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
-    
-    // Check if we already displayed a quote today
-    const todaysQuote = await query(
-      'SELECT quote, author, author_title FROM daily_quotes WHERE used_on = $1 LIMIT 1',
-      [today]
-    );
-    
-    if (todaysQuote.rows.length > 0) {
-      return res.json({ 
-        success: true, 
-        data: {
-          quote: todaysQuote.rows[0].quote,
-          author: todaysQuote.rows[0].author,
-          authorTitle: todaysQuote.rows[0].author_title
-        }
-      });
-    }
-    
-    // Select a random unused quote from the pool
-    let randomQuote = await query(`
+    // Select a random quote from the pool (fresh each request)
+    const randomQuote = await query(`
       SELECT id, quote, author, author_title 
       FROM daily_quotes 
-      WHERE used_on IS NULL
       ORDER BY RANDOM() 
       LIMIT 1
     `);
     
-    // If all quotes have been used, reset the pool and pick again
     if (randomQuote.rows.length === 0) {
-      console.log('🔄 All quotes used, resetting pool...');
-      await query('UPDATE daily_quotes SET used_on = NULL');
-      randomQuote = await query(`
-        SELECT id, quote, author, author_title 
-        FROM daily_quotes 
-        ORDER BY RANDOM() 
-        LIMIT 1
-      `);
-    }
-    
-    const selectedQuote = randomQuote.rows[0];
-    
-    if (!selectedQuote) {
       // Fallback if no quotes in database
       return res.json({ 
         success: true, 
@@ -9754,10 +9719,7 @@ app.get('/api/v1/quote-of-the-day', authenticateToken, async (req: any, res: any
       });
     }
     
-    // Mark quote as used today
-    await query('UPDATE daily_quotes SET used_on = $1 WHERE id = $2', [today, selectedQuote.id]);
-    
-    console.log(`📜 Quote of the day: "${selectedQuote.quote.substring(0, 40)}..." - ${selectedQuote.author}`);
+    const selectedQuote = randomQuote.rows[0];
     
     res.json({ 
       success: true, 
