@@ -626,6 +626,53 @@ npm run dev --workspace=frontend
 3. Test passes
 4. Refactor
 
+### ⚠️ CRITICAL: Write-Read Tests for New Fields (Lesson Learned)
+
+**When adding a new field to the database or API, you MUST write a simple write-read test:**
+
+```typescript
+it('should persist newField in database', async () => {
+  // 1. CREATE with the new field
+  const createResponse = await request(app)
+    .post('/api/v1/resource')
+    .send({ newField: 'test value' });
+  
+  const resourceId = createResponse.body.data.id;
+  
+  // 2. Verify in CREATE response
+  expect(createResponse.body.data.newField).toBe('test value');
+  
+  // 3. Query DATABASE directly (don't trust API response alone!)
+  const dbResult = await query(
+    'SELECT content FROM table WHERE id = $1',
+    [resourceId]
+  );
+  const dbContent = JSON.parse(dbResult.rows[0].content);
+  
+  // 4. CRITICAL: Verify field is actually stored
+  expect(dbContent.newField).toBe('test value');
+  
+  // 5. Verify GET response also includes it
+  const getResponse = await request(app)
+    .get(`/api/v1/resource/${resourceId}`);
+  expect(getResponse.body.data.newField).toBe('test value');
+});
+```
+
+**Why this matters:**
+- Code review is NOT sufficient - you must execute the code
+- A field can be "in the code" but not actually stored/returned
+- The bug may be in: request parsing, database INSERT, response construction
+- Querying the database directly catches storage bugs that API-only tests miss
+
+**Real Bug Example:**
+A new field `whatDoYouNeedFromMe` was added. The code "looked correct" but:
+- The field was stored in the database ✅
+- The GET response included it ✅  
+- The CREATE response was **missing** it ❌
+
+A simple write-read test would have caught this immediately.
+
 ### Test Pyramid
 ```
        /\

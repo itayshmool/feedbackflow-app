@@ -6450,6 +6450,7 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
         areasForImprovement: structuredContent.areasForImprovement,
         specificExamples: structuredContent.specificExamples,
         recommendations: structuredContent.recommendations,
+        whatDoYouNeedFromMe: structuredContent.whatDoYouNeedFromMe,
         bottomLine: structuredContent.bottomLine,
         confidential: structuredContent.confidential,
         createdAt: responseResult.rows[0].created_at,
