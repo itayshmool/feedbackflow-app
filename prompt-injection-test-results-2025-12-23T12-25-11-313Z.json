@@ -1,0 +1,57 @@
+{
+  "timestamp": "2025-12-23T12:25:11.313Z",
+  "environment": "staging",
+  "url": "https://feedbackflow-backend-staging.onrender.com",
+  "results": [
+    {
+      "testName": "Email Extraction Attack (Original Report)",
+      "status": 401,
+      "vulnerable": false,
+      "detectedIndicators": [],
+      "response": {
+        "success": false,
+        "error": "Invalid or expired token"
+      }
+    },
+    {
+      "testName": "System Prompt Override",
+      "status": 401,
+      "vulnerable": false,
+      "detectedIndicators": [],
+      "response": {
+        "success": false,
+        "error": "Invalid or expired token"
+      }
+    },
+    {
+      "testName": "Role Manipulation Attack",
+      "status": 401,
+      "vulnerable": false,
+      "detectedIndicators": [],
+      "response": {
+        "success": false,
+        "error": "Invalid or expired token"
+      }
+    },
+    {
+      "testName": "Data Exfiltration via Department",
+      "status": 401,
+      "vulnerable": false,
+      "detectedIndicators": [],
+      "response": {
+        "success": false,
+        "error": "Invalid or expired token"
+      }
+    },
+    {
+      "testName": "Newline Injection",
+      "status": 401,
+      "vulnerable": false,
+      "detectedIndicators": [],
+      "response": {
+        "success": false,
+        "error": "Invalid or expired token"
+      }
+    }
+  ]
+}
