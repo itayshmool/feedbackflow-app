@@ -1,5 +1,5 @@
 import React from 'react';
-import { Wrench } from 'lucide-react';
+import { Wrench, Gamepad2 } from 'lucide-react';
 
 const MaintenancePage: React.FC = () => {
   return (
@@ -38,6 +38,27 @@ const MaintenancePage: React.FC = () => {
               <span className="text-sm font-medium text-gray-700">
                 Maintenance in Progress
               </span>
+            </div>
+          </div>
+
+          {/* Fun Game Link */}
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <div className="text-center">
+              <p className="text-gray-600 mb-3 flex items-center justify-center gap-2">
+                <Gamepad2 className="w-5 h-5 text-purple-600" />
+                <span className="text-base">In the meanwhile, let's play cards!</span>
+              </p>
+              <a
+                href="https://set-game-frontend.onrender.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all transform hover:scale-105 font-medium shadow-lg"
+              >
+                🎴 Play SET Game
+              </a>
+              <p className="text-xs text-gray-500 mt-3">
+                Test your pattern-matching skills while you wait
+              </p>
             </div>
           </div>
         </div>
