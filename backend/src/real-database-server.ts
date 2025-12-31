@@ -26,6 +26,7 @@ import { rateLimit } from './shared/middleware/rate-limit.middleware.js';
 import { validateSortColumn, validateSortOrder } from './shared/utils/sql-security.js';
 import { csrfProtection, setCsrfToken, clearCsrfToken, csrfTokenHandler } from './shared/middleware/csrf.middleware.js';
 import { sanitizePromptInput, validateFeedbackType } from './shared/utils/prompt-security.js';
+import { checkMaintenanceMode } from './shared/middleware/maintenance.middleware.js';
 
 // Rate limiters for auth endpoints (prevents credential stuffing/brute force)
 const authRateLimit = rateLimit({
@@ -183,6 +184,14 @@ app.get('/api/v1/health', (req, res) => {
 // CSRF token endpoint - returns current token or generates new one
 // Frontend should call this on app initialization
 app.get('/api/v1/csrf-token', csrfTokenHandler);
+
+// ============================================================================
+// Maintenance Mode Middleware
+// ============================================================================
+// Apply maintenance mode check for all API routes
+// This will block all requests except auth, health, and maintenance-status endpoints
+// when MAINTENANCE_MODE=true environment variable is set
+app.use(checkMaintenanceMode);
 
 // Configure multer for template file uploads - use memory storage to store in database
 const upload = multer({
@@ -9909,6 +9918,22 @@ app.get('/api/v1/quotes/stats', authenticateToken, async (req: any, res: any) =>
     console.error('Quotes stats error:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch stats' });
   }
+});
+
+// ============================================================================
+// Maintenance Mode Status Endpoint
+// ============================================================================
+// Returns current maintenance mode status
+// Used by frontend to check if system is in maintenance mode
+app.get('/api/v1/maintenance-status', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      maintenance: process.env.MAINTENANCE_MODE === 'true',
+      message: 'We are currently performing system maintenance to improve security and performance. Please check back soon.',
+      estimatedDuration: '30-60 minutes'
+    }
+  });
 });
 
 // Error handling middleware

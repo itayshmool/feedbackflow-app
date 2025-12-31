@@ -36,6 +36,7 @@ import TeamPage from './pages/team/TeamPage';
 import QuoteArchivePage from './pages/quotes/QuoteArchivePage';
 import NotFoundPage from './pages/NotFoundPage';
 import QuoteTest from './pages/test/QuoteTest';
+import MaintenancePage from './pages/MaintenancePage';
 
 // Layout
 import Layout from './components/layout/Layout';
@@ -55,6 +56,10 @@ const AppRouter: React.FC = () => {
     {
       path: '/test/quote',
       element: <QuoteTest />,
+    },
+    {
+      path: '/maintenance',
+      element: <MaintenancePage />,
     },
     {
       path: '/',
