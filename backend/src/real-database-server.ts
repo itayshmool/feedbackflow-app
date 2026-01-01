@@ -153,6 +153,21 @@ app.use(cookieParser());
 // Uses Double Submit Cookie pattern: cookie + header must match
 app.use(csrfProtection);
 
+// ============================================================================
+// IP Whitelist (Optional - controlled via IP_WHITELIST environment variable)
+// ============================================================================
+// When IP_WHITELIST is set, only requests from whitelisted IPs are allowed
+// Format: IP_WHITELIST="1.2.3.4,5.6.7.8,192.168.1.0/24"
+// Supports individual IPs and CIDR ranges
+// If not set, all IPs are allowed (no restriction)
+import { initializeIPWhitelist } from './shared/middleware/ip-whitelist.middleware.js';
+
+const ipWhitelistMiddleware = initializeIPWhitelist();
+if (ipWhitelistMiddleware) {
+  app.use(ipWhitelistMiddleware);
+  console.log('✅ IP Whitelist protection enabled');
+}
+
 // Test database connection on startup
 testConnection().then((connected) => {
   if (connected) {
