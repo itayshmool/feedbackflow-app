@@ -13,9 +13,13 @@ import { Request, Response, NextFunction } from 'express';
  * EMAIL_WHITELIST="user1@company.com,user2@company.com"
  * EMAIL_DOMAIN_WHITELIST="@company.com,@partner.com"
  * 
- * Hierarchy (checked in order):
- * 1. Domain whitelist (fast check for entire domains)
- * 2. Individual email whitelist (specific external users)
+ * Hierarchy (OVERRIDE logic):
+ * - If EMAIL_WHITELIST has values → ONLY those specific emails allowed (domain ignored)
+ * - If EMAIL_WHITELIST is empty/not set → Use domain whitelist
+ * 
+ * Examples:
+ * 1. EMAIL_DOMAIN_WHITELIST="@wix.com", EMAIL_WHITELIST="" → All @wix.com allowed
+ * 2. EMAIL_DOMAIN_WHITELIST="@wix.com", EMAIL_WHITELIST="john@wix.com" → ONLY john@wix.com allowed
  * 
  * If both are not set, all authenticated emails are allowed (disabled).
  */
@@ -46,6 +50,10 @@ function normalizeEmail(email: string): string {
 
 /**
  * Check if email is whitelisted
+ * 
+ * OVERRIDE HIERARCHY:
+ * - If EMAIL_WHITELIST has values → check ONLY that list (ignore domain)
+ * - If EMAIL_WHITELIST is empty → check domain whitelist
  */
 function isEmailWhitelisted(
   email: string,
@@ -55,19 +63,26 @@ function isEmailWhitelisted(
   const normalizedEmail = normalizeEmail(email);
   const domain = extractDomain(normalizedEmail);
 
-  // Priority 1: Check domain whitelist first (fast for entire organizations)
+  // If EMAIL_WHITELIST has values, ONLY check that list (ignore domain)
+  if (emailWhitelist.length > 0) {
+    if (emailWhitelist.includes(normalizedEmail)) {
+      return {
+        allowed: true,
+        reason: 'in EMAIL_WHITELIST (domain ignored)'
+      };
+    }
+    // Email not in individual list - block (even if domain matches)
+    return {
+      allowed: false,
+      reason: 'not in EMAIL_WHITELIST (domain whitelist ignored when EMAIL_WHITELIST is set)'
+    };
+  }
+
+  // EMAIL_WHITELIST is empty - check domain whitelist
   if (domainWhitelist.length > 0 && domainWhitelist.includes(domain)) {
     return {
       allowed: true,
       reason: `domain ${domain} whitelisted`
-    };
-  }
-
-  // Priority 2: Check individual email whitelist
-  if (emailWhitelist.length > 0 && emailWhitelist.includes(normalizedEmail)) {
-    return {
-      allowed: true,
-      reason: 'in EMAIL_WHITELIST'
     };
   }
 
@@ -98,16 +113,26 @@ export function createEmailWhitelistMiddleware(options: EmailWhitelistOptions) {
     console.warn('⚠️  Email Whitelist is empty - all emails will be blocked!');
   } else {
     console.log(`🔒 Email Whitelist enabled:`);
-    if (cleanDomainWhitelist.length > 0) {
+    
+    // Show hierarchy mode
+    if (cleanEmailWhitelist.length > 0) {
+      console.log(`   ⚠️  OVERRIDE MODE: EMAIL_WHITELIST is set - domain whitelist will be IGNORED`);
+      console.log(`   📧 ONLY these specific emails allowed: ${cleanEmailWhitelist.length} entries`);
+      cleanEmailWhitelist.forEach(email => {
+        console.log(`      - ${email}`);
+      });
+      if (cleanDomainWhitelist.length > 0) {
+        console.log(`   ⏭️  Domain whitelist IGNORED (${cleanDomainWhitelist.length} entries):`);
+        cleanDomainWhitelist.forEach(domain => {
+          console.log(`      - ${domain} (not used)`);
+        });
+      }
+    } else {
+      // EMAIL_WHITELIST is empty - use domain whitelist
+      console.log(`   📧 Domain mode: EMAIL_WHITELIST is empty, using domain whitelist`);
       console.log(`   📧 Domains: ${cleanDomainWhitelist.length} entries`);
       cleanDomainWhitelist.forEach(domain => {
         console.log(`      - ${domain}`);
-      });
-    }
-    if (cleanEmailWhitelist.length > 0) {
-      console.log(`   📧 Specific emails: ${cleanEmailWhitelist.length} entries`);
-      cleanEmailWhitelist.forEach(email => {
-        console.log(`      - ${email}`);
       });
     }
   }

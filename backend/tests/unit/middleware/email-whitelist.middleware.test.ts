@@ -193,20 +193,22 @@ describe('Email Whitelist Middleware', () => {
     });
   });
 
-  describe('Combined Domain + Email Whitelist', () => {
-    it('should allow email from whitelisted domain', () => {
+  describe('Combined Domain + Email Whitelist (OVERRIDE LOGIC)', () => {
+    it('should BLOCK email from whitelisted domain when EMAIL_WHITELIST is set (override mode)', () => {
       const middleware = createEmailWhitelistMiddleware({
         emailWhitelist: ['contractor@external.com'],
         domainWhitelist: ['@wix.com']
       });
 
+      // employee@wix.com is BLOCKED because EMAIL_WHITELIST overrides domain
       mockReq.user = { email: 'employee@wix.com' } as any;
       middleware(mockReq as Request, mockRes as Response, mockNext);
 
-      expect(mockNext).toHaveBeenCalled();
+      expect(mockNext).not.toHaveBeenCalled();
+      expect(statusMock).toHaveBeenCalledWith(403);
     });
 
-    it('should allow specific email not from whitelisted domain', () => {
+    it('should allow specific email when EMAIL_WHITELIST is set', () => {
       const middleware = createEmailWhitelistMiddleware({
         emailWhitelist: ['contractor@external.com'],
         domainWhitelist: ['@wix.com']
@@ -231,20 +233,45 @@ describe('Email Whitelist Middleware', () => {
       expect(statusMock).toHaveBeenCalledWith(403);
     });
 
-    it('should prioritize domain check over email check', () => {
+    it('should use EMAIL_WHITELIST and ignore domain when EMAIL_WHITELIST is set', () => {
       const logSpy = jest.spyOn(console, 'log');
       const middleware = createEmailWhitelistMiddleware({
-        emailWhitelist: ['user@wix.com'], // Also in individual list
+        emailWhitelist: ['user@wix.com'], // Only this email allowed
+        domainWhitelist: ['@wix.com']      // This is IGNORED
+      });
+
+      // user@wix.com is allowed (in EMAIL_WHITELIST)
+      mockReq.user = { email: 'user@wix.com' } as any;
+      middleware(mockReq as Request, mockRes as Response, mockNext);
+      expect(mockNext).toHaveBeenCalled();
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('in EMAIL_WHITELIST (domain ignored)')
+      );
+
+      // other@wix.com is BLOCKED (not in EMAIL_WHITELIST, domain ignored)
+      mockNext.mockClear();
+      statusMock.mockClear();
+      mockReq.user = { email: 'other@wix.com' } as any;
+      middleware(mockReq as Request, mockRes as Response, mockNext);
+      expect(mockNext).not.toHaveBeenCalled();
+      expect(statusMock).toHaveBeenCalledWith(403);
+    });
+
+    it('should use domain whitelist when EMAIL_WHITELIST is empty', () => {
+      const middleware = createEmailWhitelistMiddleware({
+        emailWhitelist: [],              // Empty - use domain
         domainWhitelist: ['@wix.com']
       });
 
-      mockReq.user = { email: 'user@wix.com' } as any;
+      // ANY @wix.com email is allowed
+      mockReq.user = { email: 'employee@wix.com' } as any;
       middleware(mockReq as Request, mockRes as Response, mockNext);
-
       expect(mockNext).toHaveBeenCalled();
-      expect(logSpy).toHaveBeenCalledWith(
-        expect.stringContaining('domain @wix.com whitelisted')
-      );
+
+      mockNext.mockClear();
+      mockReq.user = { email: 'another@wix.com' } as any;
+      middleware(mockReq as Request, mockRes as Response, mockNext);
+      expect(mockNext).toHaveBeenCalled();
     });
   });
 
@@ -452,7 +479,7 @@ describe('Email Whitelist Middleware', () => {
       middleware(mockReq as Request, mockRes as Response, mockNext);
 
       expect(logSpy).toHaveBeenCalledWith(
-        expect.stringContaining('✅ Email user@external.com allowed (in EMAIL_WHITELIST)')
+        expect.stringContaining('✅ Email user@external.com allowed (in EMAIL_WHITELIST (domain ignored))')
       );
     });
 
