@@ -168,6 +168,24 @@ if (ipWhitelistMiddleware) {
   console.log('✅ IP Whitelist protection enabled');
 }
 
+// ============================================================================
+// Email Whitelist (Optional - controlled via EMAIL_WHITELIST/EMAIL_DOMAIN_WHITELIST)
+// ============================================================================
+// When EMAIL_WHITELIST or EMAIL_DOMAIN_WHITELIST is set, only authenticated users
+// with whitelisted emails can access the application
+// Format: 
+//   EMAIL_WHITELIST="user1@company.com,user2@external.com"
+//   EMAIL_DOMAIN_WHITELIST="@company.com,@wix.com"
+// Supports:
+//   - Individual emails: user@company.com
+//   - Domain wildcards: @company.com (any email from domain)
+// Hierarchy: Domain check first, then individual emails
+// If neither is set, all authenticated users are allowed (no restriction)
+// Note: Applied to all /api/v1 routes (except health), runs AFTER authentication
+import { initializeEmailWhitelist } from './shared/middleware/email-whitelist.middleware.js';
+
+const emailWhitelistMiddleware = initializeEmailWhitelist();
+
 // Test database connection on startup
 testConnection().then((connected) => {
   if (connected) {
@@ -9950,6 +9968,22 @@ app.get('/api/v1/maintenance-status', (req, res) => {
     }
   });
 });
+
+// ============================================================================
+// Email Whitelist Enforcement (Applied After All Routes)
+// ============================================================================
+// This runs AFTER all routes are registered, ensuring it catches all /api/v1 requests
+// that have already passed through authentication (authenticateToken middleware)
+if (emailWhitelistMiddleware) {
+  app.use('/api/v1', (req, res, next) => {
+    // Skip health and public endpoints
+    if (req.path === '/health' || req.path.startsWith('/csrf-token') || req.path === '/maintenance-status') {
+      return next();
+    }
+    // Apply email whitelist check (requires req.user.email from authenticateToken)
+    emailWhitelistMiddleware(req, res, next);
+  });
+}
 
 // Error handling middleware
 app.use((error: any, req: any, res: any, next: any) => {
