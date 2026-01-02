@@ -3,6 +3,7 @@ import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdminRouteGuard from './components/auth/AdminRouteGuard';
 import SuperAdminRouteGuard from './components/auth/SuperAdminRouteGuard';
+import SystemAdminRouteGuard from './components/auth/SystemAdminRouteGuard';
 import { useAuthStore } from './stores/authStore';
 
 // Pages
@@ -38,6 +39,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import QuoteTest from './pages/test/QuoteTest';
 import MaintenancePage from './pages/MaintenancePage';
 import AccessDeniedPage from './pages/AccessDeniedPage';
+import SecuritySettingsPage from './pages/system/SecuritySettingsPage';
 
 // Layout
 import Layout from './components/layout/Layout';
@@ -198,6 +200,14 @@ const AppRouter: React.FC = () => {
         {
           path: 'settings',
           element: <SettingsPage />,
+        },
+        {
+          path: 'system/security',
+          element: (
+            <SystemAdminRouteGuard>
+              <SecuritySettingsPage />
+            </SystemAdminRouteGuard>
+          ),
         },
       ],
     },

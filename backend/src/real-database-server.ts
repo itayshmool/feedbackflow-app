@@ -183,6 +183,8 @@ if (ipWhitelistMiddleware) {
 // If neither is set, all authenticated users are allowed (no restriction)
 // Note: Applied to all /api/v1 routes (except health), runs AFTER authentication
 import { initializeEmailWhitelist } from './shared/middleware/email-whitelist.middleware.js';
+import systemAdminRoutes from './modules/system/routes/system-admin.routes.js';
+import { SecuritySettingsService } from './modules/system/services/security-settings.service.js';
 
 const emailWhitelistMiddleware = initializeEmailWhitelist();
 
@@ -576,6 +578,9 @@ app.get('/api/v1/admin/assignable-organizations', authenticateAndCheckEmail, asy
 
 // Mount admin user routes
 app.use('/api/v1/admin', createAdminUserRoutes());
+
+// Mount system admin routes (protected by system admin middleware)
+app.use('/api/v1/system', authenticateAndCheckEmail, systemAdminRoutes);
 
 // Organization API routes - specific routes first, then parameterized routes
 app.get('/api/v1/admin/organizations', authenticateAndCheckEmail, async (req, res) => {
@@ -10006,13 +10011,16 @@ app.use((error: any, req: any, res: any, next: any) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log('🚀 Real Database-backed server running on http://localhost:' + PORT);
   console.log('📊 Health check: http://localhost:' + PORT + '/health');
   console.log('🔐 API health: http://localhost:' + PORT + '/api/v1/health');
   console.log('📝 Test org API: http://localhost:' + PORT + '/api/v1/admin/organizations/test');
   console.log('🧪 Quote test: http://localhost:' + PORT + '/api/v1/test/quote-of-the-day');
   console.log('🗄️  Database: Real PostgreSQL database connected and ready');
+  
+  // Migrate security settings from environment to database
+  await SecuritySettingsService.migrateFromEnv();
 });
 
 // Graceful shutdown
