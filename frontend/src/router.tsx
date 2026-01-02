@@ -37,6 +37,7 @@ import QuoteArchivePage from './pages/quotes/QuoteArchivePage';
 import NotFoundPage from './pages/NotFoundPage';
 import QuoteTest from './pages/test/QuoteTest';
 import MaintenancePage from './pages/MaintenancePage';
+import AccessDeniedPage from './pages/AccessDeniedPage';
 
 // Layout
 import Layout from './components/layout/Layout';
@@ -48,6 +49,10 @@ const AppRouter: React.FC = () => {
     {
       path: '/login',
       element: <LoginPage />,
+    },
+    {
+      path: '/access-denied',
+      element: <AccessDeniedPage />,
     },
     {
       path: '/test-google-login',
