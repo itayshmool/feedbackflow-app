@@ -1,4 +1,5 @@
 import { query } from '../../../config/real-database.js';
+import { settingsCache } from '../../../shared/utils/settings-cache.js';
 
 /**
  * Maintenance mode settings
@@ -81,6 +82,7 @@ export class SecuritySettingsService {
   /**
    * Update security settings
    * Creates an audit log entry for the change
+   * Invalidates the settings cache to ensure middleware picks up changes immediately
    */
   static async updateSettings(
     settings: SecuritySettings,
@@ -114,7 +116,10 @@ export class SecuritySettingsService {
         ]
       );
 
-      console.log(`[SecuritySettings] Settings updated by ${updatedBy}`);
+      // Invalidate cache so middleware picks up new settings immediately
+      settingsCache.invalidate();
+      console.log(`[SecuritySettings] Settings updated by ${updatedBy}, cache invalidated`);
+      
       return result.rows[0].value as SecuritySettings;
     } catch (error) {
       console.error('[SecuritySettings] Error updating settings:', error);

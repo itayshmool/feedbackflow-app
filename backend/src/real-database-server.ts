@@ -154,19 +154,16 @@ app.use(cookieParser());
 app.use(csrfProtection);
 
 // ============================================================================
-// IP Whitelist (Optional - controlled via IP_WHITELIST environment variable)
+// IP Whitelist (Database-backed with ENV fallback)
 // ============================================================================
-// When IP_WHITELIST is set, only requests from whitelisted IPs are allowed
-// Format: IP_WHITELIST="1.2.3.4,5.6.7.8,192.168.1.0/24"
-// Supports individual IPs and CIDR ranges
-// If not set, all IPs are allowed (no restriction)
+// Reads from database via SecuritySettingsService
+// Fallback: IP_WHITELIST environment variable
+// If disabled or empty, all IPs are allowed
 import { initializeIPWhitelist } from './shared/middleware/ip-whitelist.middleware.js';
 
 const ipWhitelistMiddleware = initializeIPWhitelist();
-if (ipWhitelistMiddleware) {
-  app.use(ipWhitelistMiddleware);
-  console.log('✅ IP Whitelist protection enabled');
-}
+app.use(ipWhitelistMiddleware);
+console.log('✅ IP Whitelist middleware loaded (database-backed)');
 
 // ============================================================================
 // Email Whitelist (Optional - controlled via EMAIL_WHITELIST/EMAIL_DOMAIN_WHITELIST)
@@ -195,22 +192,18 @@ const emailWhitelistMiddleware = initializeEmailWhitelist();
 // Use this on all protected routes instead of authenticateToken alone
 // Flow:
 //   1. Authenticate user (sets req.user)
-//   2. Check email whitelist (if enabled)
+//   2. Check email whitelist (database-backed with fallback)
 //   3. Proceed to route handler
 const authenticateAndCheckEmail = (req: any, res: any, next: any) => {
   // First: Authenticate the user
-  authenticateToken(req, res, (err?: any) => {
+  authenticateToken(req, res, async (err?: any) => {
     if (err) {
       return next(err);
     }
     
-    // Second: Check email whitelist (if enabled)
-    if (emailWhitelistMiddleware) {
-      return emailWhitelistMiddleware(req, res, next);
-    }
-    
-    // No email whitelist configured - proceed
-    next();
+    // Second: Check email whitelist (always runs, database-backed)
+    // The middleware internally checks if it's enabled
+    return emailWhitelistMiddleware(req, res, next);
   });
 };
 

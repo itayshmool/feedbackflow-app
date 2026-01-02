@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { settingsCache } from '../utils/settings-cache.js';
 
 /**
  * IP Whitelist Middleware
@@ -9,10 +10,10 @@ import { Request, Response, NextFunction } from 'express';
  * - CIDR ranges: "192.168.1.0/24"
  * - Multiple entries (comma-separated)
  * 
- * Environment Variable:
- * IP_WHITELIST="1.2.3.4,5.6.7.8,192.168.1.0/24"
+ * NEW: Reads from database (via Security Settings)
+ * Fallback: IP_WHITELIST environment variable
  * 
- * If IP_WHITELIST is not set or empty, all IPs are allowed (disabled).
+ * If disabled or empty, all IPs are allowed.
  */
 
 interface IPWhitelistOptions {
@@ -127,8 +128,61 @@ export function createIPWhitelistMiddleware(options: IPWhitelistOptions) {
 }
 
 /**
- * Parse IP whitelist from environment variable
- * Format: "1.2.3.4,5.6.7.8,192.168.0.0/24"
+ * Initialize IP whitelist from database (with environment fallback)
+ * Returns middleware that checks IP on each request
+ */
+export function initializeIPWhitelist() {
+  console.log('🔒 Initializing IP Whitelist (database-backed with env fallback)');
+  
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Get settings from cache (avoids DB query on every request)
+      const settings = await settingsCache.getSettings();
+      const { ipWhitelist } = settings;
+
+      // Check if IP whitelist is enabled
+      if (!ipWhitelist.enabled || ipWhitelist.allowedIPs.length === 0) {
+        // Disabled - allow all IPs
+        return next();
+      }
+
+      const clientIP = getClientIP(req);
+      const displayIP = clientIP.replace(/^::ffff:/, '');
+
+      // Check if IP matches any whitelist entry
+      const isAllowed = ipWhitelist.allowedIPs.some(entry => {
+        const cleanEntry = entry.replace(/^::ffff:/, '');
+        return ipMatchesCIDR(clientIP, cleanEntry);
+      });
+
+      if (isAllowed) {
+        console.log(`✅ IP ${displayIP} allowed (whitelisted)`);
+        return next();
+      }
+
+      // IP not in whitelist - block request
+      console.warn(`🚫 IP ${displayIP} blocked - not in whitelist`);
+      console.warn(`   Path: ${req.method} ${req.path}`);
+      console.warn(`   User-Agent: ${req.headers['user-agent'] || 'unknown'}`);
+
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied: Your IP address is not authorized to access this service',
+        code: 'IP_NOT_WHITELISTED',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('[IP Whitelist] Error checking whitelist:', error);
+      // On error, allow request (fail open for safety)
+      console.warn('[IP Whitelist] Allowing request due to error (fail-open)');
+      return next();
+    }
+  };
+}
+
+/**
+ * Legacy: Parse IP whitelist from environment variable
+ * Kept for backwards compatibility
  */
 export function parseIPWhitelistEnv(envValue: string | undefined): string[] {
   if (!envValue || envValue.trim() === '') {
@@ -139,31 +193,5 @@ export function parseIPWhitelistEnv(envValue: string | undefined): string[] {
     .split(',')
     .map(ip => ip.trim())
     .filter(ip => ip.length > 0);
-}
-
-/**
- * Initialize IP whitelist from environment
- * Returns middleware if IP_WHITELIST is set, null otherwise
- */
-export function initializeIPWhitelist(): ReturnType<typeof createIPWhitelistMiddleware> | null {
-  const ipWhitelistEnv = process.env.IP_WHITELIST;
-
-  if (!ipWhitelistEnv) {
-    console.log('ℹ️  IP Whitelist disabled (IP_WHITELIST not set)');
-    return null;
-  }
-
-  const whitelist = parseIPWhitelistEnv(ipWhitelistEnv);
-
-  if (whitelist.length === 0) {
-    console.warn('⚠️  IP_WHITELIST is set but empty - feature disabled');
-    return null;
-  }
-
-  console.log(`🔒 Initializing IP Whitelist with ${whitelist.length} entries`);
-  return createIPWhitelistMiddleware({ 
-    whitelist,
-    message: 'Access denied: Your IP address is not authorized to access this service'
-  });
 }
 

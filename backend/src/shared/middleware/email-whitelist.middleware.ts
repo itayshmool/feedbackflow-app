@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { settingsCache } from '../utils/settings-cache.js';
 
 /**
  * Email Whitelist Middleware
@@ -9,19 +10,15 @@ import { Request, Response, NextFunction } from 'express';
  * - Domain wildcards: "@company.com" (any email from domain)
  * - Multiple entries (comma-separated)
  * 
- * Environment Variables:
- * EMAIL_WHITELIST="user1@company.com,user2@company.com"
- * EMAIL_DOMAIN_WHITELIST="@company.com,@partner.com"
+ * NEW: Reads from database (via Security Settings)
+ * Fallback: EMAIL_WHITELIST and EMAIL_DOMAIN_WHITELIST environment variables
  * 
- * Hierarchy (OVERRIDE logic):
- * - If EMAIL_WHITELIST has values → ONLY those specific emails allowed (domain ignored)
- * - If EMAIL_WHITELIST is empty/not set → Use domain whitelist
+ * Modes (from database):
+ * - 'disabled': All authenticated emails allowed
+ * - 'domain': Check domain whitelist only
+ * - 'specific': Check specific email list only (overrides domain)
  * 
- * Examples:
- * 1. EMAIL_DOMAIN_WHITELIST="@wix.com", EMAIL_WHITELIST="" → All @wix.com allowed
- * 2. EMAIL_DOMAIN_WHITELIST="@wix.com", EMAIL_WHITELIST="john@wix.com" → ONLY john@wix.com allowed
- * 
- * If both are not set, all authenticated emails are allowed (disabled).
+ * If disabled or empty, all authenticated emails are allowed.
  */
 
 interface EmailWhitelistOptions {
@@ -174,8 +171,86 @@ export function createEmailWhitelistMiddleware(options: EmailWhitelistOptions) {
 }
 
 /**
- * Parse email whitelist from environment variable
- * Format: "email1@company.com,email2@company.com,email3@external.com"
+ * Initialize email whitelist from database (with environment fallback)
+ * Returns middleware that checks email on each request
+ */
+export function initializeEmailWhitelist() {
+  console.log('🔒 Initializing Email Whitelist (database-backed with env fallback)');
+  
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Get settings from cache (avoids DB query on every request)
+      const settings = await settingsCache.getSettings();
+      const { emailWhitelist } = settings;
+
+      // Check if email whitelist is disabled
+      if (emailWhitelist.mode === 'disabled') {
+        // Disabled - allow all authenticated emails
+        return next();
+      }
+
+      // Check if user is authenticated (should have req.user from auth middleware)
+      const reqUser = (req as any).user;
+      if (!reqUser || !reqUser.email) {
+        // No user or email - let auth middleware handle this
+        return next();
+      }
+
+      const userEmail = reqUser.email;
+      const normalizedEmail = normalizeEmail(userEmail);
+      const domain = extractDomain(normalizedEmail);
+
+      let isAllowed = false;
+      let reason = '';
+
+      // Check based on mode
+      if (emailWhitelist.mode === 'specific') {
+        // Specific emails only (overrides domain)
+        const cleanEmails = emailWhitelist.emails.map(e => normalizeEmail(e));
+        isAllowed = cleanEmails.includes(normalizedEmail);
+        reason = isAllowed 
+          ? 'in specific email whitelist' 
+          : 'not in specific email whitelist (domain ignored)';
+      } else if (emailWhitelist.mode === 'domain') {
+        // Domain whitelist
+        const cleanDomains = emailWhitelist.domains.map(d => normalizeEmail(d));
+        isAllowed = cleanDomains.includes(domain);
+        reason = isAllowed 
+          ? `domain ${domain} whitelisted` 
+          : 'domain not whitelisted';
+      }
+
+      if (isAllowed) {
+        console.log(`✅ Email ${userEmail} allowed (${reason})`);
+        return next();
+      }
+
+      // Email not in whitelist - block request
+      console.warn(`🚫 Email ${userEmail} blocked - ${reason}`);
+      console.warn(`   Path: ${req.method} ${req.path}`);
+      console.warn(`   User ID: ${reqUser.id || 'unknown'}`);
+      console.warn(`   Mode: ${emailWhitelist.mode}`);
+      console.warn(`   Timestamp: ${new Date().toISOString()}`);
+
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied: Your email is not authorized to access this system. Please contact your administrator.',
+        code: 'EMAIL_NOT_WHITELISTED',
+        email: userEmail,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('[Email Whitelist] Error checking whitelist:', error);
+      // On error, allow request (fail open for safety)
+      console.warn('[Email Whitelist] Allowing request due to error (fail-open)');
+      return next();
+    }
+  };
+}
+
+/**
+ * Legacy: Parse email whitelist from environment variable
+ * Kept for backwards compatibility
  */
 export function parseEmailWhitelistEnv(envValue: string | undefined): string[] {
   if (!envValue || envValue.trim() === '') {
@@ -189,8 +264,8 @@ export function parseEmailWhitelistEnv(envValue: string | undefined): string[] {
 }
 
 /**
- * Parse domain whitelist from environment variable
- * Format: "@company.com,@partner.com,@wix.com"
+ * Legacy: Parse domain whitelist from environment variable
+ * Kept for backwards compatibility
  */
 export function parseDomainWhitelistEnv(envValue: string | undefined): string[] {
   if (!envValue || envValue.trim() === '') {
@@ -201,39 +276,5 @@ export function parseDomainWhitelistEnv(envValue: string | undefined): string[] 
     .split(',')
     .map(domain => domain.trim())
     .filter(domain => domain.length > 0);
-}
-
-/**
- * Initialize email whitelist from environment
- * Returns middleware if EMAIL_WHITELIST or EMAIL_DOMAIN_WHITELIST is set, null otherwise
- */
-export function initializeEmailWhitelist(): ReturnType<typeof createEmailWhitelistMiddleware> | null {
-  const emailWhitelistEnv = process.env.EMAIL_WHITELIST;
-  const domainWhitelistEnv = process.env.EMAIL_DOMAIN_WHITELIST;
-
-  // If neither is set, feature is disabled
-  if (!emailWhitelistEnv && !domainWhitelistEnv) {
-    console.log('ℹ️  Email Whitelist disabled (EMAIL_WHITELIST and EMAIL_DOMAIN_WHITELIST not set)');
-    return null;
-  }
-
-  const emailWhitelist = parseEmailWhitelistEnv(emailWhitelistEnv);
-  const domainWhitelist = parseDomainWhitelistEnv(domainWhitelistEnv);
-
-  // If both are empty after parsing, feature is disabled
-  if (emailWhitelist.length === 0 && domainWhitelist.length === 0) {
-    console.warn('⚠️  EMAIL_WHITELIST and EMAIL_DOMAIN_WHITELIST are set but empty - feature disabled');
-    return null;
-  }
-
-  console.log(`🔒 Initializing Email Whitelist:`);
-  console.log(`   - ${domainWhitelist.length} domain(s)`);
-  console.log(`   - ${emailWhitelist.length} specific email(s)`);
-
-  return createEmailWhitelistMiddleware({
-    emailWhitelist,
-    domainWhitelist,
-    message: 'Access denied: Your email is not authorized to access this system. Please contact your administrator.'
-  });
 }
 
