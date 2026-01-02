@@ -249,6 +249,17 @@ api.interceptors.response.use(
           break
           
         case 403:
+          // Check for email whitelist denial FIRST - this takes priority
+          if (data.code === 'EMAIL_NOT_WHITELISTED') {
+            console.log('[API] Email not whitelisted, redirecting to access denied page')
+            // Stop processing other requests to prevent error spam
+            if (!window.location.pathname.includes('/access-denied')) {
+              window.location.href = '/access-denied'
+            }
+            // Don't show toast - the page will explain
+            break
+          }
+          
           // Check if it's a CSRF error - try to refresh token and retry
           if ((data.error === 'CSRF token missing' || data.error === 'CSRF token invalid') 
               && originalRequest && !originalRequest._csrfRetry) {
