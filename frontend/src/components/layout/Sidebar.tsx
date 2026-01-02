@@ -1,5 +1,6 @@
 // frontend/src/components/layout/Sidebar.tsx
 
+import React from 'react'
 import { NavLink } from 'react-router-dom'
 import { 
   LayoutDashboard, 
@@ -14,7 +15,8 @@ import {
   X,
   User,
   Sparkles,
-  Upload
+  Upload,
+  Shield
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useHierarchyStore } from '@/stores/hierarchyStore'
@@ -94,6 +96,8 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
   const { user } = useAuthStore()
   const { directReports } = useHierarchyStore()
   
+  const [isSystemAdmin, setIsSystemAdmin] = React.useState(false)
+  
   const isAdmin = user?.roles?.includes('admin') || user?.roles?.includes('super_admin')
   const isSuperAdmin = user?.roles?.includes('super_admin') || user?.isSuperAdmin
   const isManager = user?.roles?.includes('manager')
@@ -104,6 +108,24 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
   // Determine if user should see "MANAGEMENT" section header
   // Manager of Managers and Admins get the MANAGEMENT header
   const showManagementHeader = hasManagerReports || isAdmin
+
+  // Check system admin access
+  React.useEffect(() => {
+    const checkSystemAdmin = async () => {
+      try {
+        const { systemAdminService } = await import('@/services/system-admin.service')
+        const hasAccess = await systemAdminService.checkAccess()
+        setIsSystemAdmin(hasAccess)
+      } catch (error) {
+        console.error('[Sidebar] Error checking system admin access:', error)
+        setIsSystemAdmin(false)
+      }
+    }
+    
+    if (user) {
+      checkSystemAdmin()
+    }
+  }, [user])
 
   // Handle nav link click - close mobile menu
   const handleNavClick = () => {
@@ -155,6 +177,11 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
     { name: 'Hierarchy', href: '/admin/hierarchy', icon: TreePine },
     { name: 'Bulk Setup', href: '/admin/bulk-setup', icon: Upload },
     { name: 'Template Management', href: '/admin/templates', icon: FileText },
+  ]
+
+  // System navigation - for system admins only
+  const systemNavigation: NavItem[] = [
+    { name: 'Security Settings', href: '/system/security', icon: Shield },
   ]
 
   const sidebarContent = (
@@ -210,6 +237,17 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose }: Sidebar
               <SectionDivider />
               <SectionHeader>Administration</SectionHeader>
               {adminNavigation.map((item) => (
+                <NavItem key={item.name} item={item} onClick={handleNavClick} />
+              ))}
+            </>
+          )}
+          
+          {/* SYSTEM Section - for system admins only */}
+          {isSystemAdmin && (
+            <>
+              <SectionDivider />
+              <SectionHeader>System</SectionHeader>
+              {systemNavigation.map((item) => (
                 <NavItem key={item.name} item={item} onClick={handleNavClick} />
               ))}
             </>
