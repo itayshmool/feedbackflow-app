@@ -10,10 +10,12 @@ const AccessDeniedPage: React.FC = () => {
   const handleLogout = async () => {
     try {
       await logout();
-      navigate('/login');
     } catch (error) {
-      // Force logout even if API call fails
-      navigate('/login');
+      console.error('Logout error:', error);
+    } finally {
+      // Always redirect to login, even if logout fails
+      // Use window.location to force full page reload and clear state
+      window.location.href = '/login';
     }
   };
 
