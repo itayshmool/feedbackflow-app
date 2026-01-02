@@ -226,6 +226,24 @@ app.get('/api/v1/csrf-token', csrfTokenHandler);
 // when MAINTENANCE_MODE=true environment variable is set
 app.use(checkMaintenanceMode);
 
+// ============================================================================
+// Email Whitelist Enforcement (Applied to ALL /api/v1 routes)
+// ============================================================================
+// This runs BEFORE routes are registered, so it can intercept ALL /api/v1 requests
+// Runs AFTER authentication (routes use authenticateToken inline)
+// When EMAIL_WHITELIST or EMAIL_DOMAIN_WHITELIST is set, checks user email
+if (emailWhitelistMiddleware) {
+  app.use('/api/v1', (req, res, next) => {
+    // Skip health and public endpoints
+    if (req.path === '/health' || req.path.startsWith('/csrf-token') || req.path === '/maintenance-status') {
+      return next();
+    }
+    // Apply email whitelist check (requires req.user.email from authenticateToken)
+    emailWhitelistMiddleware(req, res, next);
+  });
+  console.log('✅ Email Whitelist middleware registered on /api/v1 routes');
+}
+
 // Configure multer for template file uploads - use memory storage to store in database
 const upload = multer({
   storage: multer.memoryStorage(), // Store in memory, then save to database
@@ -9968,22 +9986,6 @@ app.get('/api/v1/maintenance-status', (req, res) => {
     }
   });
 });
-
-// ============================================================================
-// Email Whitelist Enforcement (Applied After All Routes)
-// ============================================================================
-// This runs AFTER all routes are registered, ensuring it catches all /api/v1 requests
-// that have already passed through authentication (authenticateToken middleware)
-if (emailWhitelistMiddleware) {
-  app.use('/api/v1', (req, res, next) => {
-    // Skip health and public endpoints
-    if (req.path === '/health' || req.path.startsWith('/csrf-token') || req.path === '/maintenance-status') {
-      return next();
-    }
-    // Apply email whitelist check (requires req.user.email from authenticateToken)
-    emailWhitelistMiddleware(req, res, next);
-  });
-}
 
 // Error handling middleware
 app.use((error: any, req: any, res: any, next: any) => {
