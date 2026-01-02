@@ -186,6 +186,32 @@ import { initializeEmailWhitelist } from './shared/middleware/email-whitelist.mi
 
 const emailWhitelistMiddleware = initializeEmailWhitelist();
 
+// ============================================================================
+// Combined Authentication + Email Whitelist Middleware
+// ============================================================================
+// This wrapper combines authenticateToken + email whitelist check
+// Use this on all protected routes instead of authenticateToken alone
+// Flow:
+//   1. Authenticate user (sets req.user)
+//   2. Check email whitelist (if enabled)
+//   3. Proceed to route handler
+const authenticateAndCheckEmail = (req: any, res: any, next: any) => {
+  // First: Authenticate the user
+  authenticateToken(req, res, (err?: any) => {
+    if (err) {
+      return next(err);
+    }
+    
+    // Second: Check email whitelist (if enabled)
+    if (emailWhitelistMiddleware) {
+      return emailWhitelistMiddleware(req, res, next);
+    }
+    
+    // No email whitelist configured - proceed
+    next();
+  });
+};
+
 // Test database connection on startup
 testConnection().then((connected) => {
   if (connected) {
@@ -225,24 +251,6 @@ app.get('/api/v1/csrf-token', csrfTokenHandler);
 // This will block all requests except auth, health, and maintenance-status endpoints
 // when MAINTENANCE_MODE=true environment variable is set
 app.use(checkMaintenanceMode);
-
-// ============================================================================
-// Email Whitelist Enforcement (Applied to ALL /api/v1 routes)
-// ============================================================================
-// This runs BEFORE routes are registered, so it can intercept ALL /api/v1 requests
-// Runs AFTER authentication (routes use authenticateToken inline)
-// When EMAIL_WHITELIST or EMAIL_DOMAIN_WHITELIST is set, checks user email
-if (emailWhitelistMiddleware) {
-  app.use('/api/v1', (req, res, next) => {
-    // Skip health and public endpoints
-    if (req.path === '/health' || req.path.startsWith('/csrf-token') || req.path === '/maintenance-status') {
-      return next();
-    }
-    // Apply email whitelist check (requires req.user.email from authenticateToken)
-    emailWhitelistMiddleware(req, res, next);
-  });
-  console.log('✅ Email Whitelist middleware registered on /api/v1 routes');
-}
 
 // Configure multer for template file uploads - use memory storage to store in database
 const upload = multer({
@@ -309,7 +317,7 @@ const avatarUpload = multer({
 });
 
 // Templates API endpoints
-app.get('/api/v1/templates', authenticateToken, async (req, res) => {
+app.get('/api/v1/templates', authenticateAndCheckEmail, async (req, res) => {
   try {
     const result = await query(`
       SELECT 
@@ -339,7 +347,7 @@ app.get('/api/v1/templates', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/v1/templates', authenticateToken, (req, res, next) => {
+app.post('/api/v1/templates', authenticateAndCheckEmail, (req, res, next) => {
   // Wrap multer with error handling
   upload.single('file')(req, res, (err) => {
     if (err) {
@@ -421,7 +429,7 @@ app.post('/api/v1/templates', authenticateToken, (req, res, next) => {
   }
 });
 
-app.delete('/api/v1/templates/:id', authenticateToken, async (req, res) => {
+app.delete('/api/v1/templates/:id', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id } = req.params;
     const user = (req as any).user;
@@ -459,7 +467,7 @@ app.delete('/api/v1/templates/:id', authenticateToken, async (req, res) => {
   }
 });
 
-app.get('/api/v1/templates/:id/download', authenticateToken, async (req, res) => {
+app.get('/api/v1/templates/:id/download', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id } = req.params;
     const user = (req as any).user;
@@ -513,7 +521,7 @@ const teamModel = new TeamModelClass(dbConfig.pool);
 // GET assignable organizations - MUST be registered BEFORE admin user routes
 // Returns orgs the current user can grant admin access to
 // Super admin: all orgs, Org-scoped admin: only their managed orgs, Others: empty
-app.get('/api/v1/admin/assignable-organizations', authenticateToken, async (req, res) => {
+app.get('/api/v1/admin/assignable-organizations', authenticateAndCheckEmail, async (req, res) => {
   try {
     const user = (req as any).user;
     const userRoles = user?.roles || [];
@@ -570,7 +578,7 @@ app.get('/api/v1/admin/assignable-organizations', authenticateToken, async (req,
 app.use('/api/v1/admin', createAdminUserRoutes());
 
 // Organization API routes - specific routes first, then parameterized routes
-app.get('/api/v1/admin/organizations', authenticateToken, async (req, res) => {
+app.get('/api/v1/admin/organizations', authenticateAndCheckEmail, async (req, res) => {
   try {
     // Check if user is super_admin (can see all orgs) or org-scoped admin (only their org)
     const userRoles = (req as any).user?.roles || [];
@@ -634,7 +642,7 @@ app.get('/api/v1/admin/organizations', authenticateToken, async (req, res) => {
   }
 });
 
-app.get('/api/v1/admin/organizations/stats', authenticateToken, async (req, res) => {
+app.get('/api/v1/admin/organizations/stats', authenticateAndCheckEmail, async (req, res) => {
   try {
     const stats = await organizationService.getOrganizationStats();
     res.json({
@@ -652,7 +660,7 @@ app.get('/api/v1/admin/organizations/stats', authenticateToken, async (req, res)
 });
 
 // Slug availability check - must come before /:id route
-app.get('/api/v1/admin/organizations/check-slug', authenticateToken, async (req, res) => {
+app.get('/api/v1/admin/organizations/check-slug', authenticateAndCheckEmail, async (req, res) => {
   try {
     const slug = req.query.slug;
     if (!slug) {
@@ -677,7 +685,7 @@ app.get('/api/v1/admin/organizations/check-slug', authenticateToken, async (req,
 });
 
 // Test endpoint
-app.get('/api/v1/admin/organizations/test', authenticateToken, async (req, res) => {
+app.get('/api/v1/admin/organizations/test', authenticateAndCheckEmail, async (req, res) => {
   try {
     const result = await query('SELECT COUNT(*) as count FROM organizations');
     res.json({
@@ -695,7 +703,7 @@ app.get('/api/v1/admin/organizations/test', authenticateToken, async (req, res) 
   }
 });
 
-app.get('/api/v1/admin/organizations/:id', authenticateToken, async (req, res) => {
+app.get('/api/v1/admin/organizations/:id', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id } = req.params;
     const organization = await organizationService.getOrganizationById(id);
@@ -719,7 +727,7 @@ app.get('/api/v1/admin/organizations/:id', authenticateToken, async (req, res) =
   }
 });
 
-app.post('/api/v1/admin/organizations', authenticateToken, async (req, res) => {
+app.post('/api/v1/admin/organizations', authenticateAndCheckEmail, async (req, res) => {
   try{
     const frontendData = req.body;
     
@@ -760,7 +768,7 @@ app.post('/api/v1/admin/organizations', authenticateToken, async (req, res) => {
   }
 });
 
-app.put('/api/v1/admin/organizations/:id', authenticateToken, async (req, res) => {
+app.put('/api/v1/admin/organizations/:id', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -785,7 +793,7 @@ app.put('/api/v1/admin/organizations/:id', authenticateToken, async (req, res) =
   }
 });
 
-app.delete('/api/v1/admin/organizations/:id', authenticateToken, async (req, res) => {
+app.delete('/api/v1/admin/organizations/:id', authenticateAndCheckEmail, async (req, res) => {
   console.log('🗑️  DELETE organization endpoint hit', { id: req.params.id });
   try {
     const { id } = req.params;
@@ -1421,9 +1429,9 @@ app.post('/api/v1/auth/refresh', sessionRateLimit, async (req, res) => {
   }
 });
 
-app.get('/api/v1/auth/me', sessionRateLimit, authenticateToken, async (req, res) => {
+app.get('/api/v1/auth/me', sessionRateLimit, authenticateAndCheckEmail, async (req, res) => {
   try {
-    // authenticateToken middleware has already verified the token from cookie
+    // authenticateAndCheckEmail middleware has already verified the token from cookie
     // and populated req.user
     const userEmail = (req as any).user?.email;
     
@@ -1536,7 +1544,7 @@ app.get('/api/v1/auth/me', sessionRateLimit, authenticateToken, async (req, res)
 });
 
 // Department API routes
-app.get('/api/v1/admin/organizations/:id/departments', authenticateToken, async (req, res) => {
+app.get('/api/v1/admin/organizations/:id/departments', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id: organizationId } = req.params;
     const { isActive, type, parentDepartmentId, limit, offset } = req.query;
@@ -1565,7 +1573,7 @@ app.get('/api/v1/admin/organizations/:id/departments', authenticateToken, async 
   }
 });
 
-app.get('/api/v1/admin/organizations/:id/departments/stats', authenticateToken, async (req, res) => {
+app.get('/api/v1/admin/organizations/:id/departments/stats', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id: organizationId } = req.params;
     const stats = await departmentModel.getDepartmentStats(organizationId);
@@ -1584,7 +1592,7 @@ app.get('/api/v1/admin/organizations/:id/departments/stats', authenticateToken, 
   }
 });
 
-app.get('/api/v1/admin/organizations/:id/departments/hierarchy', authenticateToken, async (req, res) => {
+app.get('/api/v1/admin/organizations/:id/departments/hierarchy', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id: organizationId } = req.params;
     const hierarchy = await departmentModel.getDepartmentHierarchy(organizationId);
@@ -1603,7 +1611,7 @@ app.get('/api/v1/admin/organizations/:id/departments/hierarchy', authenticateTok
   }
 });
 
-app.post('/api/v1/admin/organizations/:id/departments', authenticateToken, async (req, res) => {
+app.post('/api/v1/admin/organizations/:id/departments', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id: organizationId } = req.params;
     const departmentData = req.body;
@@ -1627,7 +1635,7 @@ app.post('/api/v1/admin/organizations/:id/departments', authenticateToken, async
   }
 });
 
-app.get('/api/v1/admin/organizations/:id/departments/:departmentId', authenticateToken, async (req, res) => {
+app.get('/api/v1/admin/organizations/:id/departments/:departmentId', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id: organizationId, departmentId } = req.params;
     const department = await departmentModel.getDepartmentById(departmentId, organizationId);
@@ -1653,7 +1661,7 @@ app.get('/api/v1/admin/organizations/:id/departments/:departmentId', authenticat
   }
 });
 
-app.put('/api/v1/admin/organizations/:id/departments/:departmentId', authenticateToken, async (req, res) => {
+app.put('/api/v1/admin/organizations/:id/departments/:departmentId', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id: organizationId, departmentId } = req.params;
     const updateData = req.body;
@@ -1678,7 +1686,7 @@ app.put('/api/v1/admin/organizations/:id/departments/:departmentId', authenticat
   }
 });
 
-app.delete('/api/v1/admin/organizations/:id/departments/:departmentId', authenticateToken, async (req, res) => {
+app.delete('/api/v1/admin/organizations/:id/departments/:departmentId', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id: organizationId, departmentId } = req.params;
     
@@ -1696,7 +1704,7 @@ app.delete('/api/v1/admin/organizations/:id/departments/:departmentId', authenti
 });
 
 // Team API routes
-app.get('/api/v1/admin/organizations/:id/teams', authenticateToken, async (req, res) => {
+app.get('/api/v1/admin/organizations/:id/teams', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id: organizationId } = req.params;
     const { isActive, type, departmentId, limit, offset } = req.query;
@@ -1725,7 +1733,7 @@ app.get('/api/v1/admin/organizations/:id/teams', authenticateToken, async (req, 
   }
 });
 
-app.get('/api/v1/admin/organizations/:id/teams/stats', authenticateToken, async (req, res) => {
+app.get('/api/v1/admin/organizations/:id/teams/stats', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id: organizationId } = req.params;
     const stats = await teamModel.getTeamStats(organizationId);
@@ -1744,7 +1752,7 @@ app.get('/api/v1/admin/organizations/:id/teams/stats', authenticateToken, async 
   }
 });
 
-app.post('/api/v1/admin/organizations/:id/teams', authenticateToken, async (req, res) => {
+app.post('/api/v1/admin/organizations/:id/teams', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id: organizationId } = req.params;
     const teamData = req.body;
@@ -1768,7 +1776,7 @@ app.post('/api/v1/admin/organizations/:id/teams', authenticateToken, async (req,
   }
 });
 
-app.get('/api/v1/admin/organizations/:id/teams/:teamId', authenticateToken, async (req, res) => {
+app.get('/api/v1/admin/organizations/:id/teams/:teamId', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id: organizationId, teamId } = req.params;
     const team = await teamModel.getTeamById(teamId, organizationId);
@@ -1794,7 +1802,7 @@ app.get('/api/v1/admin/organizations/:id/teams/:teamId', authenticateToken, asyn
   }
 });
 
-app.put('/api/v1/admin/organizations/:id/teams/:teamId', authenticateToken, async (req, res) => {
+app.put('/api/v1/admin/organizations/:id/teams/:teamId', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id: organizationId, teamId } = req.params;
     const updateData = req.body;
@@ -1819,7 +1827,7 @@ app.put('/api/v1/admin/organizations/:id/teams/:teamId', authenticateToken, asyn
   }
 });
 
-app.delete('/api/v1/admin/organizations/:id/teams/:teamId', authenticateToken, async (req, res) => {
+app.delete('/api/v1/admin/organizations/:id/teams/:teamId', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id: organizationId, teamId } = req.params;
     
@@ -1837,7 +1845,7 @@ app.delete('/api/v1/admin/organizations/:id/teams/:teamId', authenticateToken, a
 });
 
 // Organization Chart Route
-app.get('/api/v1/admin/organizations/:organizationId/chart', authenticateToken, async (req, res) => {
+app.get('/api/v1/admin/organizations/:organizationId/chart', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { organizationId } = req.params;
     
@@ -1951,7 +1959,7 @@ app.get('/api/v1/admin/organizations/:organizationId/chart', authenticateToken, 
 
 
 // Bulk Operations Routes
-app.get('/api/v1/admin/bulk/template', authenticateToken, async (req, res) => {
+app.get('/api/v1/admin/bulk/template', authenticateAndCheckEmail, async (req, res) => {
   try {
     const type = req.query.type as string || 'organizations';
     
@@ -1981,7 +1989,7 @@ app.get('/api/v1/admin/bulk/template', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/v1/admin/bulk/upload', authenticateToken, csvUpload.single('file'), async (req, res) => {
+app.post('/api/v1/admin/bulk/upload', authenticateAndCheckEmail, csvUpload.single('file'), async (req, res) => {
   try {
     const file = (req as any).file;
     
@@ -2115,7 +2123,7 @@ app.post('/api/v1/admin/bulk/upload', authenticateToken, csvUpload.single('file'
   }
 });
 
-app.post('/api/v1/admin/bulk/export', authenticateToken, async (req, res) => {
+app.post('/api/v1/admin/bulk/export', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { type, format, filters } = req.body;
     
@@ -2152,7 +2160,7 @@ app.post('/api/v1/admin/bulk/export', authenticateToken, async (req, res) => {
 });
 
 // GET /api/v1/admin/bulk/template/users - Download user CSV template
-app.get('/api/v1/admin/bulk/template/users', authenticateToken, (req, res) => {
+app.get('/api/v1/admin/bulk/template/users', authenticateAndCheckEmail, (req, res) => {
   try {
     const csv = CSVParser.generateUserTemplate();
     res.setHeader('Content-Type', 'text/csv');
@@ -2169,7 +2177,7 @@ app.get('/api/v1/admin/bulk/template/users', authenticateToken, (req, res) => {
 });
 
 // POST /api/v1/admin/bulk/export/users - Export users to CSV/JSON
-app.post('/api/v1/admin/bulk/export/users', authenticateToken, async (req, res) => {
+app.post('/api/v1/admin/bulk/export/users', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { format = 'csv', filters = {} } = req.body;
     
@@ -2204,7 +2212,7 @@ app.post('/api/v1/admin/bulk/export/users', authenticateToken, async (req, res) 
 // ==================
 
 // GET /api/v1/admin/roles - Get all roles
-app.get('/api/v1/admin/roles', authenticateToken, async (req, res) => {
+app.get('/api/v1/admin/roles', authenticateAndCheckEmail, async (req, res) => {
   try {
     const rolesQuery = `
       SELECT 
@@ -2232,7 +2240,7 @@ app.get('/api/v1/admin/roles', authenticateToken, async (req, res) => {
 });
 
 // GET /api/v1/admin/users - Get users with filters and pagination
-app.get('/api/v1/admin/users', authenticateToken, async (req, res) => {
+app.get('/api/v1/admin/users', authenticateAndCheckEmail, async (req, res) => {
   console.log('🚀 Admin users endpoint called with query:', req.query);
   try {
     // Check if user is super_admin (can see all users) or org-scoped admin (only their org's users)
@@ -2409,7 +2417,7 @@ app.get('/api/v1/admin/users', authenticateToken, async (req, res) => {
 });
 
 // GET /api/v1/admin/users/:id - Get user by ID
-app.get('/api/v1/admin/users/:id', authenticateToken, async (req, res) => {
+app.get('/api/v1/admin/users/:id', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -2466,7 +2474,7 @@ app.get('/api/v1/admin/users/:id', authenticateToken, async (req, res) => {
 });
 
 // POST /api/v1/admin/users - Create new user
-app.post('/api/v1/admin/users', authenticateToken, async (req, res) => {
+app.post('/api/v1/admin/users', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { 
       name, 
@@ -2583,7 +2591,7 @@ app.post('/api/v1/admin/users', authenticateToken, async (req, res) => {
 });
 
 // PUT /api/v1/admin/users/:id - Update user
-app.put('/api/v1/admin/users/:id', authenticateToken, async (req, res) => {
+app.put('/api/v1/admin/users/:id', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id } = req.params;
     const { 
@@ -2767,7 +2775,7 @@ app.put('/api/v1/admin/users/:id', authenticateToken, async (req, res) => {
 });
 
 // DELETE /api/v1/admin/users/:id - Delete user
-app.delete('/api/v1/admin/users/:id', authenticateToken, async (req, res) => {
+app.delete('/api/v1/admin/users/:id', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -2789,7 +2797,7 @@ app.delete('/api/v1/admin/users/:id', authenticateToken, async (req, res) => {
 });
 
 // GET /api/v1/admin/users/stats - Get user statistics
-app.get('/api/v1/admin/users/stats', authenticateToken, async (req, res) => {
+app.get('/api/v1/admin/users/stats', authenticateAndCheckEmail, async (req, res) => {
   try {
     const statsQuery = `
       SELECT 
@@ -2859,7 +2867,7 @@ app.get('/api/v1/admin/users/stats', authenticateToken, async (req, res) => {
 // ==================
 
 // GET /api/v1/notifications - Get user notifications
-app.get('/api/v1/notifications', authenticateToken, async (req, res) => {
+app.get('/api/v1/notifications', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { userId, userEmail, isRead, type, limit = 50, offset = 0 } = req.query;
     
@@ -2965,7 +2973,7 @@ app.get('/api/v1/notifications', authenticateToken, async (req, res) => {
 });
 
 // GET /api/v1/notifications/stats - Get notification statistics
-app.get('/api/v1/notifications/stats', authenticateToken, async (req, res) => {
+app.get('/api/v1/notifications/stats', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { userId, userEmail } = req.query;
     
@@ -3057,7 +3065,7 @@ app.get('/api/v1/notifications/stats', authenticateToken, async (req, res) => {
 });
 
 // PUT /api/v1/notifications/:id/read - Mark notification as read
-app.put('/api/v1/notifications/:id/read', authenticateToken, async (req, res) => {
+app.put('/api/v1/notifications/:id/read', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -3102,7 +3110,7 @@ app.put('/api/v1/notifications/:id/read', authenticateToken, async (req, res) =>
 });
 
 // PUT /api/v1/notifications/read-all - Mark all notifications as read
-app.put('/api/v1/notifications/read-all', authenticateToken, async (req, res) => {
+app.put('/api/v1/notifications/read-all', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { userId, userEmail } = req.body;
     
@@ -3145,7 +3153,7 @@ app.put('/api/v1/notifications/read-all', authenticateToken, async (req, res) =>
 });
 
 // DELETE /api/v1/notifications/:id - Delete notification
-app.delete('/api/v1/notifications/:id', authenticateToken, async (req, res) => {
+app.delete('/api/v1/notifications/:id', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -3170,7 +3178,7 @@ app.delete('/api/v1/notifications/:id', authenticateToken, async (req, res) => {
 });
 
 // POST /api/v1/notifications - Create notification (for testing)
-app.post('/api/v1/notifications', authenticateToken, async (req, res) => {
+app.post('/api/v1/notifications', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { userId, userEmail, type, title, message, data, priority = 'normal' } = req.body;
     
@@ -3240,7 +3248,7 @@ app.post('/api/v1/notifications', authenticateToken, async (req, res) => {
 // Scenario A (Manager of Employees): Remind employees to acknowledge submitted feedback
 // Scenario B (Manager of Managers): Remind managers to give feedback to their teams
 // Supports: recipientId (optional) for individual reminders, reminderType (optional) to specify which type
-app.post('/api/v1/notifications/cycle-reminder', authenticateToken, async (req, res) => {
+app.post('/api/v1/notifications/cycle-reminder', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { cycleId, recipientId, reminderType: requestedReminderType } = req.body;
     const currentUserEmail = (req as any).user?.email;
@@ -3495,7 +3503,7 @@ app.post('/api/v1/notifications/cycle-reminder', authenticateToken, async (req, 
 
 // GET /api/v1/notifications/cycle-reminder-preview - Preview who would receive reminders (without sending)
 // Returns BOTH employee and manager data for hybrid managers (who manage both managers and employees)
-app.get('/api/v1/notifications/cycle-reminder-preview', authenticateToken, async (req, res) => {
+app.get('/api/v1/notifications/cycle-reminder-preview', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { cycleId } = req.query;
     const currentUserEmail = (req as any).user?.email;
@@ -3718,7 +3726,7 @@ app.get('/api/v1/notifications/cycle-reminder-preview', authenticateToken, async
 });
 
 // GET /api/v1/users/search - Search users by email/name within organization
-app.get('/api/v1/users/search', authenticateToken, async (req, res) => {
+app.get('/api/v1/users/search', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { q, limit = 10 } = req.query;
     
@@ -3789,7 +3797,7 @@ app.get('/api/v1/users/search', authenticateToken, async (req, res) => {
 // ==================
 
 // GET /api/v1/profile - Get current user profile
-app.get('/api/v1/profile', authenticateToken, async (req, res) => {
+app.get('/api/v1/profile', authenticateAndCheckEmail, async (req, res) => {
   try {
     // Get user email from request (set by auth middleware)
     const userEmail = (req as any).user?.email;
@@ -3885,7 +3893,7 @@ app.get('/api/v1/profile', authenticateToken, async (req, res) => {
 });
 
 // PUT /api/v1/profile - Update current user profile
-app.put('/api/v1/profile', authenticateToken, async (req, res) => {
+app.put('/api/v1/profile', authenticateAndCheckEmail, async (req, res) => {
   try {
     const userEmail = (req as any).user?.email;
     if (!userEmail) {
@@ -3955,7 +3963,7 @@ app.put('/api/v1/profile', authenticateToken, async (req, res) => {
 });
 
 // POST /api/v1/profile/avatar - Upload avatar
-app.post('/api/v1/profile/avatar', authenticateToken, avatarUpload.single('avatar'), async (req: any, res: any) => {
+app.post('/api/v1/profile/avatar', authenticateAndCheckEmail, avatarUpload.single('avatar'), async (req: any, res: any) => {
   try {
     const userEmail = req.user?.email;
     if (!userEmail) {
@@ -4011,7 +4019,7 @@ app.post('/api/v1/profile/avatar', authenticateToken, avatarUpload.single('avata
 });
 
 // GET /api/v1/users/:id/avatar - Serve user avatar from database (requires auth)
-app.get('/api/v1/users/:id/avatar', authenticateToken, async (req: any, res: any) => {
+app.get('/api/v1/users/:id/avatar', authenticateAndCheckEmail, async (req: any, res: any) => {
   try {
     const userId = req.params.id;
     
@@ -4063,7 +4071,7 @@ app.get('/api/v1/users/:id/avatar', authenticateToken, async (req: any, res: any
 });
 
 // GET /api/v1/profile/stats - Get profile statistics
-app.get('/api/v1/profile/stats', authenticateToken, async (req, res) => {
+app.get('/api/v1/profile/stats', authenticateAndCheckEmail, async (req, res) => {
   try {
     const userEmail = (req as any).user?.email;
     if (!userEmail) {
@@ -4147,7 +4155,7 @@ app.get('/api/v1/profile/stats', authenticateToken, async (req, res) => {
 // ==================
 
 // GET /api/v1/settings - Get current user settings
-app.get('/api/v1/settings', authenticateToken, async (req, res) => {
+app.get('/api/v1/settings', authenticateAndCheckEmail, async (req, res) => {
   try {
     const userEmail = (req as any).user?.email;
     if (!userEmail) {
@@ -4222,7 +4230,7 @@ app.get('/api/v1/settings', authenticateToken, async (req, res) => {
 });
 
 // PUT /api/v1/settings - Update current user settings
-app.put('/api/v1/settings', authenticateToken, async (req, res) => {
+app.put('/api/v1/settings', authenticateAndCheckEmail, async (req, res) => {
   try {
     const userEmail = (req as any).user?.email;
     if (!userEmail) {
@@ -4294,7 +4302,7 @@ app.put('/api/v1/settings', authenticateToken, async (req, res) => {
 
 // POST /api/v1/settings/reset - Reset settings to defaults
 // SECURITY: Requires authentication
-app.post('/api/v1/settings/reset', authenticateToken, async (req, res) => {
+app.post('/api/v1/settings/reset', authenticateAndCheckEmail, async (req, res) => {
   try {
     const defaultSettings = {
       id: 'settings-1',
@@ -4351,7 +4359,7 @@ app.post('/api/v1/settings/reset', authenticateToken, async (req, res) => {
 
 // POST /api/v1/settings/password - Change password
 // SECURITY: Requires authentication
-app.post('/api/v1/settings/password', authenticateToken, async (req, res) => {
+app.post('/api/v1/settings/password', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { currentPassword, newPassword, confirmPassword } = req.body;
     
@@ -4382,7 +4390,7 @@ app.post('/api/v1/settings/password', authenticateToken, async (req, res) => {
 
 // POST /api/v1/settings/export - Export user data
 // SECURITY: Requires authentication
-app.post('/api/v1/settings/export', authenticateToken, async (req, res) => {
+app.post('/api/v1/settings/export', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { format, includeFeedback, includeProfile, includeActivity } = req.body;
     
@@ -4404,7 +4412,7 @@ app.post('/api/v1/settings/export', authenticateToken, async (req, res) => {
 
 // POST /api/v1/settings/delete-account - Delete user account
 // SECURITY: Requires authentication
-app.post('/api/v1/settings/delete-account', authenticateToken, async (req, res) => {
+app.post('/api/v1/settings/delete-account', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { password, reason, confirmDeletion } = req.body;
     
@@ -4445,7 +4453,7 @@ type HierarchyRelationship = {
 
 // DELETE /api/v1/hierarchy/clear/:organizationId - Clear all relationships for an org (database)
 // SECURITY: Requires authentication + admin/super_admin role for the target organization
-app.delete('/api/v1/hierarchy/clear/:organizationId', authenticateToken, requireOrgAccess(), async (req, res) => {
+app.delete('/api/v1/hierarchy/clear/:organizationId', authenticateAndCheckEmail, requireOrgAccess(), async (req, res) => {
   try {
     const { organizationId } = req.params;
     const user = (req as any).user;
@@ -4477,7 +4485,7 @@ app.delete('/api/v1/hierarchy/clear/:organizationId', authenticateToken, require
 
 // GET /api/v1/hierarchy/tree/:organizationId - Get organizational hierarchy tree
 // SECURITY: Requires authentication + org access validation
-app.get('/api/v1/hierarchy/tree/:organizationId', authenticateToken, requireOrgAccess(), async (req, res) => {
+app.get('/api/v1/hierarchy/tree/:organizationId', authenticateAndCheckEmail, requireOrgAccess(), async (req, res) => {
   try {
     const { organizationId } = req.params;
 
@@ -4644,7 +4652,7 @@ app.get('/api/v1/hierarchy/tree/:organizationId', authenticateToken, requireOrgA
 
 // GET /api/v1/hierarchy/direct-reports/:managerId - Get direct reports for a manager
 // SECURITY: Requires authentication + validates manager belongs to user's org
-app.get('/api/v1/hierarchy/direct-reports/:managerId', authenticateToken, async (req, res) => {
+app.get('/api/v1/hierarchy/direct-reports/:managerId', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { managerId } = req.params;
     const user = (req as any).user;
@@ -4760,7 +4768,7 @@ app.get('/api/v1/hierarchy/direct-reports/:managerId', authenticateToken, async 
 
 // GET /api/v1/hierarchy/manager-chain/:employeeId - Get manager chain for an employee
 // SECURITY: Requires authentication + validates employee belongs to user's org
-app.get('/api/v1/hierarchy/manager-chain/:employeeId', authenticateToken, async (req, res) => {
+app.get('/api/v1/hierarchy/manager-chain/:employeeId', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { employeeId } = req.params;
     const user = (req as any).user;
@@ -4973,7 +4981,7 @@ app.get('/api/v1/hierarchy/manager-chain/:employeeId', authenticateToken, async 
 
 // GET /api/v1/hierarchy/stats/:organizationId - Get hierarchy statistics
 // SECURITY: Requires authentication + org access validation
-app.get('/api/v1/hierarchy/stats/:organizationId', authenticateToken, requireOrgAccess(), async (req, res) => {
+app.get('/api/v1/hierarchy/stats/:organizationId', authenticateAndCheckEmail, requireOrgAccess(), async (req, res) => {
   try {
     const { organizationId } = req.params;
     
@@ -5096,7 +5104,7 @@ app.get('/api/v1/hierarchy/stats/:organizationId', authenticateToken, requireOrg
 
 // GET /api/v1/hierarchy/search-employees - Search employees for hierarchy assignment
 // SECURITY: Requires authentication + org access validation  
-app.get('/api/v1/hierarchy/search-employees', authenticateToken, async (req, res) => {
+app.get('/api/v1/hierarchy/search-employees', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { organizationId, q, exclude, role, type } = req.query;
     const user = (req as any).user;
@@ -5178,7 +5186,7 @@ app.get('/api/v1/hierarchy/search-employees', authenticateToken, async (req, res
 // POST /api/v1/hierarchy - Create or update hierarchy relationship
 // Uses UPSERT logic: if employee already has a manager in this org, update it
 // SECURITY: Requires authentication + org-scoped admin access
-app.post('/api/v1/hierarchy', authenticateToken, requireOrgScopedAdmin(), async (req, res) => {
+app.post('/api/v1/hierarchy', authenticateAndCheckEmail, requireOrgScopedAdmin(), async (req, res) => {
   try {
     const { organizationId, managerId, employeeId, level, isDirectReport } = req.body;
     const hierarchyLevel = level !== undefined ? level : 1;
@@ -5241,7 +5249,7 @@ app.post('/api/v1/hierarchy', authenticateToken, requireOrgScopedAdmin(), async 
 
 // PUT /api/v1/hierarchy/:id - Update hierarchy relationship
 // SECURITY: Requires authentication + org-scoped admin access
-app.put('/api/v1/hierarchy/:id', authenticateToken, requireOrgScopedAdmin(), async (req, res) => {
+app.put('/api/v1/hierarchy/:id', authenticateAndCheckEmail, requireOrgScopedAdmin(), async (req, res) => {
   try {
     const { id } = req.params;
     const { managerId, level, isDirectReport, isActive } = req.body;
@@ -5314,7 +5322,7 @@ app.put('/api/v1/hierarchy/:id', authenticateToken, requireOrgScopedAdmin(), asy
 
 // DELETE /api/v1/hierarchy/:id - Delete hierarchy relationship
 // SECURITY: Requires authentication + org-scoped admin access
-app.delete('/api/v1/hierarchy/:id', authenticateToken, requireOrgScopedAdmin(), async (req, res) => {
+app.delete('/api/v1/hierarchy/:id', authenticateAndCheckEmail, requireOrgScopedAdmin(), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -5340,7 +5348,7 @@ app.delete('/api/v1/hierarchy/:id', authenticateToken, requireOrgScopedAdmin(), 
 
 // POST /api/v1/hierarchy/bulk - Bulk update hierarchy relationships
 // SECURITY: Requires authentication + org-scoped admin access
-app.post('/api/v1/hierarchy/bulk', authenticateToken, requireOrgScopedAdmin(), async (req, res) => {
+app.post('/api/v1/hierarchy/bulk', authenticateAndCheckEmail, requireOrgScopedAdmin(), async (req, res) => {
   try {
     const { organizationId, hierarchies } = req.body;
     
@@ -5371,7 +5379,7 @@ app.post('/api/v1/hierarchy/bulk', authenticateToken, requireOrgScopedAdmin(), a
 
 // GET /api/v1/hierarchy/template - Download CSV template for hierarchy import
 // SECURITY: Requires authentication
-app.get('/api/v1/hierarchy/template', authenticateToken, async (req, res) => {
+app.get('/api/v1/hierarchy/template', authenticateAndCheckEmail, async (req, res) => {
   try {
     const csv = [
       'organization_name,organization_slug,employee_email,manager_email',
@@ -5389,7 +5397,7 @@ app.get('/api/v1/hierarchy/template', authenticateToken, async (req, res) => {
 // POST /api/v1/hierarchy/bulk/csv - Bulk create relationships from CSV
 // Expected headers row: organization_name,organization_slug,employee_email,manager_email
 // SECURITY: Requires authentication + org-scoped admin access
-app.post('/api/v1/hierarchy/bulk/csv', authenticateToken, requireOrgScopedAdmin(), express.text({ type: [ 'text/csv', 'text/plain', 'application/octet-stream' ] }), async (req, res) => {
+app.post('/api/v1/hierarchy/bulk/csv', authenticateAndCheckEmail, requireOrgScopedAdmin(), express.text({ type: [ 'text/csv', 'text/plain', 'application/octet-stream' ] }), async (req, res) => {
   try {
     const body = (req.body || '').toString();
     if (!body || body.trim().length === 0) {
@@ -5547,7 +5555,7 @@ app.post('/api/v1/hierarchy/bulk/csv', authenticateToken, requireOrgScopedAdmin(
 
 // GET /api/v1/hierarchy/validate/:organizationId - Validate hierarchy structure
 // SECURITY: Requires authentication + org access validation
-app.get('/api/v1/hierarchy/validate/:organizationId', authenticateToken, requireOrgAccess(), async (req, res) => {
+app.get('/api/v1/hierarchy/validate/:organizationId', authenticateAndCheckEmail, requireOrgAccess(), async (req, res) => {
   try {
     const { organizationId } = req.params;
     
@@ -5577,7 +5585,7 @@ app.get('/api/v1/hierarchy/validate/:organizationId', authenticateToken, require
 // Mock analytics data - REMOVED (now using database)
 
 // GET /api/v1/feedback - List feedback with filters
-app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
+app.get('/api/v1/feedback', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { toUserId, fromUserId, cycleId, status, reviewType, page = 1, limit = 20 } = req.query;
 
@@ -5877,7 +5885,7 @@ app.get('/api/v1/feedback', authenticateToken, async (req, res) => {
 });
 
 // GET /api/v1/feedback/stats - Get feedback stats
-app.get('/api/v1/feedback/stats', authenticateToken, async (req, res) => {
+app.get('/api/v1/feedback/stats', authenticateAndCheckEmail, async (req, res) => {
   try {
     // Get user context from authentication middleware
     const currentUserEmail = (req as any).user?.email;
@@ -5946,7 +5954,7 @@ app.get('/api/v1/feedback/stats', authenticateToken, async (req, res) => {
 });
 
 // GET /api/v1/feedback/:id - Get specific feedback
-app.get('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
+app.get('/api/v1/feedback/:id', authenticateAndCheckEmail, async (req, res) => {
   try {
     const feedbackId = req.params.id;
     
@@ -6149,7 +6157,7 @@ app.get('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
 });
 
 // POST /api/v1/feedback - Create feedback
-app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
+app.post('/api/v1/feedback', authenticateAndCheckEmail, async (req, res) => {
   try {
     console.log('🔍 Creating feedback with body:', JSON.stringify(req.body, null, 2));
     const { cycleId, toUserEmail, recipientId, reviewType, content, ratings, rating, comment, categories, goals = [], colorClassification } = req.body;
@@ -6600,7 +6608,7 @@ app.post('/api/v1/feedback', authenticateToken, async (req, res) => {
 });
 
 // PUT /api/v1/feedback/:id - Update feedback
-app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
+app.put('/api/v1/feedback/:id', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
@@ -6882,7 +6890,7 @@ app.put('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
 // ==================
 
 // PUT /api/v1/goals/:id - Update goal (toggle completed status)
-app.put('/api/v1/goals/:id', authenticateToken, async (req, res) => {
+app.put('/api/v1/goals/:id', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id } = req.params;
     const { completed } = req.body;
@@ -6949,7 +6957,7 @@ app.put('/api/v1/goals/:id', authenticateToken, async (req, res) => {
 });
 
 // POST /api/v1/feedback/:id/submit - Submit feedback
-app.post('/api/v1/feedback/:id/submit', authenticateToken, async (req, res) => {
+app.post('/api/v1/feedback/:id/submit', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -7126,7 +7134,7 @@ app.post('/api/v1/feedback/:id/submit', authenticateToken, async (req, res) => {
 });
 
 // POST /api/v1/feedback/:id/complete - Mark feedback as complete
-app.post('/api/v1/feedback/:id/complete', authenticateToken, async (req, res) => {
+app.post('/api/v1/feedback/:id/complete', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -7285,7 +7293,7 @@ app.post('/api/v1/feedback/:id/complete', authenticateToken, async (req, res) =>
 });
 
 // DELETE /api/v1/feedback/:id - Delete draft feedback
-app.delete('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
+app.delete('/api/v1/feedback/:id', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -7341,7 +7349,7 @@ app.delete('/api/v1/feedback/:id', authenticateToken, async (req, res) => {
 });
 
 // POST /api/v1/feedback/:id/acknowledge - Acknowledge feedback
-app.post('/api/v1/feedback/:id/acknowledge', authenticateToken, async (req, res) => {
+app.post('/api/v1/feedback/:id/acknowledge', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { id } = req.params;
     const { response } = req.body;
@@ -7509,7 +7517,7 @@ app.post('/api/v1/feedback/:id/acknowledge', authenticateToken, async (req, res)
 });
 
 // POST /api/v1/feedback/:id/comments - Add comment
-app.post('/api/v1/feedback/:feedbackId/comments', authenticateToken, async (req, res) => {
+app.post('/api/v1/feedback/:feedbackId/comments', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { feedbackId } = req.params;
     const { content, parentCommentId, isPrivate = false } = req.body;
@@ -7577,7 +7585,7 @@ app.post('/api/v1/feedback/:feedbackId/comments', authenticateToken, async (req,
 });
 
 // DELETE /api/v1/feedback/:feedbackId/comments/:commentId - Delete comment
-app.delete('/api/v1/feedback/:feedbackId/comments/:commentId', authenticateToken, async (req, res) => {
+app.delete('/api/v1/feedback/:feedbackId/comments/:commentId', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { feedbackId, commentId } = req.params;
     
@@ -7629,7 +7637,7 @@ app.delete('/api/v1/feedback/:feedbackId/comments/:commentId', authenticateToken
 // Feedback cycles are now stored in the database (feedback_cycles table)
 
 // GET /api/v1/cycles - Get cycles list
-app.get('/api/v1/cycles', authenticateToken, async (req, res) => {
+app.get('/api/v1/cycles', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { 
       page = 1, 
@@ -7782,7 +7790,7 @@ app.get('/api/v1/cycles', authenticateToken, async (req, res) => {
 });
 
 // GET /api/v1/cycles/:id - Get specific cycle
-app.get('/api/v1/cycles/:id', authenticateToken, async (req, res) => {
+app.get('/api/v1/cycles/:id', authenticateAndCheckEmail, async (req, res) => {
   try {
     // BAC/IDOR FIX: Validate organization ownership
     const userOrganizationId = req.user.organizationId;
@@ -7898,7 +7906,7 @@ const rbacMiddleware = (allowedRoles) => {
 };
 
 // POST /api/v1/cycles - Create new cycle
-app.post('/api/v1/cycles', authenticateToken, async (req, res) => {
+app.post('/api/v1/cycles', authenticateAndCheckEmail, async (req, res) => {
   try {
     const {
       name,
@@ -7982,7 +7990,7 @@ app.post('/api/v1/cycles', authenticateToken, async (req, res) => {
 });
 
 // PUT /api/v1/cycles/:id - Update cycle
-app.put('/api/v1/cycles/:id', authenticateToken, async (req, res) => {
+app.put('/api/v1/cycles/:id', authenticateAndCheckEmail, async (req, res) => {
   try {
     // BAC/IDOR FIX: Validate organization ownership
     const userOrganizationId = req.user.organizationId;
@@ -8067,7 +8075,7 @@ app.put('/api/v1/cycles/:id', authenticateToken, async (req, res) => {
 });
 
 // DELETE /api/v1/cycles/:id - Delete cycle
-app.delete('/api/v1/cycles/:id', authenticateToken, async (req, res) => {
+app.delete('/api/v1/cycles/:id', authenticateAndCheckEmail, async (req, res) => {
   try {
     const cycleId = req.params.id;
     
@@ -8127,7 +8135,7 @@ app.delete('/api/v1/cycles/:id', authenticateToken, async (req, res) => {
 });
 
 // GET /api/v1/cycles/:id/can-delete - Check if cycle can be deleted
-app.get('/api/v1/cycles/:id/can-delete', authenticateToken, async (req, res) => {
+app.get('/api/v1/cycles/:id/can-delete', authenticateAndCheckEmail, async (req, res) => {
   try {
     const cycleId = req.params.id;
     
@@ -8174,7 +8182,7 @@ app.get('/api/v1/cycles/:id/can-delete', authenticateToken, async (req, res) => 
 });
 
 // POST /api/v1/cycles/:id/activate - Activate cycle
-app.post('/api/v1/cycles/:id/activate', authenticateToken, async (req, res) => {
+app.post('/api/v1/cycles/:id/activate', authenticateAndCheckEmail, async (req, res) => {
   try {
     const updateQuery = `
       UPDATE feedback_cycles 
@@ -8204,7 +8212,7 @@ app.post('/api/v1/cycles/:id/activate', authenticateToken, async (req, res) => {
 });
 
 // POST /api/v1/cycles/:id/close - Close cycle
-app.post('/api/v1/cycles/:id/close', authenticateToken, async (req, res) => {
+app.post('/api/v1/cycles/:id/close', authenticateAndCheckEmail, async (req, res) => {
   try {
     const updateQuery = `
       UPDATE feedback_cycles 
@@ -8234,7 +8242,7 @@ app.post('/api/v1/cycles/:id/close', authenticateToken, async (req, res) => {
 });
 
 // POST /api/v1/cycles/:id/archive - Archive cycle
-app.post('/api/v1/cycles/:id/archive', authenticateToken, async (req, res) => {
+app.post('/api/v1/cycles/:id/archive', authenticateAndCheckEmail, async (req, res) => {
   try {
     const updateQuery = `
       UPDATE feedback_cycles 
@@ -8284,7 +8292,7 @@ app.post('/api/v1/cycles/:id/archive', authenticateToken, async (req, res) => {
 });
 
 // POST /api/v1/cycles/:id/restore - Restore archived cycle (restores as active)
-app.post('/api/v1/cycles/:id/restore', authenticateToken, async (req, res) => {
+app.post('/api/v1/cycles/:id/restore', authenticateAndCheckEmail, async (req, res) => {
   try {
     const updateQuery = `
       UPDATE feedback_cycles 
@@ -8334,7 +8342,7 @@ app.post('/api/v1/cycles/:id/restore', authenticateToken, async (req, res) => {
 });
 
 // GET /api/v1/cycles/summary - Get cycle summary
-app.get('/api/v1/cycles/summary', authenticateToken, async (req, res) => {
+app.get('/api/v1/cycles/summary', authenticateAndCheckEmail, async (req, res) => {
   try {
     // Participants = employees in the org hierarchy (those who have managers)
     // Completed = employees who received feedback FROM their manager in this cycle
@@ -8397,7 +8405,7 @@ app.get('/api/v1/cycles/summary', authenticateToken, async (req, res) => {
 });
 
 // GET /api/v1/cycles/:id/participants - Get cycle participants
-app.get('/api/v1/cycles/:id/participants', authenticateToken, async (req, res) => {
+app.get('/api/v1/cycles/:id/participants', authenticateAndCheckEmail, async (req, res) => {
   try {
     // BAC/IDOR FIX: Validate organization ownership of the cycle first
     const userOrganizationId = req.user.organizationId;
@@ -8461,7 +8469,7 @@ app.get('/api/v1/cycles/:id/participants', authenticateToken, async (req, res) =
 });
 
 // POST /api/v1/cycles/:id/participants - Add cycle participants
-app.post('/api/v1/cycles/:id/participants', authenticateToken, async (req, res) => {
+app.post('/api/v1/cycles/:id/participants', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { participants } = req.body;
     
@@ -8515,7 +8523,7 @@ app.post('/api/v1/cycles/:id/participants', authenticateToken, async (req, res) 
 });
 
 // DELETE /api/v1/cycles/:id/participants/:participantId - Remove cycle participant
-app.delete('/api/v1/cycles/:id/participants/:participantId', authenticateToken, async (req, res) => {
+app.delete('/api/v1/cycles/:id/participants/:participantId', authenticateAndCheckEmail, async (req, res) => {
   try {
     const deleteQuery = `
       DELETE FROM feedback_requests 
@@ -8542,7 +8550,7 @@ app.delete('/api/v1/cycles/:id/participants/:participantId', authenticateToken, 
 });
 
 // POST /api/v1/cycles/validate-feedback - Validate feedback permission
-app.post('/api/v1/cycles/validate-feedback', authenticateToken, async (req, res) => {
+app.post('/api/v1/cycles/validate-feedback', authenticateAndCheckEmail, async (req, res) => {
   try {
     const { cycleId, fromUserId, toUserId, reviewType } = req.body;
     
@@ -8585,7 +8593,7 @@ async function getManagerEmployeeTree(managerId: string): Promise<string[]> {
 }
 
 // GET /api/v1/analytics/overview - Get analytics overview for manager
-app.get('/api/v1/analytics/overview', authenticateToken, async (req, res) => {
+app.get('/api/v1/analytics/overview', authenticateAndCheckEmail, async (req, res) => {
   try {
     const userEmail = (req as any).user.email;
     const cycleId = req.query.cycleId as string | undefined;
@@ -8674,7 +8682,7 @@ app.get('/api/v1/analytics/overview', authenticateToken, async (req, res) => {
 });
 
 // GET /api/v1/analytics/trends - Get feedback trends over time
-app.get('/api/v1/analytics/trends', authenticateToken, async (req, res) => {
+app.get('/api/v1/analytics/trends', authenticateAndCheckEmail, async (req, res) => {
   try {
     const userEmail = (req as any).user.email;
     const period = req.query.period as string || 'monthly';
@@ -8760,7 +8768,7 @@ app.get('/api/v1/analytics/trends', authenticateToken, async (req, res) => {
 });
 
 // GET /api/v1/analytics/categories - Get feedback by category/type
-app.get('/api/v1/analytics/categories', authenticateToken, async (req, res) => {
+app.get('/api/v1/analytics/categories', authenticateAndCheckEmail, async (req, res) => {
   try {
     const userEmail = (req as any).user.email;
     const cycleId = req.query.cycleId as string | undefined;
@@ -8842,7 +8850,7 @@ app.get('/api/v1/analytics/categories', authenticateToken, async (req, res) => {
 });
 
 // GET /api/v1/analytics/insights - Get AI-generated insights
-app.get('/api/v1/analytics/insights', authenticateToken, async (req, res) => {
+app.get('/api/v1/analytics/insights', authenticateAndCheckEmail, async (req, res) => {
   try {
     const userEmail = (req as any).user.email;
     
@@ -8904,7 +8912,7 @@ app.get('/api/v1/analytics/insights', authenticateToken, async (req, res) => {
 });
 
 // GET /api/v1/analytics/team-color-distribution - Get color classification distribution for manager's team
-app.get('/api/v1/analytics/team-color-distribution', authenticateToken, async (req, res) => {
+app.get('/api/v1/analytics/team-color-distribution', authenticateAndCheckEmail, async (req, res) => {
   try {
     const currentUserEmail = (req as any).user?.email;
     const { cycleId } = req.query;
@@ -8986,7 +8994,7 @@ app.get('/api/v1/analytics/team-color-distribution', authenticateToken, async (r
 });
 
 // GET /api/v1/analytics/team-completion - Get feedback completion status for manager's direct reports
-app.get('/api/v1/analytics/team-completion', authenticateToken, async (req, res) => {
+app.get('/api/v1/analytics/team-completion', authenticateAndCheckEmail, async (req, res) => {
   try {
     const currentUserEmail = (req as any).user?.email;
     const { cycleId } = req.query;
@@ -9100,7 +9108,7 @@ app.get('/api/v1/analytics/team-completion', authenticateToken, async (req, res)
 });
 
 // GET /api/v1/team/employee/:employeeId/history - Get feedback history for a specific team member
-app.get('/api/v1/team/employee/:employeeId/history', authenticateToken, async (req, res) => {
+app.get('/api/v1/team/employee/:employeeId/history', authenticateAndCheckEmail, async (req, res) => {
   try {
     const currentUserEmail = (req as any).user?.email;
     const { employeeId } = req.params;
@@ -9200,7 +9208,7 @@ app.get('/api/v1/team/employee/:employeeId/history', authenticateToken, async (r
 });
 
 // GET /api/v1/team/feedback - Get team feedback for managers
-app.get('/api/v1/team/feedback', authenticateToken, async (req, res) => {
+app.get('/api/v1/team/feedback', authenticateAndCheckEmail, async (req, res) => {
   try {
     const currentUserEmail = (req as any).user?.email;
     console.log('Team feedback request from:', currentUserEmail);
@@ -9297,7 +9305,7 @@ app.get('/api/v1/team/feedback', authenticateToken, async (req, res) => {
 // ===========================================
 // AI FEEDBACK GENERATION ENDPOINT
 // ===========================================
-app.post('/api/v1/ai/generate-feedback', authenticateToken, async (req: any, res: any) => {
+app.post('/api/v1/ai/generate-feedback', authenticateAndCheckEmail, async (req: any, res: any) => {
   try {
     const { recipientName, recipientPosition, recipientDepartment, feedbackType } = req.body;
     
@@ -9417,7 +9425,7 @@ Remember: Generate generic professional feedback based on the role. Do not acces
 // ===========================================
 // AI TEAM INSIGHTS ENDPOINT
 // ===========================================
-app.post('/api/v1/ai/team-insights', authenticateToken, async (req: any, res: any) => {
+app.post('/api/v1/ai/team-insights', authenticateAndCheckEmail, async (req: any, res: any) => {
   try {
     const userEmail = req.user?.email;
     if (!userEmail) {
@@ -9765,7 +9773,7 @@ app.get('/api/v1/test/quote-of-the-day', async (req: any, res: any) => {
 });
 
 // PRODUCTION ENDPOINT - selects random quote from pre-seeded pool (fresh each request)
-app.get('/api/v1/quote-of-the-day', authenticateToken, async (req: any, res: any) => {
+app.get('/api/v1/quote-of-the-day', authenticateAndCheckEmail, async (req: any, res: any) => {
   try {
     // Select a random quote from the pool (fresh each request)
     const randomQuote = await query(`
@@ -9816,7 +9824,7 @@ app.get('/api/v1/quote-of-the-day', authenticateToken, async (req: any, res: any
 });
 
 // QUOTES ARCHIVE - Get all past quotes with search/filter
-app.get('/api/v1/quotes/archive', authenticateToken, async (req: any, res: any) => {
+app.get('/api/v1/quotes/archive', authenticateAndCheckEmail, async (req: any, res: any) => {
   try {
     const { 
       search, 
@@ -9922,7 +9930,7 @@ app.get('/api/v1/quotes/archive', authenticateToken, async (req: any, res: any) 
 });
 
 // Get unique authors for filter dropdown
-app.get('/api/v1/quotes/authors', authenticateToken, async (req: any, res: any) => {
+app.get('/api/v1/quotes/authors', authenticateAndCheckEmail, async (req: any, res: any) => {
   try {
     const result = await query(
       `SELECT DISTINCT author FROM daily_quotes ORDER BY author ASC`
@@ -9939,7 +9947,7 @@ app.get('/api/v1/quotes/authors', authenticateToken, async (req: any, res: any) 
 });
 
 // Get quote statistics
-app.get('/api/v1/quotes/stats', authenticateToken, async (req: any, res: any) => {
+app.get('/api/v1/quotes/stats', authenticateAndCheckEmail, async (req: any, res: any) => {
   try {
     const statsResult = await query(`
       SELECT 
